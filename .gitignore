@@ -1,0 +1,50 @@
+# LOGS & DIAGNOSTICS
+logs/
+*.log
+*.log.*
+*.jfr
+*.hprof
+crash-reports/
+
+# GRADLE & BUILD OUTPUTS
+.gradle/
+build/
+dist/
+bin/
+out/
+libs/
+runtime/
+dependencies/
+verification/
+
+# RUNTIME, MOD TEST RUNS & EXPORTS
+run/
+runs/
+instances/
+screenshots/
+avogadro-exports/
+Launch-Demo.cmd
+Run-Tests.cmd
+
+# LOCAL CONFIGURATIONS & OVERRIDES
+.local/
+local.properties
+*.local.properties
+*.lnk
+
+# IDE & EDITOR FILES
+.idea/
+*.iml
+*.ipr
+*.iws
+.classpath
+.project
+.settings/
+.vscode/
+
+# OPERATING SYSTEM & SYSTEM FILES
+Thumbs.db
+.DS_Store
+
+# EXCEPTIONS
+!AGENTS.md

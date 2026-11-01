@@ -1,0 +1,118 @@
+plugins {
+    id 'java'
+    id 'com.cleanroommc.cleanroomgradle'
+}
+
+group = 'io.github.wurtzitane.avogadro'
+// Use the same version as the mod metadata and private development launcher.
+version = new groovy.json.JsonSlurper().parse(file('src/main/resources/mcmod.info'))[0].version
+
+base {
+    archivesName = 'avogadro-1.12.2'
+}
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(25)
+    withSourcesJar()
+}
+
+repositories {
+    mavenCentral()
+    maven { url = 'https://maven.cleanroommc.com' }
+    maven { url = 'https://repo.cleanroommc.com/releases' }
+    maven {
+        url = 'https://cursemaven.com'
+        content { includeGroup 'curse.maven' }
+    }
+}
+
+dependencies {
+    implementation cleanroom.userdev(providers.gradleProperty('cleanroomVersion').getOrElse('0.7.4-alpha'))
+    compileOnly files('libs/OffscreenCleanroom-1.12.2-0.1.1-mcp.jar')
+    // Cleanroom includes JOML at runtime.
+    implementation 'org.joml:joml:1.10.9'
+    implementation('com.cleanroommc:modularui:3.1.6:dev') { transitive = false }
+    compileOnly 'mezz:jei:4.36.1:dev'
+    if (!providers.gradleProperty('withoutHei').isPresent()) {
+        runtimeOnly 'mezz:jei:4.36.1:dev'
+    }
+    compileOnly('com.cleanroommc:groovyscript:1.4.3:dev') { transitive = false }
+    compileOnly('curse.maven:theonesmeagle-977883:8869623') { transitive = false }
+    compileOnly('curse.maven:hwyla-253449:2568751') { transitive = false }
+}
+
+cleanroom {
+    runs {
+        client {
+            configure {
+                username = 'AvogadroTester'
+                maxHeapSize = '2G'
+                workingDir = file('run/client')
+            }
+        }
+        server {
+            configure {
+                maxHeapSize = '2G'
+                workingDir = file('run/server')
+                standardInput = System.in
+                systemProperty 'terminal.jline', 'false'
+                systemProperty 'terminal.ansi', 'false'
+            }
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+// Keep the development class loader from conflicting with the server's JLine library.
+tasks.withType(JavaExec).configureEach {
+    systemProperty 'foundation.loadsall', 'false'
+}
+
+tasks.matching { it.name in ['runClient', 'runServer'] }.configureEach {
+    def verifyDistributable = providers.gradleProperty('verifyDistributable').isPresent()
+    dependsOn tasks.named(verifyDistributable ? 'reobfJar' : 'jar')
+    classpath = classpath.minus(sourceSets.main.output).filter { !it.name.startsWith('jei-4.36.1') && !it.name.startsWith('modularui-') }
+
+    doFirst {
+        def mods = new File(workingDir, 'mods')
+        mods.mkdirs()
+        def modJar = verifyDistributable
+                ? layout.buildDirectory.file("libs/avogadro-1.12.2-${project.version}.jar").get().asFile
+                : tasks.named('jar').get().archiveFile.get().asFile
+        if (providers.gradleProperty('runtimeModJar').isPresent()) {
+            modJar = file(providers.gradleProperty('runtimeModJar').get())
+            if (!modJar.isFile()) throw new GradleException("Runtime mod JAR not found: $modJar")
+        }
+        copy {
+            from modJar
+            into mods
+            rename { 'avogadro-development.jar' }
+        }
+
+        copy { from configurations.runtimeClasspath.files.find { it.name.startsWith('modularui-') }; into mods; rename { 'modularui-development.jar' } }
+
+        def hei = configurations.runtimeClasspath.files.find { it.name.startsWith('jei-4.36.1') }
+        if (hei != null) {
+            copy {
+                from hei
+                into mods
+                rename { 'hei-development.jar' }
+            }
+        } else {
+            new File(mods, 'hei-development.jar').delete()
+        }
+
+    }
+}
+
+jar {
+    from('LICENSE')
+    manifest.attributes('MixinConfigs': 'mixins.avogadro.client.json')
+}
+
+if (providers.gradleProperty('verificationScript').isPresent()) {
+    apply from: file(providers.gradleProperty('verificationScript').get())
+}

@@ -1,0 +1,22 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "io.github.wurtzitane.avogadro.mixin.client",
+  "plugin": "io.github.wurtzitane.avogadro.mixin.AvogadroMixinPlugin",
+  "refmap": "mixins.avogadro.refmap.json",
+  "compatibilityLevel": "JAVA_25",
+  "client": [
+    "ModularTextFontMixin",
+    "ModularContextFontMixin",
+    "ViewerFramerateMixin",
+    "ForgeTooltipMixin",
+    "HeiTooltipMixin",
+    "HeiIngredientMixin",
+    "HeiListIngredientMixin",
+    "CclTooltipMixin",
+    "ProbeOverlayMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

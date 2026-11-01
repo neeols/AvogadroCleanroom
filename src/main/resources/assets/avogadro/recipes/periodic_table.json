@@ -1,0 +1,12 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "conditions": [
+    {"type": "avogadro:periodic_table_crafting"}
+  ],
+  "pattern": ["SSS", "SPS", "SSS"],
+  "key": {
+    "S": {"item": "minecraft:stick"},
+    "P": {"item": "minecraft:paper"}
+  },
+  "result": {"item": "avogadro:periodic_table", "count": 1}
+}

@@ -1,0 +1,5 @@
+{
+  "conditions": {
+    "periodic_table_crafting": "io.github.wurtzitane.avogadro.recipe.PeriodicTableRecipeCondition"
+  }
+}

@@ -1,0 +1,163 @@
+================================================================================
+
+                        AVOGADRO REFERENCE DATA SOURCES
+
+================================================================================
+
+
+
+These notices describe the bundled scientific datasets included with Avogadro,
+
+which are maintained separately from the software's MIT license. All source
+
+publications and their respective terms remain with their original authors and
+
+publishers.
+
+
+
+NO REMOTE SERVICES ARE QUERIED AT RUNTIME.
+
+
+
+================================================================================
+
+1. NUCLEAR PROPERTIES & ISOTOPES: NUBASE2020
+
+================================================================================
+
+
+
+* Reference: F. G. Kondev, M. Wang, W. J. Huang, S. Naimi, and G. Audi,
+
+  "The NUBASE2020 evaluation of nuclear physics properties",
+
+  Chinese Physics C 45, 030001 (2021).
+
+* DOI: https://doi.org/10.1088/1674-1137/abddae
+
+* License: Creative Commons Attribution 3.0
+
+  https://creativecommons.org/licenses/by/3.0/
+
+* Published ASCII Table: https://amdc.impcas.ac.cn/masstables/Ame2020/nubase_4.mas20
+
+  Pinned SHA-256: 1585a5eea86c5e17e90307c7e6e786d060049c4039e392a261ff6db977df9859
+
+* Adaptation: Selected ground-state isotope records, normalized fields, and
+
+  source flags.
+
+
+
+Dataset Details:
+
+----------------
+
+* Contains 3,339 ground-state records for atomic numbers 1-118, including
+
+  four-digit discovery years in columns 115-118 of that edition.
+
+* Exclusions: Unobserved estimates, excited states, and isomeric states.
+
+* Notation Flags:
+
+  - '#' indicates an estimated mass or half-life (does not denote the absence
+
+    of a nuclide).
+
+  - 'stbl' denotes stable half-lives.
+
+  - Includes historical tentative assignments from NUBASE2020 (not claims of
+
+    discoveries confirmed through the current year).
+
+
+
+
+
+================================================================================
+
+2. REPRESENTATIVE ISOTOPES: CIAAW
+
+================================================================================
+
+
+
+* References:
+
+  - Commission on Isotopic Abundances and Atomic Weights (CIAAW),
+
+    Isotopic Compositions of the Elements 2024:
+
+    https://www.ciaaw.org/isotopic-abundances.htm
+
+  - Radioactive Elements Compilation (based on NUBASE2020, March 29, 2022):
+
+    https://www.ciaaw.org/radioactive-elements.htm
+
+
+
+Selection Guidelines:
+
+---------------------
+
+* Reference mass numbers are explicitly pinned for all 118 elements.
+
+* Natural References: Utilize the greatest representative abundance where
+
+  meaningful (e.g., Pb-208 is explicitly chosen due to natural lead abundance
+
+  variations).
+
+* Radioactive References: Selected from the CIAAW compilation; where multiple
+
+  comparable candidates exist, the chosen value serves as a reference rather
+
+  than a unique longest-lived isotope claim.
+
+* Neutron Counts: Never derived from rounded atomic weights.
+
+
+
+
+
+================================================================================
+
+3. ELECTRON CONFIGURATIONS & ELEMENT CARDS
+
+================================================================================
+
+
+
+* Primary Sources: Transcribed from standard element references including
+
+  Encyclopaedia Britannica and PubChem.
+
+* Visual Presentation: Category colors follow the shared Avogadro element
+
+  palette. All graphics and text are rendered natively by Avogadro; original
+
+  reference images and article text are not bundled.
+
+
+
+Specific Adjustments & Computations:
+
+-----------------------------------
+
+* Lawrencium (Z = 103): Configuration corrected to [Rn]5f14 7s2 7p1 using the
+
+  NIST Elemental Data Index:
+
+  https://physics.nist.gov/cgi-bin/Elements/elInfo.pl?element=103
+
+* Shell Populations: Neutral shell populations (including noble-gas cores) are
+
+  derived directly from these configurations.
+
+* Superheavy Elements: Configurations marked as predicted/calculated in
+
+  element facts serve as schematic models rather than measured atomic shell
+
+  images.

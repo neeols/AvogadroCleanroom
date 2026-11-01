@@ -1,0 +1,293 @@
+# =============================================================================
+# MOD IDENTIFICATION & ITEM GROUPS
+# =============================================================================
+jei.avogadro.molecules=Molecules
+itemGroup.avogadro.molecules=Avogadro Molecules
+itemGroup.avogadro.elements=Avogadro Elements
+itemGroup.avogadro.crystals=Avogadro Crystals
+itemGroup.avogadro.polymers=Avogadro Polymers
+
+# =============================================================================
+# ITEMS, ENTITIES & BLOCKS
+# =============================================================================
+item.avogadro.molecule.name=Unavailable Molecule
+item.avogadro.molecules_icon.name=Molecules
+item.avogadro.periodic_table.name=Periodic Table of Elements
+entity.periodic_table.name=Periodic Table of Elements
+
+avogadro.item.unavailable=This molecule item is disabled or its definition is missing.
+avogadro.item.entity_mass=Mass: %s
+avogadro.item.mass_unavailable=Mass unavailable: no standard atomic weight for one or more elements.
+avogadro.item.variable_composition=Variable composition
+
+# =============================================================================
+# KEYBINDINGS
+# =============================================================================
+key.categories.avogadro=Avogadro
+key.avogadro.worldHud=World HUD Molecule
+key.avogadro.pauseMolecule=Pause/Resume HEI Molecule
+key.avogadro.examineMolecule=Examine molecule
+
+# =============================================================================
+# MOLECULE VIEWER & INTERACTION UI
+# =============================================================================
+avogadro.molecules.pause=%s: pause rotation
+avogadro.molecules.resume=%s: resume rotation
+avogadro.molecules.drag=Left-drag to rotate
+avogadro.molecules.pan=Right-drag to pan
+avogadro.molecules.zoom=Scroll to zoom
+avogadro.molecules.reset=Middle-click to reset view
+avogadro.molecules.prerendered=Pre-rendered animation: fixed camera
+avogadro.molecules.examine=%s: examine molecule
+avogadro.offscreen.open=Open in separate window
+
+# =============================================================================
+# ATOM EXAMINER & SETTINGS
+# =============================================================================
+avogadro.examiner.controls=Drag: rotate | Right drag: pan | Wheel: zoom
+avogadro.examiner.keys=Tab: next atom | Shift+Tab: previous | Click: inspect | %s: pause | Middle: reset
+avogadro.examiner.pause=Pause
+avogadro.examiner.resume=Resume
+avogadro.examiner.details=Details
+avogadro.examiner.component_count=Components (%s)
+avogadro.examiner.phase_count=Phases (%s)
+avogadro.examiner.phases=Phases
+avogadro.examiner.scroll_components=Scroll for more
+avogadro.examiner.zoom=Zoom: %s%%
+avogadro.examiner.help=View controls
+avogadro.examiner.help.rotate=Left drag: rotate
+avogadro.examiner.help.pan=Right drag: pan
+avogadro.examiner.help.zoom=Mouse wheel: zoom
+avogadro.examiner.help.pause=%s: pause or resume
+avogadro.examiner.help.reset=Middle click: reset view
+avogadro.examiner.help.inspect=Click an atom: inspect
+avogadro.examiner.help.next_atom=Tab / Shift+Tab: next / previous atom
+avogadro.examiner.settings=Settings
+avogadro.examiner.settings.heading=Atom view and export defaults
+avogadro.examiner.setting.atomCloud=Cloud
+avogadro.examiner.setting.atomOrbits=Electron paths
+avogadro.examiner.setting.atomNucleus=Nucleus
+avogadro.examiner.setting.atomElectrons=Electrons
+avogadro.examiner.setting.atomDetails=Export details
+avogadro.examiner.setting.predictNeutralElectronConfigs=Predict neutral configs
+avogadro.examiner.setting.text=Text size: %s%%
+avogadro.examiner.setting.size=Export: %s x %s
+avogadro.examiner.setting.fps=Export FPS: %s
+avogadro.examiner.setting.viewerFps=Viewer FPS: %s
+avogadro.examiner.setting.unlimited=Unlimited
+avogadro.examiner.setting.turn=One turn: %s s
+avogadro.examiner.setting.restore=Reset atom settings
+avogadro.examiner.composition=Composition
+avogadro.examiner.atom=Atom details
+avogadro.examiner.select_atom=Click an atom to inspect its nucleus and electrons.
+avogadro.examiner.no_atomic_data=No atomic data supplied for this atom.
+avogadro.examiner.protons=Protons: %s
+avogadro.examiner.neutrons=Neutrons: %s
+avogadro.examiner.electrons=Electrons: %s
+avogadro.examiner.charge=Charge: %s
+avogadro.examiner.shells=Shells: %s
+avogadro.examiner.back=Back
+avogadro.examiner.reset=Reset view
+avogadro.examiner.component=Components
+avogadro.examiner.particles=%s protons | %s neutrons | %s electrons
+avogadro.examiner.mixture_structure=Variable composition
+avogadro.examiner.constituents=Constituents (no fixed ratio)
+avogadro.examiner.material_forms=Material forms
+
+# =============================================================================
+# CRYSTAL STRUCTURE EXAMINER UI
+# =============================================================================
+avogadro.crystal.atoms=Atoms
+avogadro.crystal.molar_mass=Formula-unit molar mass: %s
+avogadro.crystal.title=Crystal structure: %s
+avogadro.crystal.formula=Formula unit: %s
+avogadro.crystal.cells=Cells: %s x %s x %s
+avogadro.crystal.boundary=Cell edges: %s
+avogadro.crystal.bonds=Local bonds: %s
+avogadro.crystal.controls=Drag: rotate   /   Right-drag: pan   /   Scroll: zoom   /   Details: scroll
+avogadro.crystal.displayed=Preview: %s cells, %s atoms
+avogadro.crystal.cell_counts=Source cell: %s atoms (not a molecular formula)
+avogadro.crystal.no_inferred_bonds=Local authored bonds only. Cell edges are not chemical bonds; no cross-cell bonds are inferred.
+avogadro.crystal.polymorph=Phase
+avogadro.crystal.space_group=Space group
+avogadro.crystal.conditions=Source conditions
+avogadro.crystal.source=Source
+avogadro.crystal.notes=Notes
+avogadro.crystal.examiner=Crystal examiner
+avogadro.crystal.lattice=LATTICE
+avogadro.crystal.edges=Edges
+avogadro.crystal.local_bonds=Bonds
+avogadro.crystal.reset=Reset
+avogadro.crystal.controls_short=Drag: rotate / Right-drag: pan / Scroll: zoom
+avogadro.crystal.select_size=Repeat the unit cell along all three axes.
+avogadro.crystal.lag_warning=May lag on slower computers.
+avogadro.crystal.large_preview=Large lattice preview
+avogadro.crystal.large_size=%s / %s cells / %s atoms
+avogadro.crystal.load=Load preview
+avogadro.crystal.atom_limit=This preview exceeds the %s-atom limit.
+avogadro.crystal.formula_heading=FORMULA UNIT
+avogadro.crystal.cell_heading=UNIT CELL
+avogadro.crystal.lengths=Lengths [Å]
+avogadro.crystal.angles=Angles [°]
+avogadro.crystal.preview_heading=PREVIEW
+avogadro.crystal.cell_total=Cells
+avogadro.crystal.atom_total=Atoms
+avogadro.crystal.source_total=Atoms / cell
+avogadro.crystal.elements_heading=ELEMENTS
+
+# =============================================================================
+# POLYMER EXAMINER UI
+# =============================================================================
+avogadro.polymer.examiner=Polymer examiner
+avogadro.polymer.repeat_unit=REPEAT UNIT
+avogadro.polymer.chain_length=CHAIN LENGTH
+avogadro.polymer.units=n = %s / %s
+avogadro.polymer.finite_preview=FINITE PREVIEW
+avogadro.polymer.atoms=%s atoms
+avogadro.polymer.end_groups=End groups included.
+avogadro.polymer.repeat_unit_molar_mass=Repeat-unit molar mass: %s
+
+# =============================================================================
+# PERIODIC TABLE & ISOTOPES
+# =============================================================================
+avogadro.periodic_table.title=Periodic table of elements
+avogadro.periodic_table.lanthanoids=Lanthanoids
+avogadro.periodic_table.actinoids=Actinoids
+avogadro.periodic_table.open=Shift + right-click to inspect elements
+avogadro.periodic_table.resize=Crouch + scroll to resize
+avogadro.periodic_table.place=Right-click a wall to hang the table
+avogadro.periodic_table.size=%s x %s blocks
+avogadro.periodic_table.painting=On wall: right-click an element; Shift + right-click opens the table
+
+avogadro.periodic_table.category.alkali=Alkali metals
+avogadro.periodic_table.category.alkaline=Alkaline-earth metals
+avogadro.periodic_table.category.transition=Transition metals
+avogadro.periodic_table.category.metal=Other metals
+avogadro.periodic_table.category.metalloid=Metalloids
+avogadro.periodic_table.category.nonmetal=Other nonmetals
+avogadro.periodic_table.category.halogen=Halogens
+avogadro.periodic_table.category.noble=Noble gases
+avogadro.periodic_table.category.rare-earth=Rare-earth elements
+avogadro.periodic_table.category.actinoid=Actinoids
+
+avogadro.periodic.isotope.choose=Isotopes
+avogadro.periodic.isotope.title=%s isotopes
+avogadro.periodic.isotope.button=Isotope: %s
+avogadro.periodic.isotope.reference=(reference)
+avogadro.periodic.isotope.neutrons=%s neutrons
+
+# =============================================================================
+# PREVIEW & NETWORK
+# =============================================================================
+avogadro.preview.preparing=Preparing model…
+avogadro.preview.failed=Could not prepare model
+avogadro.preview.definition_changed=Definition changed. Reopen to refresh.
+avogadro.network.default_formula=Default preview: %s
+avogadro.network.default_mass=Default-preview molar mass: %s
+
+# =============================================================================
+# CONFIGURATION - CATEGORIES
+# =============================================================================
+avogadro.configuration.title=Avogadro
+avogadro.configuration.category.tooltips=Tooltips
+avogadro.configuration.category.appearance=Appearance
+avogadro.configuration.category.recipebrowser=Recipe Browser
+avogadro.configuration.category.worldhud=World HUD
+avogadro.configuration.category.atoms=Atom viewer and exports
+avogadro.configuration.category.periodictable=Periodic table
+avogadro.configuration.category.elements=Reference element items
+avogadro.configuration.category.exports=Exports
+
+# =============================================================================
+# CONFIGURATION - TOOLTIPS
+# =============================================================================
+avogadro.configuration.enableTooltips=Show Item & Fluid Tooltip Molecules
+avogadro.configuration.enableTooltips.tooltip=Show molecule models in matching item, filled-container and direct-fluid tooltips, including HEI ingredients and bookmarks. Independent of the HEI Molecules page and world HUDs. Native descriptions remain unchanged.
+
+avogadro.configuration.tooltipSize=Tooltip Size
+avogadro.configuration.tooltipSize.tooltip=Molecule image size in GUI pixels. Minimum: 16 px. Maximum: 128 px. Default: 64 px.
+
+# =============================================================================
+# CONFIGURATION - APPEARANCE
+# =============================================================================
+avogadro.configuration.spinSeconds=Rotation Period (Seconds)
+avogadro.configuration.spinSeconds.tooltip=Seconds per automatic rotation. Minimum: 0.5 s. Maximum: 60 s. Default: 6 s.
+
+avogadro.configuration.rotationDirection=Rotation Direction
+avogadro.configuration.rotationDirection.tooltip=FORWARD keeps the original automatic direction. REVERSE spins the other way. Mouse dragging follows the pointer in either mode.
+
+avogadro.configuration.cubicAtoms=Cubic Atoms
+avogadro.configuration.cubicAtoms.tooltip=Use cubic atoms and square bonds instead of spheres and cylinders.
+
+avogadro.configuration.textScale=Molecule Text Scale
+avogadro.configuration.textScale.tooltip=Scale Avogadro's name and formula labels. Minimum: 0.5×. Maximum: 3×. Default: 1×. Labels fit their available space. Native item descriptions and HUD text are unchanged.
+
+avogadro.configuration.renderingMode=Rendering Mode
+avogadro.configuration.renderingMode.tooltip=LIVE keeps camera controls. PRERENDERED caches full-geometry tooltip, HEI and HUD animations with a fixed camera and 120 angular frames. HEI camera controls are disabled. Large previews fall back to live geometry when the texture budget is exceeded. Exports and molecule items always use live geometry.
+
+avogadro.configuration.creativeSort=Creative tab sorting
+avogadro.configuration.creativeSort.tooltip=Sort molecule samples by translated name, formula, identifier, or registration order.
+
+avogadro.configuration.elementSort=Elements tab sorting
+avogadro.configuration.elementSort.tooltip=Sort elements by configured atomic number (protons), name, formula, identifier, or registration order.
+
+avogadro.configuration.splitCreativeTabs=Separate Elements and Molecules tabs
+avogadro.configuration.splitCreativeTabs.tooltip=Separate elemental samples from compounds. Disable to combine both in Molecules. Requires restart.
+
+avogadro.config.separateCrystalTab=Separate crystal tab
+avogadro.configuration.separatePolymerTab=Separate polymer tab
+
+# =============================================================================
+# CONFIGURATION - RECIPE BROWSER (HEI/JEI)
+# =============================================================================
+avogadro.configuration.jeiCategory=Show HEI Molecules Page
+avogadro.configuration.jeiCategory.tooltip=Show the Molecules page in HEI. Changes apply without restarting. Independent of item/fluid tooltips and world HUDs.
+
+# =============================================================================
+# CONFIGURATION - WORLD HUD
+# =============================================================================
+avogadro.configuration.worldHud.enabled=Show World HUD Molecules
+avogadro.configuration.worldHud.enabled.tooltip=Show molecule models below native text in HWYLA, TOP or The One Smeagle while inspecting a matching block or fluid. Independent of item/fluid tooltips and the HEI page. Requires the configured HUD key.
+
+avogadro.configuration.worldHud.mode=Key Mode
+avogadro.configuration.worldHud.mode.tooltip=HOLD displays the molecule while the key is held. TOGGLE switches it on or off with each press.
+
+avogadro.configuration.worldHud.provider=HUD Provider
+avogadro.configuration.worldHud.provider.tooltip=AUTO selects an available HUD. PROBE uses The One Probe. WAILA uses HWYLA or Waila.
+
+avogadro.configuration.worldHudKey=Configure World HUD Key...
+avogadro.configuration.worldHudKey.tooltip=Open Controls and assign the World HUD molecule key in the Avogadro category. It starts unbound.
+
+# =============================================================================
+# CONFIGURATION - ATOM VIEWER & EXPORTS
+# =============================================================================
+avogadro.configuration.atomCloud=Electron cloud
+avogadro.configuration.atomOrbits=Electron paths
+avogadro.configuration.atomNucleus=Nucleus
+avogadro.configuration.atomElectrons=Electrons
+avogadro.configuration.atomDetails=Export element details
+
+avogadro.configuration.predictNeutralElectronConfigs=Predict neutral electron configurations
+avogadro.configuration.predictNeutralElectronConfigs.tooltip=Show predicted, calculated and authored configurations. Otherwise, unknown neutral configurations display UNKNOWN.
+
+avogadro.configuration.atomWidth=Export width
+avogadro.configuration.atomHeight=Export height
+avogadro.configuration.atomFps=Export frame rate
+avogadro.configuration.atomTextScale=Export text size
+avogadro.configuration.viewerFps=Viewer frame rate
+avogadro.configuration.atomRevealZoom=Atomic detail reveal zoom
+
+# =============================================================================
+# CONFIGURATION - PERIODIC TABLE & ELEMENTS
+# =============================================================================
+avogadro.configuration.periodicTable.enableCrafting=Enable periodic-table crafting
+avogadro.config.glowingPainting=Glowing periodic-table painting
+
+avogadro.configuration.elements.autoLoadElements=Automatically add element samples
+avogadro.configuration.elements.autoLoadIsotopes=Automatically add isotope samples
+
+# =============================================================================
+# CONFIGURATION - EXPORTS
+# =============================================================================
+avogadro.configuration.performanceMode=Performance Mode
+avogadro.configuration.performanceMode.tooltip=Smooth Gameplay (default) spreads capture work over game frames. Fastest Export prioritizes completion speed and may cause stutter. Both keep the same geometry, image quality, frame count and duration. Changes apply on the next render frame.
