@@ -1,0 +1,382 @@
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Map;
+import java.util.concurrent.CompletableFuture;
+import com.google.gson.JsonObject;
+import io.github.wurtzitane.avogadro.api.*;
+import io.github.wurtzitane.avogadro.api.client.*;
+import io.github.wurtzitane.avogadro.client.export.*;
+import io.github.wurtzitane.avogadro.molecule.*;
+import net.minecraft.client.Minecraft;
+import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NBTTagCompound;
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fluids.Fluid;
+import net.minecraftforge.fluids.FluidStack;
+
+/** Companion operations. Call client methods only from a client entry point. */
+public final class GuideTasks {
+    private GuideTasks() {}
+
+    // BEGIN register
+    public static CompletableFuture<MoleculeView> register() {
+        // Invoke once from your mod's common initialization. Reuse your mod ID as owner.
+        return AvogadroApi.owner("guide").register(AvogadroApi.builder("guide:water")
+                .name("Water").smiles("O").items("minecraft:water_bucket")
+                .fluids("water").generateItem(true));
+    }
+    // END register
+
+    // BEGIN batch
+    public static CompletableFuture<MoleculeView> registerCatalog() {
+        // Replaces this owner's contribution only. Other owners are untouched.
+        return AvogadroApi.owner("guide").replace(GuideModels.catalog());
+    }
+    // END batch
+
+    // BEGIN lookup
+    public static MoleculeDef lookup(ItemStack stack) {
+        // Use this view for decisions on the running server. A miss returns null.
+        return AvogadroApi.serverView().find(stack);
+    }
+    // END lookup
+
+    // BEGIN item
+    public static ItemStack sample(MoleculeDef water) {
+        // The definition must enable generateItem(true).
+        return AvogadroApi.moleculeItem(water);
+    }
+    // END item
+
+    // BEGIN matching
+    public static MoleculeSpec pureWater() {
+        // Extra NBT keys in a stack are allowed. Grade must be the string "pure".
+        return AvogadroApi.builder("guide:pure_water").name("Purified water").smiles("O")
+                .items("minecraft:potion@0#{Potion:\"minecraft:water\"}")
+                .fluids("water#{Grade:\"pure\"}").matchContainers(true).build();
+    }
+    // END matching
+
+    // BEGIN stack-matching
+    public static MoleculeSpec taggedFluid(Fluid water) {
+        def stack = new FluidStack(water, 1000);
+        stack.tag = new NBTTagCompound();
+        stack.tag.setString("Grade", "pure");
+        // The builder keeps the tag requirement. Amount is not a selector condition.
+        return AvogadroApi.builder("guide:pure_water").smiles("O").fluids(stack).build();
+    }
+    // END stack-matching
+
+    // BEGIN fluid-lookup
+    public static MoleculeDef lookupFluid(FluidStack contents) {
+        // Keep the FluidStack; passing contents.getFluid() would discard its tag.
+        return AvogadroApi.serverView().find(contents);
+    }
+    // END fluid-lookup
+
+    // BEGIN tags
+    public static MoleculeBatch tags() {
+        return new MoleculeBatch()
+                .itemTag("guide:water_containers", false, "minecraft:water_bucket")
+                .fluidTag("guide:water", false, "water")
+                .register(AvogadroApi.builder("guide:tagged_water").smiles("O")
+                        .itemTags("guide:water_containers").fluidTags("guide:water"));
+    }
+    // END tags
+
+    // BEGIN exclusion
+    public static void hideAutomaticPreview() {
+        // Associations remain available for HEI and lookups.
+        AvogadroApi.excludeItemTooltip(new ResourceLocation("minecraft", "water_bucket"));
+    }
+    // END exclusion
+
+    // BEGIN remap
+    public static StructureEditResult isolateOxygen() {
+        // Both selections refer to the ORIGINAL three-atom water fragment.
+        // Deletion resolves the whole selection before removing any atoms.
+        return GuideModels.water().edit().removeAtoms(1, 2).build();
+        // oldToNew() is [0, -1, -1]. The resulting O atom is not a water molecule.
+    }
+    // END remap
+
+    // BEGIN saved-edits
+    public static StructureEdits hydrogenPeroxideEdits() {
+        // Water indices: O=0, H=1, H=2. Replace H=2 with O, then add its H.
+        return StructureEdits.builder().replaceAtom(2, "O").moveAtom(2, -.9, -.95, 0)
+                .atom("H", -1.65, -.6, .4).setBond(2, 3, BondType.SINGLE).build();
+    }
+    // END saved-edits
+
+    // BEGIN definition-edit
+    public static MoleculeDef peroxide(MoleculeDef water) {
+        // Carries over names and associations. Rename/rebind deliberately if needed.
+        return MoleculeEdits.apply("guide:peroxide", water, hydrogenPeroxideEdits(), false);
+    }
+    // END definition-edit
+
+    // BEGIN copy-edit
+    public static MoleculeSpec peroxideCopy() {
+        return AvogadroApi.builder("guide:peroxide").copy("guide:water")
+                .name("Hydrogen peroxide").edits(hydrogenPeroxideEdits()).build();
+    }
+    // END copy-edit
+
+    // BEGIN transform
+    public static StructureFragment waterPair() {
+        def water = GuideModels.water();
+        // A disconnected pair of water molecules, not an inferred hydrogen bond.
+        return water.qualified("first").append("second",
+                water.rotate(0, 0, 1, 180).translate(3.2, 0, 0));
+    }
+    // END transform
+
+    // BEGIN crown-ring
+    public static StructureAssembly crownRing() {
+        def unit = new StructureBuilder();
+        for (int i = 0; i < 3; i++) {
+            double angle = Math.toRadians(i * 20);
+            double x = 4.4 * Math.cos(angle), y = 4.4 * Math.sin(angle);
+            int atom = unit.addAtom(i == 0 ? "O" : "C", x, y, 0);
+            if (i > 0) {
+                int h1 = unit.addAtom("H", x, y, .95);
+                int h2 = unit.addAtom("H", x, y, -.95);
+                unit.bond(atom, h1).bond(atom, h2);
+            }
+        }
+        // Indices after H insertion: O=0, first C=1, second C=4.
+        def fragment = unit.bond(0, 1).bond(1, 4).attachment("head", 0).attachment("tail", 4).build();
+        double c = Math.cos(Math.PI / 3), s = Math.sin(Math.PI / 3);
+        double[][] turn = [[c,-s,0,0], [s,c,0,0], [0,0,1,0]] as double[][];
+        return StructureAssembly.builder()
+                .repeat("ring", StructureAssembly.builder().part("unit", fragment).build(), 6, turn)
+                .neighbor("unit/tail", "unit/head", 1, BondType.SINGLE)
+                // Neighbor links leave the boundary open; this closes it explicitly.
+                .link("ring[last]/unit/tail", "ring[first]/unit/head", BondType.SINGLE).build();
+    }
+    // END crown-ring
+
+    // BEGIN random-links
+    public static PolymerNetworkDefinition reactiveSites() {
+        // Two authored hydroxyl radicals. At p=1 they form H–O–O–H.
+        // At p=0 they remain radicals, not two water molecules.
+        def left = new StructureBuilder().atom("O", -.7, 0, 0).atom("H", -1.1, .85, 0)
+                .bond(0, 1).attachment("site", 0).attachment("alias", 0).randomLinkCapacity(0, 1).build();
+        def right = new StructureBuilder().atom("O", .7, 0, 0).atom("H", 1.1, -.85, 0)
+                .bond(0, 1).attachment("site", 0).randomLinkCapacity(0, 1).build();
+        def assembly = StructureAssembly.builder().part("left", left).part("right", right)
+                .randomLinks("peroxide_bond", "left/site", "right/site", "paired", "chance", BondType.SINGLE)
+                .build();
+        return new PolymerNetworkDefinition(List.of(
+                PolymerNetworkDefinition.Parameter.probability("chance", 1)), assembly, 42L);
+    }
+    // END random-links
+
+    // BEGIN crystal
+    public static MoleculeStructure saltCube() {
+        // 3 cells on each axis: 27 conventional cells, 216 ions.
+        return CrystalGeometry.repeat(GuideModels.saltBasis().toStructure("guide:salt_basis"),
+                new CrystalCell(5.64, 5.64, 5.64, 90, 90, 90), 3, false);
+    }
+    // END crystal
+
+    // BEGIN isotope
+    public static StructureFragment carbon13Methanol() {
+        return GuideModels.methanol().edit()
+                .atomConfiguration(0, new AtomicConfiguration(6, 7, 0, List.of(2, 4))).fragment();
+    }
+    // END isotope
+
+    // BEGIN ion
+    public static MoleculeSpec sodiumIon() {
+        return AvogadroApi.builder("guide:sodium_ion").name("Sodium ion")
+                .atom("Na", 0, 0, 0).noBonds().atomConfiguration(0, 11, 12, 1, 2, 8).build();
+    }
+    // END ion
+
+    // BEGIN components
+    public static MoleculeSpec waterAndEthanol() {
+        // Component references add inspection links, not geometry.
+        return AvogadroApi.builder("guide:water_ethanol_pair").name("Water and ethanol")
+                .smiles("O.CCO").component("guide:water").component("guide:ethanol")
+                .classification(MoleculeClassification.MIXTURE)
+                .inspectionMetadata("note", "One molecule of each; an illustrative pair, not a bulk concentration.")
+                .build();
+    }
+    // END components
+
+    // BEGIN mass
+    public static MoleculeWeight.Result mass() {
+        // Uses standard element weights, not isotope-specific measured masses.
+        return AvogadroApi.weight("C9H8O4");
+    }
+    // END mass
+
+    // BEGIN render-options
+    public static MoleculeRenderOptions style() {
+        return MoleculeRenderOptions.builder().orientation(25, 20, 0).pan(0, 0).zoom(1)
+                .background(0xfff8f7f2).atomScale(1.15f).bondScale(.7f)
+                .palette(Map.of("O", 0xe45b55)).rotationSpeed(30).build();
+    }
+    // END render-options
+
+    // BEGIN draw
+    public static void draw(MoleculeStructure structure, double elapsedSeconds) {
+        // Call from GuiScreen.drawScreen, with GUI pixel coordinates.
+        AvogadroClientApi.render(structure, 20, 40, 320, 220, style(), elapsedSeconds);
+    }
+    // END draw
+
+    // BEGIN still
+    public static void drawStill(MoleculeStructure structure, int x, int y) {
+        def options = MoleculeRenderOptions.builder().orientation(25, 20, 0).rotationSpeed(0).build();
+        AvogadroClientApi.render(structure, x, y, 240, 180, options, 0);
+    }
+    // END still
+
+    // BEGIN viewports
+    public static void compareStyles(MoleculeStructure structure) {
+        def large = MoleculeRenderOptions.builder().atomScale(1.6f).bondScale(.6f).build();
+        def fine = MoleculeRenderOptions.builder().atomScale(.8f).bondScale(1.2f).build();
+        AvogadroClientApi.render(structure, 10, 30, 220, 180, large, 0);
+        AvogadroClientApi.render(structure, 240, 30, 220, 180, fine, 0);
+    }
+    // END viewports
+
+    // BEGIN tooltip
+    public static void fluidTooltip(FluidStack contents, Runnable drawTooltip) {
+        // Use when your integration draws an ordinary tooltip for these contents.
+        AvogadroClientApi.withFluidTooltip(contents, drawTooltip);
+    }
+    // END tooltip
+
+    // BEGIN open-network
+    public static void openNetwork(MoleculeDef network) {
+        // Client code only. The ordinary molecule entry point also routes networks here.
+        io.github.wurtzitane.avogadro.client.PolymerNetworkExaminer.open(network);
+    }
+    // END open-network
+
+    // BEGIN gif
+    public static ExportJob exportGif(MoleculeDef aspirin) throws IOException {
+        def options = ExportOptions.builder(1).size(960, 720).fps(20).secondsPerRotation(3)
+                .background(0xf8f7f2).filename("aspirin.gif").build();
+        return AvogadroClientApi.exports().submit(MediaExportRequest.molecule(aspirin).options(options).build());
+    }
+    // END gif
+
+    // BEGIN gallery
+    public static ExportJob exportGallery(List<MoleculeDef> molecules) throws IOException {
+        // Size is the whole canvas, not each cell. Keep the count equal to the list size.
+        def options = ExportOptions.builder(molecules.size()).size(1920, 1280).columns(3)
+                .fps(20).secondsPerRotation(3).background(0xf8f7f2).filename("gallery.gif").build();
+        return AvogadroClientApi.exports().submit(MediaExportRequest.molecules(molecules).options(options).build());
+    }
+    // END gallery
+
+    // BEGIN mp4
+    public static ExportJob exportMp4(MoleculeDef caffeine, Path ffmpeg) throws IOException {
+        def options = ExportOptions.builder(1).format(ExportOptions.Format.MP4).size(1920, 1080)
+                .fps(24).secondsPerRotation(3).background(0xf8f7f2)
+                .encoder(ffmpeg.toString()).filename("caffeine.mp4").build();
+        return AvogadroClientApi.exports().submit(MediaExportRequest.molecule(caffeine).options(options).build());
+    }
+    // END mp4
+
+    // BEGIN item-card
+    public static ExportJob exportItemCard(ItemStack held) throws IOException {
+        def selection = ItemExportSelection.select("held", null, held);
+        def media = ExportOptions.builder(1).size(1200, 800).fps(20).secondsPerRotation(3)
+                .showName(true).showFormula(true).textScale(2)
+                .background(0xf8f7f2).filename("water-card.gif").build();
+        return AvogadroClientApi.exports().submit(
+                MediaExportRequest.item(ItemExportOptions.of(selection, media, 2)).build());
+    }
+    // END item-card
+
+    // BEGIN atom-export
+    public static ExportJob exportAtom(MoleculeDef water) throws IOException {
+        def options = ExportOptions.builder(1).size(1280, 800).fps(20).secondsPerRotation(3)
+                .background(0xf8f7f2).filename("oxygen.gif").build();
+        return AvogadroClientApi.exports().submit(
+                MediaExportRequest.atom(new AtomExportOptions(water, 0, true)).options(options).build());
+    }
+    // END atom-export
+
+    // BEGIN network-export
+    public static ExportJob exportNetwork(PolymerPreview successfulPreview) throws IOException {
+        def options = ExportOptions.builder(1).size(1280, 720).fps(20).secondsPerRotation(3)
+                .background(0xf8f7f2).filename("polyisoprene.gif").build();
+        return AvogadroClientApi.exports().submit(MediaExportRequest
+                .polymer(successfulPreview, "Sulfur-linked polyisoprene").options(options).build());
+        // Success also writes polyisoprene.gif.json with the exact recipe, parameters, and seed.
+    }
+    // END network-export
+
+    // BEGIN finite-export
+    public static ExportJob exportUnregistered(MoleculeStructure structure) throws IOException {
+        String formula = MoleculeLoader.formula(structure);
+        return AvogadroClientApi.exports().submit(MediaExportRequest
+                .structure(structure, "Finite authored model", formula, null).build());
+    }
+    // END finite-export
+
+    // BEGIN listeners
+    public static void watch(ExportJob job, java.util.function.Consumer<String> showStatus) {
+        job.onComplete(result -> {
+            // This listener runs on the client thread after capture/encoder cleanup.
+            switch (result.state()) {
+                case SUCCEEDED -> showStatus.accept("Saved " + result.output());
+                case CANCELLED -> showStatus.accept("Export cancelled");
+                case FAILED -> showStatus.accept("Export failed: " + result.failure());
+                default -> throw new IllegalStateException("Expected a terminal result");
+            }
+        });
+    }
+    // END listeners
+
+    // BEGIN progress
+    public static String progress(ExportJob job) {
+        def progress = job.progress(); // immutable, safe to read from another thread
+        return progress.state() + ": " + progress.encodedFrames() + "/" + progress.totalFrames();
+    }
+    // END progress
+
+    // BEGIN cancel
+    public static boolean cancel(ExportJob job) {
+        // Requests cancellation; result() remains null until cleanup finishes.
+        return job.cancel();
+    }
+    // END cancel
+
+    // BEGIN client-thread
+    public static void exportFromWorker(MoleculeDef molecule, java.util.function.Consumer<ExportJob> ready) {
+        Minecraft.getMinecraft().addScheduledTask(() -> {
+            try {
+                ready.accept(exportGif(molecule));
+            } catch (IOException failure) {
+                throw new IllegalStateException("Could not start export", failure);
+            }
+        });
+    }
+    // END client-thread
+
+    // BEGIN fictional
+    public static MoleculeSpec fictionalNaquadah() {
+        // Fictional nucleus and chosen shell layout, not a prediction of a real element.
+        return AvogadroApi.builder("guide:naquadah").name("Naquadah (fictional)")
+                .atom("Nq", 0, 0, 0).noBonds()
+                .element("Nq", 174, 352, 2, 8, 18, 32, 50, 32, 18, 14).build();
+    }
+    // END fictional
+
+    // BEGIN fictional-ion
+    public static MoleculeSpec fictionalStrippedIon() {
+        // Same fictional nucleus with no electrons: an illustration of explicit ion data.
+        return AvogadroApi.builder("guide:naquadah_nucleus").name("Bare naquadah nucleus (fictional)")
+                .atom("Nq", 0, 0, 0).noBonds().atomConfiguration(0, 174, 352, 174).build();
+    }
+    // END fictional-ion
+}

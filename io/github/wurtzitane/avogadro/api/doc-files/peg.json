@@ -1,0 +1,147 @@
+{
+  "name": "Polyethylene glycol",
+  "polymer": {
+    "repeat_unit": {
+      "atoms": [
+        {
+          "e": "C",
+          "x": 0.0,
+          "y": 0.0,
+          "z": 0.0
+        },
+        {
+          "e": "C",
+          "x": 1.5,
+          "y": 0.0,
+          "z": 0.0
+        },
+        {
+          "e": "O",
+          "x": 2.9,
+          "y": 0.2,
+          "z": 0.0
+        },
+        {
+          "e": "H",
+          "x": -0.3,
+          "y": 0.8,
+          "z": 0.65
+        },
+        {
+          "e": "H",
+          "x": -0.3,
+          "y": -0.8,
+          "z": -0.65
+        },
+        {
+          "e": "H",
+          "x": 1.7,
+          "y": 0.8,
+          "z": -0.65
+        },
+        {
+          "e": "H",
+          "x": 1.7,
+          "y": -0.8,
+          "z": 0.65
+        }
+      ],
+      "bonds": [
+        [
+          0,
+          1,
+          "SINGLE"
+        ],
+        [
+          1,
+          2,
+          "SINGLE"
+        ],
+        [
+          0,
+          3,
+          "SINGLE"
+        ],
+        [
+          0,
+          4,
+          "SINGLE"
+        ],
+        [
+          1,
+          5,
+          "SINGLE"
+        ],
+        [
+          1,
+          6,
+          "SINGLE"
+        ]
+      ],
+      "attachments": {
+        "head": 0,
+        "tail": 2
+      }
+    },
+    "head": 0,
+    "tail": 2,
+    "translation": [
+      4.3,
+      0.0,
+      0.0
+    ],
+    "link_type": "SINGLE",
+    "head_cap": {
+      "structure": {
+        "atoms": [
+          {
+            "e": "O",
+            "x": -1.4,
+            "y": -0.2,
+            "z": 0.0
+          },
+          {
+            "e": "H",
+            "x": -2.2,
+            "y": 0.2,
+            "z": 0.0
+          }
+        ],
+        "bonds": [
+          [
+            0,
+            1,
+            "SINGLE"
+          ]
+        ],
+        "attachments": {
+          "end": 0
+        }
+      },
+      "attachment": 0,
+      "bond_type": "SINGLE"
+    },
+    "tail_cap": {
+      "structure": {
+        "atoms": [
+          {
+            "e": "H",
+            "x": 3.8,
+            "y": 0.2,
+            "z": 0.0
+          }
+        ],
+        "bonds": [],
+        "attachments": {
+          "end": 0
+        }
+      },
+      "attachment": 0,
+      "bond_type": "SINGLE"
+    },
+    "preview_units": 4
+  },
+  "inspection": {
+    "classification": "polymer"
+  }
+}
