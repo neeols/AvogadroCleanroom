@@ -1,19 +1,22 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.util.ArrayList;
+import java.util.Comparator;
+
 import io.github.wurtzitane.avogadro.Config;
+import io.github.wurtzitane.avogadro.client.compat.DemonicaRenderScope;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStructure.Atom;
+
 import net.minecraft.client.renderer.BufferBuilder;
+
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.opengl.GL11;
 
-import java.util.ArrayList;
-import java.util.Comparator;
-
 /**
- * Handles the rendering, tessellation, geometric transformation, and animation calculations
- * for chemical molecules, atoms, and bonds in 3D space.
+ * Handles the rendering, tessellation, geometric transformation, and animation calculations for chemical molecules,
+ * atoms, and bonds in 3D space.
  */
 public final class MoleculeRenderer {
 
@@ -83,7 +86,6 @@ public final class MoleculeRenderer {
     /** Nesting depth counter tracking active media export scopes. */
     private static int exportDepth;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeRenderer() {}
 
     /**
@@ -93,8 +95,8 @@ public final class MoleculeRenderer {
      */
     public static float rotationAngle() {
         double period = Config.SPIN_SECONDS.get() * 1000.0;
-        return (float) ((System.currentTimeMillis() % (long) period) / period * 360.0 *
-                Config.ROTATION_DIRECTION.get().sign());
+        return (float) ((System.currentTimeMillis() % (long) period) / period * 360.0
+                * Config.ROTATION_DIRECTION.get().sign());
     }
 
     /**
@@ -110,27 +112,28 @@ public final class MoleculeRenderer {
     /**
      * Calculates rotation angle with explicit settings allowing exports to override appearance parameters.
      *
-     * @param elapsedSeconds       elapsed time in seconds
-     * @param secondsPerRotation   duration of a full rotation cycle in seconds
-     * @param direction            rotation direction configuration
+     * @param elapsedSeconds elapsed time in seconds
+     * @param secondsPerRotation duration of a full rotation cycle in seconds
+     * @param direction rotation direction configuration
      * @return computed rotation angle in degrees
      */
     public static float rotationAngle(double elapsedSeconds, double secondsPerRotation,
-                                      Config.RotationDirection direction) {
+            Config.RotationDirection direction) {
         if (!Double.isFinite(elapsedSeconds) || !Double.isFinite(secondsPerRotation) || secondsPerRotation <= 0) {
             throw new IllegalArgumentException("Rotation time must be finite and the period must be positive.");
         }
-        if (direction == null) throw new IllegalArgumentException("Rotation direction is required.");
+        if (direction == null)
+            throw new IllegalArgumentException("Rotation direction is required.");
         return (float) (elapsedSeconds % secondsPerRotation / secondsPerRotation * 360.0 * direction.sign());
     }
 
     /**
      * Renders a molecule structure at specified screen coordinates with default pitch.
      *
-     * @param mol   the molecule structure to render
-     * @param x     x-coordinate
-     * @param y     y-coordinate
-     * @param size  rendering size
+     * @param mol the molecule structure to render
+     * @param x x-coordinate
+     * @param y y-coordinate
+     * @param size rendering size
      * @param angle rotation yaw angle
      */
     public static void render(MoleculeStructure mol, int x, int y, int size, float angle) {
@@ -138,113 +141,151 @@ public final class MoleculeRenderer {
     }
 
     /**
-     * Renders a molecule structure at specified screen coordinates with explicit yaw and pitch,
-     * preserving default tooltip padding.
+     * Renders a molecule structure at specified screen coordinates with explicit yaw and pitch, preserving default
+     * tooltip padding.
      *
-     * @param mol   the molecule structure to render
-     * @param x     x-coordinate
-     * @param y     y-coordinate
-     * @param size  rendering size
-     * @param yaw   rotation yaw angle
+     * @param mol the molecule structure to render
+     * @param x x-coordinate
+     * @param y y-coordinate
+     * @param size rendering size
+     * @param yaw rotation yaw angle
      * @param pitch rotation pitch angle
      */
     public static void render(MoleculeStructure mol, int x, int y, int size, float yaw, float pitch) {
         renderClipped(mol, x, y, size, yaw, pitch, x - 12, y - 6, x + size + 12, y + size + 6);
     }
 
+    /** A modifier-swappable atom uses the continuous pose rather than a quantized animation texture. */
+    static void renderLive(MoleculeStructure molecule, int x, int y, int size, float yaw, float pitch) {
+        renderClipped(molecule, x, y, size, yaw, pitch, x - 12, y - 6, x + size + 12, y + size + 6,
+                Config.CUBIC_ATOMS.get(), 0, 0, 1, ElementPalette.snapshot(), false);
+    }
+
     /**
      * Renders a molecule inside a specific viewport container bounds.
      *
-     * @param molecule  the molecule structure
-     * @param left      left boundary
-     * @param top       top boundary
-     * @param width     viewport width
-     * @param height    viewport height
+     * @param molecule the molecule structure
+     * @param left left boundary
+     * @param top top boundary
+     * @param width viewport width
+     * @param height viewport height
      * @param imageSize size of the inner rendered image
-     * @param yaw       rotation yaw angle
-     * @param pitch     rotation pitch angle
+     * @param yaw rotation yaw angle
+     * @param pitch rotation pitch angle
      */
     public static void renderInViewport(MoleculeStructure molecule, int left, int top, int width, int height,
-                                        int imageSize, float yaw, float pitch) {
-        renderClipped(molecule, left + (width - imageSize) / 2, top + (height - imageSize) / 2,
-                imageSize, yaw, pitch, left, top, left + width, top + height);
+            int imageSize, float yaw, float pitch) {
+        renderClipped(molecule, left + (width - imageSize) / 2, top + (height - imageSize) / 2, imageSize, yaw, pitch,
+                left, top, left + width, top + height);
     }
 
     /**
      * Renders a molecule inside a specific viewport container with translation and zoom scaling.
      *
-     * @param molecule  the molecule structure
-     * @param left      left boundary
-     * @param top       top boundary
-     * @param width     viewport width
-     * @param height    viewport height
+     * @param molecule the molecule structure
+     * @param left left boundary
+     * @param top top boundary
+     * @param width viewport width
+     * @param height viewport height
      * @param imageSize size of the inner rendered image
-     * @param yaw       rotation yaw angle
-     * @param pitch     rotation pitch angle
-     * @param panX      horizontal panning offset
-     * @param panY      vertical panning offset
-     * @param zoom      zoom scale factor
+     * @param yaw rotation yaw angle
+     * @param pitch rotation pitch angle
+     * @param panX horizontal panning offset
+     * @param panY vertical panning offset
+     * @param zoom zoom scale factor
      */
     public static void renderInViewport(MoleculeStructure molecule, int left, int top, int width, int height,
-                                        int imageSize, float yaw, float pitch, float panX, float panY, float zoom) {
-        if (!Float.isFinite(panX) || !Float.isFinite(panY) || !Float.isFinite(zoom) || zoom <= 0) return;
-        renderClipped(molecule, left + (width - imageSize) / 2, top + (height - imageSize) / 2,
-                imageSize, yaw, pitch, left, top, left + width, top + height, Config.CUBIC_ATOMS.get(), panX, panY,
-                zoom);
+            int imageSize, float yaw, float pitch, float panX, float panY, float zoom) {
+        if (!Float.isFinite(panX) || !Float.isFinite(panY) || !Float.isFinite(zoom) || zoom <= 0)
+            return;
+        renderClipped(molecule, left + (width - imageSize) / 2, top + (height - imageSize) / 2, imageSize, yaw, pitch,
+                left, top, left + width, top + height, Config.CUBIC_ATOMS.get(), panX, panY, zoom);
+    }
+
+    /**
+     * Keeps the viewport's framing and zoom center while allowing the model to move across a larger card. The clip
+     * rectangle is still intersected with the caller's scissor, so neighboring HEI cards remain protected.
+     *
+     * @param molecule authored structure
+     * @param left initial viewport left
+     * @param top initial viewport top
+     * @param width initial viewport width
+     * @param height initial viewport height
+     * @param imageSize fitted image size
+     * @param yaw camera yaw in degrees
+     * @param pitch camera pitch in degrees
+     * @param panX horizontal pan in GUI pixels
+     * @param panY vertical pan in GUI pixels
+     * @param zoom positive camera zoom
+     * @param clipLeft outer card left
+     * @param clipTop outer card top
+     * @param clipRight outer card right
+     * @param clipBottom outer card bottom
+     */
+    public static void renderInViewport(MoleculeStructure molecule, int left, int top, int width, int height,
+            int imageSize, float yaw, float pitch, float panX, float panY, float zoom, int clipLeft, int clipTop,
+            int clipRight, int clipBottom) {
+        if (!Float.isFinite(panX) || !Float.isFinite(panY) || !Float.isFinite(zoom) || zoom <= 0)
+            return;
+        float pivotX = left + width / 2f, pivotY = top + height / 2f;
+        float clipX = (clipLeft + clipRight) / 2f, clipY = (clipTop + clipBottom) / 2f;
+        renderClipped(molecule, left + (width - imageSize) / 2, top + (height - imageSize) / 2, imageSize, yaw, pitch,
+                clipLeft, clipTop, clipRight, clipBottom, Config.CUBIC_ATOMS.get(),
+                panX + (pivotX - clipX) * (1 - zoom), panY + (pivotY - clipY) * (1 - zoom), zoom);
     }
 
     /**
      * Renders a molecule for pixel-coordinate media capture with local appearance overrides.
      *
-     * @param molecule  the molecule structure
-     * @param left      left screen coordinate
-     * @param top       top screen coordinate
-     * @param width     target area width
-     * @param height    target area height
+     * @param molecule the molecule structure
+     * @param left left screen coordinate
+     * @param top top screen coordinate
+     * @param width target area width
+     * @param height target area height
      * @param imageSize size of the rendered image
-     * @param yaw       rotation yaw angle
-     * @param cubic     whether to render atoms as cubes
+     * @param yaw rotation yaw angle
+     * @param cubic whether to render atoms as cubes
      */
     public static void renderForExport(MoleculeStructure molecule, int left, int top, int width, int height,
-                                       int imageSize, float yaw, boolean cubic) {
+            int imageSize, float yaw, boolean cubic) {
         renderForExport(molecule, left, top, width, height, imageSize, yaw, cubic, ElementPalette.snapshot());
     }
 
     /**
      * Renders a molecule for export using a specific color palette snapshot.
      *
-     * @param molecule  the molecule structure
-     * @param left      left screen coordinate
-     * @param top       top screen coordinate
-     * @param width     target area width
-     * @param height    target area height
+     * @param molecule the molecule structure
+     * @param left left screen coordinate
+     * @param top top screen coordinate
+     * @param width target area width
+     * @param height target area height
      * @param imageSize size of the rendered image
-     * @param yaw       rotation yaw angle
-     * @param cubic     whether to render atoms as cubes
-     * @param palette   the element palette snapshot to use for coloring
+     * @param yaw rotation yaw angle
+     * @param cubic whether to render atoms as cubes
+     * @param palette the element palette snapshot to use for coloring
      */
     public static void renderForExport(MoleculeStructure molecule, int left, int top, int width, int height,
-                                       int imageSize, float yaw, boolean cubic, ElementPalette.Snapshot palette) {
-        renderClipped(molecule, left + (width - imageSize) / 2, top + (height - imageSize) / 2,
-                imageSize, yaw, 15f, left, top, left + width, top + height, cubic, 0, 0, 1, palette, false, null, true);
+            int imageSize, float yaw, boolean cubic, ElementPalette.Snapshot palette) {
+        renderClipped(molecule, left + (width - imageSize) / 2, top + (height - imageSize) / 2, imageSize, yaw, 15f,
+                left, top, left + width, top + height, cubic, 0, 0, 1, palette, false, null, true);
     }
 
     /**
      * Initializes an export cursor for multi-tick geometry export rendering.
      *
-     * @param molecule  the molecule structure
-     * @param left      left boundary
-     * @param top       top boundary
-     * @param width     width boundary
-     * @param height    height boundary
-     * @param size      render size
-     * @param yaw       yaw angle
-     * @param cubic     whether atoms are cubic
-     * @param palette   element palette snapshot
-     * @return configured {@link ExportCursor} instance
+     * @param molecule the molecule structure
+     * @param left left boundary
+     * @param top top boundary
+     * @param width width boundary
+     * @param height height boundary
+     * @param size render size
+     * @param yaw yaw angle
+     * @param cubic whether atoms are cubic
+     * @param palette element palette snapshot
+     * @return configured {@link ExportCursor}
      */
     public static ExportCursor beginExport(MoleculeStructure molecule, int left, int top, int width, int height,
-                                           int size, float yaw, boolean cubic, ElementPalette.Snapshot palette) {
+            int size, float yaw, boolean cubic, ElementPalette.Snapshot palette) {
         checkCaches();
         GpuMoleculeCache.ExportCursor geometry = GpuMoleculeCache.beginExport(molecule, cubic, palette);
         return geometry == null ? null : new ExportCursor(geometry, molecule, left, top, width, height, size, yaw);
@@ -254,28 +295,31 @@ public final class MoleculeRenderer {
      * Initializes an export cursor configured with rendering options.
      *
      * @param molecule the molecule structure
-     * @param left     left boundary
-     * @param top      top boundary
-     * @param width    width boundary
-     * @param height   height boundary
-     * @param size     render size
-     * @param yaw      yaw angle
-     * @param options  molecule render options
-     * @return configured {@link ExportCursor} instance
+     * @param left left boundary
+     * @param top top boundary
+     * @param width width boundary
+     * @param height height boundary
+     * @param size render size
+     * @param yaw yaw angle
+     * @param options molecule render options
+     * @return configured {@link ExportCursor}
      */
-    public static ExportCursor beginExport(MoleculeStructure molecule, int left, int top, int width, int height, int size, float yaw,
-                                           io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions options) {
+    public static ExportCursor beginExport(MoleculeStructure molecule, int left, int top, int width, int height,
+            int size, float yaw, io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions options) {
         checkCaches();
         MoleculeStyle style = new MoleculeStyle(options.atomScale(), options.bondScale());
         size = MoleculeViewport.fitSize(molecule, size, width, height, options.cubic(), style);
-        GpuMoleculeCache.ExportCursor geometry = GpuMoleculeCache.beginExport(molecule, options.cubic(), options.palette(), style);
-        if (geometry == null) return null;
+        GpuMoleculeCache.ExportCursor geometry = GpuMoleculeCache.beginExport(molecule, options.cubic(),
+                options.palette(), style);
+        if (geometry == null)
+            return null;
         ExportCursor result = new ExportCursor(geometry, molecule, left, top, width, height, size, yaw);
-        transform(result.transform, molecule, left + (width - size) / 2, top + (height - size) / 2, size, yaw, options.pitch(), options.roll());
+        transform(result.transform, molecule, left + (width - size) / 2, top + (height - size) / 2, size, yaw,
+                options.pitch(), options.roll());
         if (options.panX() != 0 || options.panY() != 0 || options.zoom() != 1) {
             float cx = left + width / 2f, cy = top + height / 2f;
-            result.transform.set(new Matrix4f().translation(cx + options.panX(), cy + options.panY(), 0).scale(options.zoom(), options.zoom(), 1)
-                    .translate(-cx, -cy, 0).mul(result.transform));
+            result.transform.set(new Matrix4f().translation(cx + options.panX(), cy + options.panY(), 0)
+                    .scale(options.zoom(), options.zoom(), 1).translate(-cx, -cy, 0).mul(result.transform));
         }
         result.background = options.background();
         return result;
@@ -286,15 +330,23 @@ public final class MoleculeRenderer {
      */
     public static final class ExportCursor implements AutoCloseable {
         private final GpuMoleculeCache.ExportCursor geometry;
+        /** Source annotations share the same deterministic transform as the captured geometry. */
+        private final MoleculeStructure molecule;
         private final Matrix4f transform = new Matrix4f();
         private final int left, top, width, height;
         private boolean started, closed;
         private Integer background;
 
-        ExportCursor(GpuMoleculeCache.ExportCursor geometry, MoleculeStructure molecule, int left, int top,
-                     int width, int height, int size, float yaw) {
-            this.geometry = geometry; this.left = left; this.top = top; this.width = width; this.height = height;
-            MoleculeRenderer.transform(transform, molecule, left + (width - size) / 2, top + (height - size) / 2, size, yaw, 15f);
+        ExportCursor(GpuMoleculeCache.ExportCursor geometry, MoleculeStructure molecule, int left, int top, int width,
+                int height, int size, float yaw) {
+            this.geometry = geometry;
+            this.molecule = molecule;
+            this.left = left;
+            this.top = top;
+            this.width = width;
+            this.height = height;
+            MoleculeRenderer.transform(transform, molecule, left + (width - size) / 2, top + (height - size) / 2, size,
+                    yaw, 15f);
         }
 
         /**
@@ -303,98 +355,119 @@ public final class MoleculeRenderer {
          * @return {@code true} if export rendering is complete, {@code false} otherwise
          */
         public boolean advance() {
-            if (closed) return true;
+            if (closed)
+                return true;
             beginState();
             try {
-                if (!GuiClip.intersect(left, top, left + width, top + height)) { close(); return true; }
-                GL11.glDisable(GL11.GL_TEXTURE_2D); GL11.glDisable(GL11.GL_LIGHTING);
-                GL11.glDisable(GL11.GL_CULL_FACE); GL11.glDisable(GL11.GL_ALPHA_TEST);
-                GL11.glEnable(GL11.GL_DEPTH_TEST); GL11.glDepthFunc(GL11.GL_LEQUAL); GL11.glDepthMask(true);
-                GL11.glEnable(GL11.GL_BLEND); GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-                GL11.glShadeModel(GL11.GL_SMOOTH); GL11.glClearDepth(1);
+                if (!GuiClip.intersect(left, top, left + width, top + height)) {
+                    close();
+                    return true;
+                }
+                GL11.glDisable(GL11.GL_TEXTURE_2D);
+                GL11.glDisable(GL11.GL_LIGHTING);
+                GL11.glDisable(GL11.GL_CULL_FACE);
+                GL11.glDisable(GL11.GL_ALPHA_TEST);
+                GL11.glEnable(GL11.GL_DEPTH_TEST);
+                GL11.glDepthFunc(GL11.GL_LEQUAL);
+                GL11.glDepthMask(true);
+                GL11.glEnable(GL11.GL_BLEND);
+                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+                GL11.glShadeModel(GL11.GL_SMOOTH);
+                GL11.glClearDepth(1);
                 if (!started) {
                     if (background != null) {
-                        int color = background; GL11.glDisable(GL11.GL_DEPTH_TEST);
-                        GL11.glColor4f((color >> 16 & 255) / 255f, (color >> 8 & 255) / 255f, (color & 255) / 255f, (color >>> 24) / 255f);
-                        GL11.glBegin(GL11.GL_QUADS); GL11.glVertex2i(left, top); GL11.glVertex2i(left, top + height);
-                        GL11.glVertex2i(left + width, top + height); GL11.glVertex2i(left + width, top); GL11.glEnd();
+                        int color = background;
+                        GL11.glDisable(GL11.GL_DEPTH_TEST);
+                        GL11.glColor4f((color >> 16 & 255) / 255f, (color >> 8 & 255) / 255f, (color & 255) / 255f,
+                                (color >>> 24) / 255f);
+                        GL11.glBegin(GL11.GL_QUADS);
+                        GL11.glVertex2i(left, top);
+                        GL11.glVertex2i(left, top + height);
+                        GL11.glVertex2i(left + width, top + height);
+                        GL11.glVertex2i(left + width, top);
+                        GL11.glEnd();
                         GL11.glEnable(GL11.GL_DEPTH_TEST);
                     }
-                    GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT); started = true;
+                    GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+                    started = true;
                 }
                 boolean complete = geometry.advance(transform);
-                if (complete) { GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT); close(); }
+                if (complete) {
+                    AtomLabels.draw(molecule, transform);
+                    GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+                    close();
+                }
                 return complete;
-            } finally { endState(); }
+            } finally {
+                endState();
+            }
         }
 
         @Override
         public void close() {
-            if (!closed) { closed = true; geometry.close(); }
+            if (!closed) {
+                closed = true;
+                geometry.close();
+            }
         }
     }
 
     private static void renderClipped(MoleculeStructure mol, int x, int y, int size, float yaw, float pitch,
-                                      int clipLeft, int clipTop, int clipRight, int clipBottom) {
+            int clipLeft, int clipTop, int clipRight, int clipBottom) {
         renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom, Config.CUBIC_ATOMS.get());
     }
 
     private static void renderClipped(MoleculeStructure mol, int x, int y, int size, float yaw, float pitch,
-                                      int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic) {
+            int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic) {
         renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom, cubic, 0, 0, 1);
     }
 
     private static void renderClipped(MoleculeStructure mol, int x, int y, int size, float yaw, float pitch,
-                                      int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic,
-                                      float panX, float panY, float zoom) {
-        renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom,
-                cubic, panX, panY, zoom, ElementPalette.snapshot());
+            int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic, float panX, float panY,
+            float zoom) {
+        renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom, cubic, panX, panY, zoom,
+                ElementPalette.snapshot());
     }
 
     private static void renderClipped(MoleculeStructure mol, int x, int y, int size, float yaw, float pitch,
-                                      int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic,
-                                      float panX, float panY, float zoom, ElementPalette.Snapshot palette) {
+            int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic, float panX, float panY, float zoom,
+            ElementPalette.Snapshot palette) {
         renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom, cubic, panX, panY, zoom,
                 palette, true);
     }
 
     private static void renderClipped(MoleculeStructure mol, int x, int y, int size, float yaw, float pitch,
-                                      int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic,
-                                      float panX, float panY, float zoom, ElementPalette.Snapshot palette,
-                                      boolean preview) {
+            int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic, float panX, float panY, float zoom,
+            ElementPalette.Snapshot palette, boolean preview) {
         renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom, cubic, panX, panY, zoom,
                 palette, preview, null);
     }
 
-    static void renderCrystal(MoleculeStructure molecule, int left, int top, int width, int height, int size,
-                              float yaw, float pitch, float panX, float panY, float zoom, CrystalOutline outline) {
+    static void renderCrystal(MoleculeStructure molecule, int left, int top, int width, int height, int size, float yaw,
+            float pitch, float panX, float panY, float zoom, CrystalOutline outline) {
         renderClipped(molecule, left + (width - size) / 2, top + (height - size) / 2, size, yaw, pitch, left, top,
-                left + width, top + height,
-                Config.CUBIC_ATOMS.get(), panX, panY, zoom, ElementPalette.snapshot(), false, outline);
+                left + width, top + height, Config.CUBIC_ATOMS.get(), panX, panY, zoom, ElementPalette.snapshot(),
+                false, outline);
     }
 
     private static void renderClipped(MoleculeStructure mol, int x, int y, int size, float yaw, float pitch,
-                                      int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic,
-                                      float panX, float panY, float zoom, ElementPalette.Snapshot palette,
-                                      boolean preview,
-                                      CrystalOutline outline) {
-        renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom, cubic, panX, panY,
-                zoom, palette, preview, outline, false);
+            int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic, float panX, float panY, float zoom,
+            ElementPalette.Snapshot palette, boolean preview, CrystalOutline outline) {
+        renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom, cubic, panX, panY, zoom,
+                palette, preview, outline, false);
     }
 
     private static void renderClipped(MoleculeStructure mol, int x, int y, int size, float yaw, float pitch,
-                                      int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic,
-                                      float panX, float panY, float zoom, ElementPalette.Snapshot palette,
-                                      boolean preview, CrystalOutline outline, boolean immediate) {
-        renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom, cubic,
-                panX, panY, zoom, palette, preview, outline, immediate, MoleculeStyle.DEFAULT, 0);
+            int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic, float panX, float panY, float zoom,
+            ElementPalette.Snapshot palette, boolean preview, CrystalOutline outline, boolean immediate) {
+        renderClipped(mol, x, y, size, yaw, pitch, clipLeft, clipTop, clipRight, clipBottom, cubic, panX, panY, zoom,
+                palette, preview, outline, immediate, MoleculeStyle.DEFAULT, 0);
     }
 
     private static void renderClipped(MoleculeStructure mol, int x, int y, int size, float yaw, float pitch,
-                                      int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic,
-                                      float panX, float panY, float zoom, ElementPalette.Snapshot palette,
-                                      boolean preview, CrystalOutline outline, boolean immediate,
-                                      MoleculeStyle style, float roll) {
+            int clipLeft, int clipTop, int clipRight, int clipBottom, boolean cubic, float panX, float panY, float zoom,
+            ElementPalette.Snapshot palette, boolean preview, CrystalOutline outline, boolean immediate,
+            MoleculeStyle style, float roll) {
         if (mol.atoms().isEmpty() || size <= 0) {
             return;
         }
@@ -407,9 +480,12 @@ public final class MoleculeRenderer {
         boolean matrixPushed = false;
         int matrixMode = 0;
         try {
-            if (!GuiClip.intersect(clipLeft, clipTop, clipRight, clipBottom)) return;
-            if (preview && !camera && pitch == 15f && Config.RENDERING_MODE.get() == Config.RenderingMode.PRERENDERED &&
-                    MoleculeAnimationCache.draw(mol, x, y, size, yaw, cubic, palette))
+            if (!GuiClip.intersect(clipLeft, clipTop, clipRight, clipBottom))
+                return;
+            // Annotation ink can differ per menu or control; keep those labels out of painted animation frames.
+            if (preview && !camera && pitch == 15f && mol.annotatedAtoms().isEmpty()
+                    && Config.RENDERING_MODE.get() == Config.RenderingMode.PRERENDERED
+                    && MoleculeAnimationCache.draw(mol, x, y, size, yaw, cubic, palette))
                 return;
             if (camera) {
                 matrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
@@ -436,7 +512,10 @@ public final class MoleculeRenderer {
             GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
             transform(DRAW_TRANSFORM, mol, x, y, size, yaw, pitch, roll);
             boolean ready = GpuMoleculeCache.draw(mol, DRAW_TRANSFORM, cubic, palette, immediate, style);
-            if (ready && outline != null) outline.draw(DRAW_TRANSFORM);
+            if (ready)
+                AtomLabels.draw(mol, DRAW_TRANSFORM);
+            if (ready && outline != null)
+                outline.draw(DRAW_TRANSFORM);
             GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
         } finally {
             if (matrixPushed) {
@@ -450,10 +529,10 @@ public final class MoleculeRenderer {
 
     /** Explicit per-view presentation; never enters the fixed-camera animation cache. */
     public static void render(MoleculeStructure molecule, int x, int y, int width, int height,
-                              io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions options,
-                              double elapsedSeconds) {
+            io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions options, double elapsedSeconds) {
         java.util.Objects.requireNonNull(options);
-        if (width <= 0 || height <= 0) return;
+        if (width <= 0 || height <= 0)
+            return;
         MoleculeStyle style = new MoleculeStyle(options.atomScale(), options.bondScale());
         int size = MoleculeViewport.fitSize(molecule, Math.min(width, height), width, height, options.cubic(), style);
         renderStyled(molecule, x, y, width, height, size, options.yawAt(elapsedSeconds), options, false);
@@ -463,29 +542,27 @@ public final class MoleculeRenderer {
      * Renders a molecule for export with specific render options.
      *
      * @param molecule the molecule structure
-     * @param x        x screen coordinate
-     * @param y        y screen coordinate
-     * @param width    width of render area
-     * @param height   height of render area
-     * @param size     render size
-     * @param yaw      yaw angle
-     * @param options  render options
+     * @param x x screen coordinate
+     * @param y y screen coordinate
+     * @param width width of render area
+     * @param height height of render area
+     * @param size render size
+     * @param yaw yaw angle
+     * @param options render options
      */
-    public static void renderForExport(MoleculeStructure molecule, int x, int y, int width, int height,
-                                       int size, float yaw,
-                                       io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions options) {
+    public static void renderForExport(MoleculeStructure molecule, int x, int y, int width, int height, int size,
+            float yaw, io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions options) {
         MoleculeStyle style = new MoleculeStyle(options.atomScale(), options.bondScale());
         size = MoleculeViewport.fitSize(molecule, size, width, height, options.cubic(), style);
         renderStyled(molecule, x, y, width, height, size, yaw, options, true);
     }
 
-    private static void renderStyled(MoleculeStructure molecule, int x, int y, int width, int height,
-                                     int size, float yaw,
-                                     io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions options,
-                                     boolean immediate) {
+    private static void renderStyled(MoleculeStructure molecule, int x, int y, int width, int height, int size,
+            float yaw, io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions options, boolean immediate) {
         beginState();
         try {
-            if (!GuiClip.intersect(x, y, x + width, y + height)) return;
+            if (!GuiClip.intersect(x, y, x + width, y + height))
+                return;
             if (options.background() != null) {
                 int color = options.background();
                 GL11.glDisable(GL11.GL_TEXTURE_2D);
@@ -494,20 +571,24 @@ public final class MoleculeRenderer {
                 GL11.glDisable(GL11.GL_CULL_FACE);
                 GL11.glDisable(GL11.GL_ALPHA_TEST);
                 GL11.glEnable(GL11.GL_BLEND);
-                org.lwjgl.opengl.GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA,
-                        GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-                GL11.glColor4f((color >> 16 & 255) / 255f, (color >> 8 & 255) / 255f,
-                        (color & 255) / 255f, (color >>> 24) / 255f);
+                org.lwjgl.opengl.GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE,
+                        GL11.GL_ONE_MINUS_SRC_ALPHA);
+                GL11.glColor4f((color >> 16 & 255) / 255f, (color >> 8 & 255) / 255f, (color & 255) / 255f,
+                        (color >>> 24) / 255f);
                 GL11.glBegin(GL11.GL_QUADS);
-                GL11.glVertex2i(x, y); GL11.glVertex2i(x, y + height);
-                GL11.glVertex2i(x + width, y + height); GL11.glVertex2i(x + width, y);
+                GL11.glVertex2i(x, y);
+                GL11.glVertex2i(x, y + height);
+                GL11.glVertex2i(x + width, y + height);
+                GL11.glVertex2i(x + width, y);
                 GL11.glEnd();
             }
-            renderClipped(molecule, x + (width - size) / 2, y + (height - size) / 2, size,
-                    yaw, options.pitch(), x, y, x + width, y + height, options.cubic(),
-                    options.panX(), options.panY(), options.zoom(), options.palette(), false, null, immediate,
+            renderClipped(molecule, x + (width - size) / 2, y + (height - size) / 2, size, yaw, options.pitch(), x, y,
+                    x + width, y + height, options.cubic(), options.panX(), options.panY(), options.zoom(),
+                    options.palette(), false, null, immediate,
                     new MoleculeStyle(options.atomScale(), options.bondScale()), options.roll());
-        } finally { endState(); }
+        } finally {
+            endState();
+        }
     }
 
     /** Render-thread scope shared by a capture batch and its nested molecule draws. */
@@ -516,12 +597,30 @@ public final class MoleculeRenderer {
     }
 
     private static void beginState() {
-        if (stateDepth == 0) GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+        if (stateDepth == 0) {
+            DemonicaRenderScope.begin();
+            try {
+                GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+            } catch (RuntimeException | Error failure) {
+                try {
+                    DemonicaRenderScope.end();
+                } catch (RuntimeException | Error cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+                throw failure;
+            }
+        }
         stateDepth++;
     }
 
     private static void endState() {
-        if (--stateDepth == 0) GL11.glPopAttrib();
+        if (--stateDepth == 0) {
+            try {
+                GL11.glPopAttrib();
+            } finally {
+                DemonicaRenderScope.end();
+            }
+        }
     }
 
     /**
@@ -548,6 +647,7 @@ public final class MoleculeRenderer {
 
     /** Called on the render thread after definition/resource changes and disconnect. */
     public static void clearCaches() {
+        AtomicPreview.clear();
         FrameWorkBudget.reset();
         MoleculeAnimationCache.clear();
         GpuMoleculeCache.clear();
@@ -563,25 +663,28 @@ public final class MoleculeRenderer {
     }
 
     private static void checkCaches() {
-        if (cachesInvalid) clearCaches();
+        if (cachesInvalid)
+            clearCaches();
     }
 
     static void drawTransformed(MoleculeStructure molecule, Matrix4f transform, boolean cubic) {
         checkCaches();
-        GpuMoleculeCache.draw(molecule, transform, cubic, ElementPalette.snapshot(), exportDepth > 0);
+        if (GpuMoleculeCache.draw(molecule, transform, cubic, ElementPalette.snapshot(), exportDepth > 0))
+            AtomLabels.draw(molecule, transform);
     }
 
     static Matrix4f transform(Matrix4f result, MoleculeStructure molecule, int x, int y, int size, float yaw,
-                              float pitch) {
+            float pitch) {
         return transform(result, molecule, x, y, size, yaw, pitch, 0);
     }
 
     static Matrix4f transform(Matrix4f result, MoleculeStructure molecule, int x, int y, int size, float yaw,
-                              float pitch, float roll) {
+            float pitch, float roll) {
         float radius = molecule.radius();
         float scale = (size * .45f) / (radius > .001f ? radius : 1f);
         return result.translation(x + size / 2f, y + size / 2f, 100f).scale(scale, -scale, scale)
-                .rotateZ((float) Math.toRadians(roll)).rotateX((float) Math.toRadians(pitch)).rotateY((float) Math.toRadians(yaw))
+                .rotateZ((float) Math.toRadians(roll)).rotateX((float) Math.toRadians(pitch))
+                .rotateY((float) Math.toRadians(yaw))
                 .translate(-molecule.centerX(), -molecule.centerY(), -molecule.centerZ());
     }
 
@@ -593,22 +696,22 @@ public final class MoleculeRenderer {
                 System.arraycopy(SPHERE_VERTICES, i, result, j, 4);
             return result;
         }
-        float[][] faces = {
-                { 1, -1, -1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 1, 0, 0 },
-                { -1, -1, 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 0, 0 },
-                { -1, 1, -1, 1, 1, -1, 1, 1, 1, -1, 1, 1, 0, 1, 0 },
-                { -1, -1, -1, -1, -1, 1, 1, -1, 1, 1, -1, -1, 0, -1, 0 },
-                { -1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 0, 0, 1 },
-                { 1, -1, -1, -1, -1, -1, -1, 1, -1, 1, 1, -1, 0, 0, -1 } };
+        float[][] faces = {{1, -1, -1, 1, -1, 1, 1, 1, 1, 1, 1, -1, 1, 0, 0},
+                {-1, -1, 1, -1, -1, -1, -1, 1, -1, -1, 1, 1, -1, 0, 0},
+                {-1, 1, -1, 1, 1, -1, 1, 1, 1, -1, 1, 1, 0, 1, 0},
+                {-1, -1, -1, -1, -1, 1, 1, -1, 1, 1, -1, -1, 0, -1, 0},
+                {-1, -1, 1, 1, -1, 1, 1, 1, 1, -1, 1, 1, 0, 0, 1},
+                {1, -1, -1, -1, -1, -1, -1, 1, -1, 1, 1, -1, 0, 0, -1}};
         float[] result = new float[36 * 6];
         int offset = 0;
-        for (float[] face : faces) for (int v : new int[] { 0, 1, 2, 0, 2, 3 }) {
-            result[offset++] = face[v * 3];
-            result[offset++] = face[v * 3 + 1];
-            result[offset++] = face[v * 3 + 2];
-            result[offset++] = brightness(face[12], face[13], face[14]);
-            offset += 2;
-        }
+        for (float[] face : faces)
+            for (int v : new int[]{0, 1, 2, 0, 2, 3}) {
+                result[offset++] = face[v * 3];
+                result[offset++] = face[v * 3 + 1];
+                result[offset++] = face[v * 3 + 2];
+                result[offset++] = brightness(face[12], face[13], face[14]);
+                offset += 2;
+            }
         return result;
     }
 
@@ -617,7 +720,7 @@ public final class MoleculeRenderer {
         float[] result = new float[(angles.length - 1) * 6 * 6];
         int offset = 0;
         for (int i = 0; i < angles.length - 1; i++) {
-            for (int vertex : new int[] { 0, 1, 2, 0, 2, 3 }) {
+            for (int vertex : new int[]{0, 1, 2, 0, 2, 3}) {
                 int corner = vertex >= 2 ? i + 1 : i;
                 Angle position = angles[corner], normal = cubic ? SQUARE_NORMALS[i] : position;
                 result[offset++] = position.cos();
@@ -632,19 +735,18 @@ public final class MoleculeRenderer {
     }
 
     /** CPU geometry submission, kept separate from the OpenGL state scope. */
-    static void appendGeometry(BufferBuilder buffer, MoleculeStructure molecule,
-                               int x, int y, int size, float angle, boolean cubic) {
+    static void appendGeometry(BufferBuilder buffer, MoleculeStructure molecule, int x, int y, int size, float angle,
+            boolean cubic) {
         appendGeometry(buffer, molecule, x, y, size, angle, 15f, cubic);
     }
 
-    static void appendGeometry(BufferBuilder buffer, MoleculeStructure molecule,
-                               int x, int y, int size, float yaw, float pitch, boolean cubic) {
+    static void appendGeometry(BufferBuilder buffer, MoleculeStructure molecule, int x, int y, int size, float yaw,
+            float pitch, boolean cubic) {
         appendGeometry(buffer, molecule, x, y, size, yaw, pitch, cubic, ElementPalette.snapshot());
     }
 
-    static void appendGeometry(BufferBuilder buffer, MoleculeStructure molecule,
-                               int x, int y, int size, float yaw, float pitch, boolean cubic,
-                               ElementPalette.Snapshot palette) {
+    static void appendGeometry(BufferBuilder buffer, MoleculeStructure molecule, int x, int y, int size, float yaw,
+            float pitch, boolean cubic, ElementPalette.Snapshot palette) {
         var atoms = molecule.atoms();
         var bonds = molecule.bonds();
         if (atoms.isEmpty() || size <= 0) {
@@ -652,21 +754,19 @@ public final class MoleculeRenderer {
         }
         float radius = molecule.radius();
         float scale = (size * 0.45f) / (radius > 0.001f ? radius : 1f);
-        Matrix4f transform = new Matrix4f().translation(x + size / 2f, y + size / 2f, 100f)
-                .scale(scale, -scale, scale)
-                .rotateX((float) Math.toRadians(pitch))
-                .rotateY((float) Math.toRadians(yaw))
+        Matrix4f transform = new Matrix4f().translation(x + size / 2f, y + size / 2f, 100f).scale(scale, -scale, scale)
+                .rotateX((float) Math.toRadians(pitch)).rotateY((float) Math.toRadians(yaw))
                 .translate(-molecule.centerX(), -molecule.centerY(), -molecule.centerZ());
         appendTransformedGeometry(buffer, molecule, transform, cubic, palette);
     }
 
     static void appendTransformedGeometry(BufferBuilder buffer, MoleculeStructure molecule, Matrix4f transform,
-                                          boolean cubic, ElementPalette.Snapshot palette) {
+            boolean cubic, ElementPalette.Snapshot palette) {
         appendTransformedGeometry(buffer, molecule, transform, cubic, palette, MoleculeStyle.DEFAULT);
     }
 
     static void appendTransformedGeometry(BufferBuilder buffer, MoleculeStructure molecule, Matrix4f transform,
-                                          boolean cubic, ElementPalette.Snapshot palette, MoleculeStyle style) {
+            boolean cubic, ElementPalette.Snapshot palette, MoleculeStyle style) {
         var atoms = molecule.atoms();
         var bonds = molecule.bonds();
         var elements = new ArrayList<DrawElement>(atoms.size() + bonds.size());
@@ -704,7 +804,7 @@ public final class MoleculeRenderer {
     }
 
     private static void drawAtom(BufferBuilder buffer, Matrix4f transform, Atom atom, boolean cubic,
-                                 ElementPalette.Snapshot palette, MoleculeStyle style) {
+            ElementPalette.Snapshot palette, MoleculeStyle style) {
         int color = palette.color(atom.element().symbol(), atom.element().color());
         float radius = atom.element().radius() * SPHERE_SCALE * style.atoms();
         float red = ((color >> 16) & 0xFF) / 255f;
@@ -721,25 +821,21 @@ public final class MoleculeRenderer {
         float axa = Math.abs(ax), aya = Math.abs(ay), aza = Math.abs(az);
         if (axa <= aya && axa <= aza) {
             float il = 1f / (float) Math.sqrt(az * az + ay * ay);
-            return new float[] { 0f, az * il, -ay * il };
+            return new float[]{0f, az * il, -ay * il};
         } else if (aya <= aza) {
             float il = 1f / (float) Math.sqrt(az * az + ax * ax);
-            return new float[] { az * il, 0f, -ax * il };
+            return new float[]{az * il, 0f, -ax * il};
         } else {
             float il = 1f / (float) Math.sqrt(ay * ay + ax * ax);
-            return new float[] { -ay * il, ax * il, 0f };
+            return new float[]{-ay * il, ax * il, 0f};
         }
     }
 
-    private static void sphere(BufferBuilder buf, Matrix4f mat,
-                               float cx, float cy, float cz,
-                               float radius, float r, float g, float b) {
+    private static void sphere(BufferBuilder buf, Matrix4f mat, float cx, float cy, float cz, float radius, float r,
+            float g, float b) {
         for (int i = 0; i < SPHERE_VERTICES.length; i += 4) {
-            emitLit(buf, mat,
-                    cx + SPHERE_VERTICES[i] * radius,
-                    cy + SPHERE_VERTICES[i + 1] * radius,
-                    cz + SPHERE_VERTICES[i + 2] * radius,
-                    r, g, b, SPHERE_VERTICES[i + 3]);
+            emitLit(buf, mat, cx + SPHERE_VERTICES[i] * radius, cy + SPHERE_VERTICES[i + 1] * radius,
+                    cz + SPHERE_VERTICES[i + 2] * radius, r, g, b, SPHERE_VERTICES[i + 3]);
         }
     }
 
@@ -783,13 +879,9 @@ public final class MoleculeRenderer {
         return offset + 4;
     }
 
-    private static void quad(BufferBuilder buf, Matrix4f mat,
-                             float ax, float ay, float az,
-                             float bx, float by, float bz,
-                             float cx, float cy, float cz,
-                             float dx, float dy, float dz,
-                             float nx, float ny, float nz,
-                             float r, float g, float b) {
+    private static void quad(BufferBuilder buf, Matrix4f mat, float ax, float ay, float az, float bx, float by,
+            float bz, float cx, float cy, float cz, float dx, float dy, float dz, float nx, float ny, float nz, float r,
+            float g, float b) {
         float light = brightness(nx, ny, nz);
         emitLit(buf, mat, ax, ay, az, r, g, b, light);
         emitLit(buf, mat, bx, by, bz, r, g, b, light);
@@ -799,9 +891,8 @@ public final class MoleculeRenderer {
         emitLit(buf, mat, dx, dy, dz, r, g, b, light);
     }
 
-    private static void cube(BufferBuilder buf, Matrix4f mat,
-                             float cx, float cy, float cz,
-                             float radius, float r, float g, float b) {
+    private static void cube(BufferBuilder buf, Matrix4f mat, float cx, float cy, float cz, float radius, float r,
+            float g, float b) {
         float x0 = cx - radius, x1 = cx + radius;
         float y0 = cy - radius, y1 = cy + radius;
         float z0 = cz - radius, z1 = cz + radius;
@@ -813,7 +904,8 @@ public final class MoleculeRenderer {
         quad(buf, mat, x1, y0, z0, x0, y0, z0, x0, y1, z0, x1, y1, z0, 0f, 0f, -1f, r, g, b);
     }
 
-    private static void bond(BufferBuilder buf, Matrix4f mat, Atom from, Atom to, int order, boolean cubic, MoleculeStyle style) {
+    private static void bond(BufferBuilder buf, Matrix4f mat, Atom from, Atom to, int order, boolean cubic,
+            MoleculeStyle style) {
         if (order <= 1) {
             cylinder(buf, mat, from, to, (SINGLE_BOND_RADIUS * style.bonds()), cubic);
             return;
@@ -829,24 +921,26 @@ public final class MoleculeRenderer {
         float py = perp[1];
         float pz = perp[2];
         if (order == 2) {
-            cylinderOffset(buf, mat, from, to, px * (MULTI_BOND_GAP * style.bonds()), py * (MULTI_BOND_GAP * style.bonds()), pz * (MULTI_BOND_GAP * style.bonds()),
+            cylinderOffset(buf, mat, from, to, px * (MULTI_BOND_GAP * style.bonds()),
+                    py * (MULTI_BOND_GAP * style.bonds()), pz * (MULTI_BOND_GAP * style.bonds()),
                     (MULTI_BOND_RADIUS * style.bonds()), cubic);
-            cylinderOffset(buf, mat, from, to, -px * (MULTI_BOND_GAP * style.bonds()), -py * (MULTI_BOND_GAP * style.bonds()), -pz * (MULTI_BOND_GAP * style.bonds()),
+            cylinderOffset(buf, mat, from, to, -px * (MULTI_BOND_GAP * style.bonds()),
+                    -py * (MULTI_BOND_GAP * style.bonds()), -pz * (MULTI_BOND_GAP * style.bonds()),
                     (MULTI_BOND_RADIUS * style.bonds()), cubic);
         } else {
             cylinder(buf, mat, from, to, (MULTI_BOND_RADIUS * style.bonds()), cubic);
-            cylinderOffset(buf, mat, from, to, px * (MULTI_BOND_GAP * style.bonds()) * 2f, py * (MULTI_BOND_GAP * style.bonds()) * 2f,
-                    pz * (MULTI_BOND_GAP * style.bonds()) * 2f, (MULTI_BOND_RADIUS * style.bonds()), cubic);
-            cylinderOffset(buf, mat, from, to, -px * (MULTI_BOND_GAP * style.bonds()) * 2f, -py * (MULTI_BOND_GAP * style.bonds()) * 2f,
-                    -pz * (MULTI_BOND_GAP * style.bonds()) * 2f, (MULTI_BOND_RADIUS * style.bonds()), cubic);
+            cylinderOffset(buf, mat, from, to, px * (MULTI_BOND_GAP * style.bonds()) * 2f,
+                    py * (MULTI_BOND_GAP * style.bonds()) * 2f, pz * (MULTI_BOND_GAP * style.bonds()) * 2f,
+                    (MULTI_BOND_RADIUS * style.bonds()), cubic);
+            cylinderOffset(buf, mat, from, to, -px * (MULTI_BOND_GAP * style.bonds()) * 2f,
+                    -py * (MULTI_BOND_GAP * style.bonds()) * 2f, -pz * (MULTI_BOND_GAP * style.bonds()) * 2f,
+                    (MULTI_BOND_RADIUS * style.bonds()), cubic);
         }
     }
 
-    private static void cylinderOffset(BufferBuilder buf, Matrix4f mat, Atom from, Atom to,
-                                       float ox, float oy, float oz, float radius, boolean cubic) {
-        cylinderLine(buf, mat,
-                from.x() + ox, from.y() + oy, from.z() + oz,
-                to.x() + ox, to.y() + oy, to.z() + oz,
+    private static void cylinderOffset(BufferBuilder buf, Matrix4f mat, Atom from, Atom to, float ox, float oy,
+            float oz, float radius, boolean cubic) {
+        cylinderLine(buf, mat, from.x() + ox, from.y() + oy, from.z() + oz, to.x() + ox, to.y() + oy, to.z() + oz,
                 radius, cubic);
     }
 
@@ -854,9 +948,8 @@ public final class MoleculeRenderer {
         cylinderLine(buf, mat, from.x(), from.y(), from.z(), to.x(), to.y(), to.z(), radius, cubic);
     }
 
-    private static void cylinderLine(BufferBuilder buf, Matrix4f mat,
-                                     float fx, float fy, float fz,
-                                     float tx, float ty, float tz, float radius, boolean square) {
+    private static void cylinderLine(BufferBuilder buf, Matrix4f mat, float fx, float fy, float fz, float tx, float ty,
+            float tz, float radius, boolean square) {
         float dx = tx - fx, dy = ty - fy, dz = tz - fz;
         float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
         if (len < 0.0001f) {
@@ -944,10 +1037,8 @@ public final class MoleculeRenderer {
         }
     }
 
-    private static void emit(BufferBuilder buf, Matrix4f mat,
-                             float px, float py, float pz,
-                             float nx, float ny, float nz,
-                             float r, float g, float b) {
+    private static void emit(BufferBuilder buf, Matrix4f mat, float px, float py, float pz, float nx, float ny,
+            float nz, float r, float g, float b) {
         emitLit(buf, mat, px, py, pz, r, g, b, brightness(nx, ny, nz));
     }
 
@@ -956,8 +1047,8 @@ public final class MoleculeRenderer {
         return AMBIENT + (1f - AMBIENT) * diffuse;
     }
 
-    private static void emitLit(BufferBuilder buf, Matrix4f mat, float px, float py, float pz,
-                                float r, float g, float b, float brightness) {
+    private static void emitLit(BufferBuilder buf, Matrix4f mat, float px, float py, float pz, float r, float g,
+            float b, float brightness) {
         float x = mat.m00() * px + mat.m10() * py + mat.m20() * pz + mat.m30();
         float y = mat.m01() * px + mat.m11() * py + mat.m21() * pz + mat.m31();
         float z = mat.m02() * px + mat.m12() * py + mat.m22() * pz + mat.m32();
@@ -968,7 +1059,8 @@ public final class MoleculeRenderer {
     /**
      * Record representing a drawing element sorted by view Z-depth.
      */
-    private record DrawElement(float viewZ, Atom from, Atom to, int order) {}
+    private record DrawElement(float viewZ, Atom from, Atom to, int order) {
+    }
 
     private static Angle[] arc(int segments, double radians) {
         Angle[] angles = new Angle[segments + 1];

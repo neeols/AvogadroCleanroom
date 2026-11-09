@@ -1,0 +1,24 @@
+{
+  "name": "Butane · 60 degree torsion",
+  "smiles": "CCCC",
+  "constraints": [
+    {
+      "type": "bond_length",
+      "atoms": [
+        1,
+        2
+      ],
+      "length": 1.54
+    },
+    {
+      "type": "dihedral",
+      "atoms": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "degrees": 60.0
+    }
+  ]
+}

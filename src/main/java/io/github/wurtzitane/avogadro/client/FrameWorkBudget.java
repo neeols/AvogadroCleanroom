@@ -4,7 +4,8 @@ import io.github.wurtzitane.avogadro.Config;
 
 /**
  * Manages cooperative performance and frame time budgets shared by uploads, previews, and export work.
- * <p>Driver calls are indivisible.
+ * <p>
+ * Driver calls are indivisible.
  */
 public final class FrameWorkBudget {
 
@@ -29,7 +30,6 @@ public final class FrameWorkBudget {
     /** Flags indicating active frame and exporting status. */
     private static boolean active, exporting;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private FrameWorkBudget() {}
 
     /**
@@ -112,7 +112,8 @@ public final class FrameWorkBudget {
 
     /**
      * Marks the beginning of media export work.
-     * <p>Called once, inside the client render tick and before endFrame.
+     * <p>
+     * Called once, inside the client render tick and before endFrame.
      */
     public static void beginExport() {
         exporting = true;

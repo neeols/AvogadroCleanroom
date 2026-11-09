@@ -1,15 +1,13 @@
 package io.github.wurtzitane.avogadro.molecule;
 
-import net.minecraft.util.ResourceLocation;
-
-import java.io.BufferedOutputStream;
 import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
-import java.io.FilterOutputStream;
 import java.io.FilterInputStream;
+import java.io.FilterOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -21,11 +19,13 @@ import java.util.Map;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
-/** Protocol 2 carries raw JSON, including molecule metadata. */
+import net.minecraft.util.ResourceLocation;
+
+/** Protocol 3 carries raw JSON and requires chirality-aware clients. */
 public final class MoleculeSync {
 
     /** Protocol version integer identifier. */
-    public static final int PROTOCOL = 2;
+    public static final int PROTOCOL = 3;
 
     /** Maximum allowed byte size for compressed snapshots (8 MiB). */
     public static final int MAX_BYTES = 8 * 1024 * 1024;
@@ -36,11 +36,10 @@ public final class MoleculeSync {
     /** Maximum allowed byte size for resource location identifiers on the wire. */
     private static final int MAX_IDENTIFIER_BYTES = 1024;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeSync() {}
 
     /**
-     * Encodes molecule resource data into a compressed byte array using protocol 2.
+     * Encodes molecule resource data into a compressed byte array using protocol 3.
      *
      * @param data molecule resource data instance
      * @return compressed byte array payload
@@ -49,8 +48,8 @@ public final class MoleculeSync {
     public static byte[] encode(MoleculeResources.Data data) throws IOException {
         ByteArrayOutputStream compressed = new ByteArrayOutputStream();
         // Count uncompressed bytes while streaming, without retaining a second full snapshot.
-        try (DataOutputStream out = new DataOutputStream(new LimitedOutputStream(
-                new BufferedOutputStream(new GZIPOutputStream(compressed))))) {
+        try (DataOutputStream out = new DataOutputStream(
+                new LimitedOutputStream(new BufferedOutputStream(new GZIPOutputStream(compressed))))) {
             out.writeInt(PROTOCOL);
             writeMap(out, data.molecules());
             writeMap(out, data.itemTags());
@@ -66,17 +65,18 @@ public final class MoleculeSync {
      * Decodes a compressed byte array payload into molecule resource data.
      *
      * @param bytes compressed byte array payload
-     * @return decoded {@link MoleculeResources.Data} instance
+     * @return decoded {@link MoleculeResources.Data}
      * @throws IOException if protocol version is unsupported, bounds are violated, or decompression fails
      */
     public static MoleculeResources.Data decode(byte[] bytes) throws IOException {
         if (bytes.length > MAX_BYTES) {
             throw new IOException("Compressed snapshot exceeds limit");
         }
-        try (DataInputStream in = new DataInputStream(new BufferedInputStream(new LimitedInputStream(
-                new GZIPInputStream(new ByteArrayInputStream(bytes)))))) {
-            if (in.readInt() != PROTOCOL) {
-                throw new IOException("Unsupported Avogadro synchronization protocol");
+        try (DataInputStream in = new DataInputStream(new BufferedInputStream(
+                new LimitedInputStream(new GZIPInputStream(new ByteArrayInputStream(bytes)))))) {
+            int remoteProtocol = in.readInt();
+            if (remoteProtocol != PROTOCOL) {
+                throw new IOException("Incompatible Avogadro data protocol " + remoteProtocol + " (expected " + PROTOCOL + "); install the same Avogadro build on client and server");
             }
             MoleculeResources.Data result = new MoleculeResources.Data(readMap(in), readMap(in), readMap(in));
             if (in.read() != -1) {
@@ -131,9 +131,9 @@ public final class MoleculeSync {
     /**
      * Writes a length-prefixed UTF-8 string to a data output stream.
      *
-     * @param out   data output stream
+     * @param out data output stream
      * @param value string value
-     * @param max   maximum allowed byte length
+     * @param max maximum allowed byte length
      * @throws IOException if string exceeds wire limits
      */
     private static void writeString(DataOutputStream out, String value, int max) throws IOException {
@@ -148,7 +148,7 @@ public final class MoleculeSync {
     /**
      * Reads a length-prefixed UTF-8 string from a data input stream.
      *
-     * @param in  data input stream
+     * @param in data input stream
      * @param max maximum allowed byte length
      * @return decoded string value
      * @throws IOException if size is invalid or decoding fails
@@ -175,21 +175,27 @@ public final class MoleculeSync {
          *
          * @param source source input stream
          */
-        LimitedInputStream(InputStream source) { super(source); }
+        LimitedInputStream(InputStream source) {
+            super(source);
+        }
 
         /** {@inheritDoc} */
-        @Override public int read() throws IOException {
+        @Override
+        public int read() throws IOException {
             int value = in.read();
-            if (value >= 0 && ++count > MAX_BYTES) throw new IOException("Expanded snapshot exceeds limit");
+            if (value >= 0 && ++count > MAX_BYTES)
+                throw new IOException("Expanded snapshot exceeds limit");
             return value;
         }
 
         /** {@inheritDoc} */
-        @Override public int read(byte[] bytes, int offset, int length) throws IOException {
+        @Override
+        public int read(byte[] bytes, int offset, int length) throws IOException {
             int read = in.read(bytes, offset, Math.min(length, MAX_BYTES - count + 1));
             if (read > 0) {
                 count += read;
-                if (count > MAX_BYTES) throw new IOException("Expanded snapshot exceeds limit");
+                if (count > MAX_BYTES)
+                    throw new IOException("Expanded snapshot exceeds limit");
             }
             return read;
         }

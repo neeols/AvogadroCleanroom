@@ -4,34 +4,30 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Locale;
+import java.util.Map;
 import java.util.Set;
 
-/** SMILES string parser and force-directed 2D molecular geometry layout engine. */
+/**
+ * SMILES geometry loader. Unmarked structures retain the schematic layout; explicitly
+ * tetrahedral structures use validated three-dimensional geometry and CIP assignment.
+ * See the <a href="../api/doc-files/chirality.html">chirality guide</a> for supported syntax.
+ */
 public final class SmilesParser {
 
-    /** Private constructor to prevent instantiation of utility class. */
-    private SmilesParser() {
-    }
+    private SmilesParser() {}
 
     /** Maximum layout iteration steps. */
     private static final int ITERATIONS = 500;
 
     /** Set of supported two-letter chemical element symbols. */
-    private static final Set<String> TWO_LETTER = Set.of(
-            "He", "Li", "Be", "Ne", "Na", "Mg", "Al", "Si", "Cl", "Ar",
-            "Ca", "Sc", "Ti", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn",
-            "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr", "Zr", "Nb",
-            "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb",
-            "Te", "Xe", "Cs", "Ba", "La", "Ce", "Pr", "Nd", "Pm", "Sm",
-            "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf",
-            "Ta", "Re", "Os", "Ir", "Pt", "Au", "Hg", "Tl", "Pb", "Bi",
-            "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "Np", "Pu",
-            "Am", "Cm", "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf",
-            "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Nh", "Fl",
-            "Mc", "Lv", "Ts", "Og"
-    );
+    private static final Set<String> TWO_LETTER = Set.of("He", "Li", "Be", "Ne", "Na", "Mg", "Al", "Si", "Cl", "Ar",
+            "Ca", "Sc", "Ti", "Cr", "Mn", "Fe", "Co", "Ni", "Cu", "Zn", "Ga", "Ge", "As", "Se", "Br", "Kr", "Rb", "Sr",
+            "Zr", "Nb", "Mo", "Tc", "Ru", "Rh", "Pd", "Ag", "Cd", "In", "Sn", "Sb", "Te", "Xe", "Cs", "Ba", "La", "Ce",
+            "Pr", "Nd", "Pm", "Sm", "Eu", "Gd", "Tb", "Dy", "Ho", "Er", "Tm", "Yb", "Lu", "Hf", "Ta", "Re", "Os", "Ir",
+            "Pt", "Au", "Hg", "Tl", "Pb", "Bi", "Po", "At", "Rn", "Fr", "Ra", "Ac", "Th", "Pa", "Np", "Pu", "Am", "Cm",
+            "Bk", "Cf", "Es", "Fm", "Md", "No", "Lr", "Rf", "Db", "Sg", "Bh", "Hs", "Mt", "Ds", "Rg", "Cn", "Nh", "Fl",
+            "Mc", "Lv", "Ts", "Og");
 
     /** Default bond length constant. */
     private static final float BOND = 1.0f;
@@ -57,9 +53,9 @@ public final class SmilesParser {
     /**
      * Parses a SMILES string into a molecule structure, utilizing the geometry cache.
      *
-     * @param id     structure resource identifier string
+     * @param id structure resource identifier string
      * @param smiles SMILES chemical structure string
-     * @return constructed {@link MoleculeStructure} instance
+     * @return constructed {@link MoleculeStructure}
      */
     public static MoleculeStructure parse(String id, String smiles) {
         MoleculeTasks.checkCancelled();
@@ -70,17 +66,25 @@ public final class SmilesParser {
     /**
      * Parses a SMILES string without checking or updating the geometry cache.
      *
-     * @param id     structure resource identifier string
+     * @param id structure resource identifier string
      * @param smiles SMILES chemical structure string
      * @param locale locale instance
-     * @return constructed {@link MoleculeStructure} instance
+     * @return constructed {@link MoleculeStructure}
      */
     static MoleculeStructure parseUncached(String id, String smiles, Locale locale) {
+        if (smiles.indexOf('@') >= 0)
+            return StereoGeometry.parse(id, smiles);
+        if (smiles.indexOf('/') >= 0 || smiles.indexOf('\\') >= 0)
+            throw new IllegalArgumentException("Directional double-bond stereochemistry (/ and \\) is not supported; use explicit coordinates");
+        if (smiles.indexOf('>') >= 0)
+            throw new IllegalArgumentException("Reaction SMILES is not a molecule definition");
         Graph g = build(id, smiles, locale);
         try {
             layout(g);
             return structure(g);
-        } finally { release(g); }
+        } finally {
+            release(g);
+        }
     }
 
     /** Represents an atom parsed from a SMILES string. */
@@ -89,6 +93,7 @@ public final class SmilesParser {
         boolean aromatic;
         boolean bracket;
         int hydrogens;
+        AtomAnnotation annotation = AtomAnnotation.NONE;
         float x, y;
     }
 
@@ -117,13 +122,20 @@ public final class SmilesParser {
          */
         void index(Graph graph) {
             int atoms = graph.atoms.size(), entries = graph.bonds.size() * 2;
-            if (starts.length < atoms + 1) starts = new int[capacity(atoms + 1)];
-            if (cursor.length < atoms) cursor = new int[capacity(atoms)];
-            if (bondIndices.length < entries) bondIndices = new int[capacity(entries)];
+            if (starts.length < atoms + 1)
+                starts = new int[capacity(atoms + 1)];
+            if (cursor.length < atoms)
+                cursor = new int[capacity(atoms)];
+            if (bondIndices.length < entries)
+                bondIndices = new int[capacity(entries)];
             java.util.Arrays.fill(cursor, 0, atoms, 0);
-            for (Bond bond : graph.bonds) { cursor[bond.a]++; cursor[bond.b]++; }
+            for (Bond bond : graph.bonds) {
+                cursor[bond.a]++;
+                cursor[bond.b]++;
+            }
             starts[0] = 0;
-            for (int i = 0; i < atoms; i++) starts[i + 1] = starts[i] + cursor[i];
+            for (int i = 0; i < atoms; i++)
+                starts[i + 1] = starts[i] + cursor[i];
             System.arraycopy(starts, 0, cursor, 0, atoms);
             for (int i = 0; i < graph.bonds.size(); i++) {
                 Bond bond = graph.bonds.get(i);
@@ -139,9 +151,11 @@ public final class SmilesParser {
          * @return allocated capacity integer
          */
         private static int capacity(int needed) {
-            if (needed > (1 << 29)) return needed;
+            if (needed > (1 << 29))
+                return needed;
             int result = 64;
-            while (result < needed) result <<= 1;
+            while (result < needed)
+                result <<= 1;
             return result;
         }
     }
@@ -150,15 +164,19 @@ public final class SmilesParser {
      * Acquires an adjacency workspace from thread-local storage.
      *
      * @param graph graph instance
-     * @return prepared {@link AdjacencyWorkspace} instance
+     * @return prepared {@link AdjacencyWorkspace}
      */
     private static AdjacencyWorkspace acquire(Graph graph) {
         AdjacencyWorkspace cached = ADJACENCY.get();
         AdjacencyWorkspace workspace = !cached.busy && graph.atoms.size() < MAX_RETAINED_ATOMS
                 && graph.bonds.size() <= MAX_RETAINED_BOND_ENTRIES / 2 ? cached : new AdjacencyWorkspace();
         workspace.busy = true;
-        try { workspace.index(graph); }
-        catch (RuntimeException | Error failure) { workspace.busy = false; throw failure; }
+        try {
+            workspace.index(graph);
+        } catch (RuntimeException | Error failure) {
+            workspace.busy = false;
+            throw failure;
+        }
         return workspace;
     }
 
@@ -170,19 +188,21 @@ public final class SmilesParser {
     private static void release(Graph graph) {
         AdjacencyWorkspace workspace = graph.adjacency;
         graph.adjacency = null;
-        if (workspace != null) workspace.busy = false;
+        if (workspace != null)
+            workspace.busy = false;
     }
 
     /**
      * Adds a bond to a molecular graph.
      *
-     * @param g     graph instance
-     * @param a     first atom index
-     * @param b     second atom index
+     * @param g graph instance
+     * @param a first atom index
+     * @param b second atom index
      * @param order bond order integer
      */
     private static void addBond(Graph g, int a, int b, int order) {
-        if (a < 0 || b < 0 || a == b) return;
+        if (a < 0 || b < 0 || a == b)
+            return;
         Bond bond = new Bond();
         bond.a = a;
         bond.b = b;
@@ -194,18 +214,20 @@ public final class SmilesParser {
      * Builds a molecular graph from a SMILES string using default locale.
      *
      * @param id structure resource identifier string
-     * @param s  SMILES string
-     * @return constructed {@link Graph} instance
+     * @param s SMILES string
+     * @return constructed {@link Graph}
      */
-    private static Graph build(String id, String s) { return build(id, s, Locale.getDefault()); }
+    private static Graph build(String id, String s) {
+        return build(id, s, Locale.getDefault());
+    }
 
     /**
      * Builds a molecular graph from a SMILES string and locale.
      *
-     * @param id     structure resource identifier string
-     * @param s      SMILES string
+     * @param id structure resource identifier string
+     * @param s SMILES string
      * @param locale locale instance
-     * @return constructed {@link Graph} instance
+     * @return constructed {@link Graph}
      */
     private static Graph build(String id, String s, Locale locale) {
         Graph g = new Graph();
@@ -219,7 +241,8 @@ public final class SmilesParser {
         int parseSteps = 0;
 
         while (i < n) {
-            if ((parseSteps++ & 255) == 0) MoleculeTasks.checkCancelled();
+            if ((parseSteps++ & 255) == 0)
+                MoleculeTasks.checkCancelled();
             char c = s.charAt(i);
             if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
                 i++;
@@ -271,7 +294,8 @@ public final class SmilesParser {
             Atom atom = new Atom();
             if (c == '[') {
                 int end = s.indexOf(']', i);
-                if (end < 0) end = n - 1;
+                if (end < 0)
+                    end = n - 1;
                 parseBracket(s.substring(i + 1, end), atom, locale);
                 i = end + 1;
             } else {
@@ -300,29 +324,36 @@ public final class SmilesParser {
         }
 
         // Tiny molecules are cheaper to scan directly than to prepare an index.
-        if (g.atoms.size() >= 64) g.adjacency = acquire(g);
+        if (g.atoms.size() >= 64)
+            g.adjacency = acquire(g);
         try {
             if (g.adjacency == null) {
-                for (int a = 0; a < g.atoms.size(); a++) fillImplicitHydrogens(g, a);
+                for (int a = 0; a < g.atoms.size(); a++)
+                    fillImplicitHydrogens(g, a);
             } else {
-                for (int a = 0; a < g.atoms.size(); a++) fillIndexedHydrogens(g, a);
+                for (int a = 0; a < g.atoms.size(); a++)
+                    fillIndexedHydrogens(g, a);
             }
             return g;
-        } catch (RuntimeException | Error failure) { release(g); throw failure; }
+        } catch (RuntimeException | Error failure) {
+            release(g);
+            throw failure;
+        }
     }
 
     /**
      * Closes a ring closure bond in the molecular graph.
      *
-     * @param g       graph instance
-     * @param rings   active ring map
-     * @param ring    ring identifier integer
-     * @param prev    previous atom index
+     * @param g graph instance
+     * @param rings active ring map
+     * @param ring ring identifier integer
+     * @param prev previous atom index
      * @param pending pending bond order
      * @return previous atom index
      */
     private static int closeRing(Graph g, Map<Integer, int[]> rings, int ring, int prev, int pending) {
-        if (prev < 0) return prev;
+        if (prev < 0)
+            return prev;
         int[] open = rings.remove(ring);
         if (open == null) {
             rings.put(ring, new int[]{prev, pending});
@@ -335,20 +366,31 @@ public final class SmilesParser {
     /**
      * Parses bracketed atom expressions in SMILES strings.
      *
-     * @param body   bracket body string
-     * @param atom   target atom instance
+     * @param body bracket body string
+     * @param atom target atom instance
      * @param locale locale instance
      */
     private static void parseBracket(String body, Atom atom, Locale locale) {
         atom.bracket = true;
         int i = 0;
+        // Isotope prefixes must not be mistaken for element symbols. Nuclear populations remain explicit examiner data.
+        while (i < body.length() && Character.isDigit(body.charAt(i))) i++;
+        if (i < body.length() && body.charAt(i) == '*') {
+            atom.element = "*";
+            String suffix = body.substring(i + 1);
+            if (!suffix.isEmpty() && !suffix.matches(":[1-9][0-9]{0,5}"))
+                throw new IllegalArgumentException("Wildcard brackets accept only an optional numeric atom map: [*:1]");
+            atom.annotation = new AtomAnnotation(suffix.isEmpty() ? "R" : "R" + suffix.substring(1), 0);
+            return;
+        }
         if (i < body.length() && Character.isLowerCase(body.charAt(i))) {
             atom.aromatic = true;
             atom.element = body.substring(i, i + 1).toUpperCase(locale);
             i++;
         } else if (i < body.length()) {
             int j = i + 1;
-            if (j < body.length() && Character.isLowerCase(body.charAt(j))) j++;
+            if (j < body.length() && Character.isLowerCase(body.charAt(j)))
+                j++;
             atom.element = body.substring(i, j);
             i = j;
         }
@@ -371,18 +413,21 @@ public final class SmilesParser {
     /**
      * Fills implicit hydrogens for an atom using sequential graph scans.
      *
-     * @param g   graph instance
+     * @param g graph instance
      * @param idx atom index
      */
     private static void fillImplicitHydrogens(Graph g, int idx) {
         Atom a = g.atoms.get(idx);
-        if (a.bracket) return;
+        if (a.bracket)
+            return;
         int valence = valence(a.element, a.aromatic);
-        if (valence <= 0) return;
+        if (valence <= 0)
+            return;
         int used = 0;
         for (int bondIndex = 0; bondIndex < g.bonds.size(); bondIndex++) {
             Bond b = g.bonds.get(bondIndex);
-            if (b.a == idx || b.b == idx) used += b.order;
+            if (b.a == idx || b.b == idx)
+                used += b.order;
         }
         a.hydrogens = Math.max(0, valence - used);
     }
@@ -390,14 +435,16 @@ public final class SmilesParser {
     /**
      * Fills implicit hydrogens for an atom using accelerated adjacency indexes.
      *
-     * @param g   graph instance
+     * @param g graph instance
      * @param idx atom index
      */
     private static void fillIndexedHydrogens(Graph g, int idx) {
         Atom a = g.atoms.get(idx);
-        if (a.bracket) return;
+        if (a.bracket)
+            return;
         int valence = valence(a.element, a.aromatic);
-        if (valence <= 0) return;
+        if (valence <= 0)
+            return;
         int used = 0;
         for (int next = g.adjacency.starts[idx]; next < g.adjacency.starts[idx + 1]; next++)
             used += g.bonds.get(g.adjacency.bondIndices[next]).order;
@@ -407,7 +454,7 @@ public final class SmilesParser {
     /**
      * Computes standard chemical valence for an element symbol and aromatic status.
      *
-     * @param element  element symbol string
+     * @param element element symbol string
      * @param aromatic {@code true} if aromatic, {@code false} otherwise
      * @return valence integer
      */
@@ -439,8 +486,11 @@ public final class SmilesParser {
         if (workspace.busy || g.atoms.size() > MAX_RETAINED_ATOMS || g.bonds.size() > MAX_RETAINED_BOND_ENTRIES / 2)
             workspace = new LayoutWorkspace();
         workspace.busy = true;
-        try { layout(g, workspace); }
-        finally { workspace.busy = false; }
+        try {
+            layout(g, workspace);
+        } finally {
+            workspace.busy = false;
+        }
     }
 
     /** Workspace container holding layout coordinate and force arrays. */
@@ -452,29 +502,42 @@ public final class SmilesParser {
         /**
          * Prepares workspace arrays based on atom and bond counts.
          *
-         5 * @param atoms atom count integer
+         * 5 * @param atoms atom count integer
+         *
          * @param bonds bond count integer
          */
         void prepare(int atoms, int bonds) {
-            if (x.length < atoms) { x = new float[atoms]; y = new float[atoms]; fx = new float[atoms]; fy = new float[atoms]; }
-            if (bondA.length < bonds) { bondA = new int[bonds]; bondB = new int[bonds]; }
+            if (x.length < atoms) {
+                x = new float[atoms];
+                y = new float[atoms];
+                fx = new float[atoms];
+                fy = new float[atoms];
+            }
+            if (bondA.length < bonds) {
+                bondA = new int[bonds];
+                bondB = new int[bonds];
+            }
         }
     }
 
     /**
      * Executes force-directed iterations to compute 2D positions for atoms.
      *
-     * @param g         graph instance
+     * @param g graph instance
      * @param workspace layout workspace instance
      */
     private static void layout(Graph g, LayoutWorkspace workspace) {
         int n = g.atoms.size();
-        if (n == 0) return;
+        if (n == 0)
+            return;
         int bondCount = g.bonds.size();
         workspace.prepare(n, bondCount);
         float[] x = workspace.x, y = workspace.y, fx = workspace.fx, fy = workspace.fy;
         int[] bondA = workspace.bondA, bondB = workspace.bondB;
-        for (int i = 0; i < bondCount; i++) { bondA[i] = g.bonds.get(i).a; bondB[i] = g.bonds.get(i).b; }
+        for (int i = 0; i < bondCount; i++) {
+            bondA[i] = g.bonds.get(i).a;
+            bondB[i] = g.bonds.get(i).b;
+        }
         for (int i = 0; i < n; i++) {
             double angle = 2.0 * Math.PI * i / Math.max(1, n);
             double radius = 0.6 * Math.sqrt(n);
@@ -503,7 +566,8 @@ public final class SmilesParser {
             int pairs = 0;
             for (int i = 0; i < n; i++) {
                 for (int j = i + 1; j < n; j++) {
-                    if ((pairs++ & 4095) == 0) MoleculeTasks.checkCancelled();
+                    if ((pairs++ & 4095) == 0)
+                        MoleculeTasks.checkCancelled();
                     float dx = x[i] - x[j], dy = y[i] - y[j];
                     float d2 = dx * dx + dy * dy + 1e-3f;
                     float d = (float) Math.sqrt(d2);
@@ -539,7 +603,7 @@ public final class SmilesParser {
     /**
      * Clamps a value within specified limits.
      *
-     * @param v   value float
+     * @param v value float
      * @param lim limit float magnitude
      * @return clamped float value
      */
@@ -551,29 +615,34 @@ public final class SmilesParser {
      * Converts a layout graph into a compiled {@link MoleculeStructure}.
      *
      * @param g graph instance
-     * @return constructed {@link MoleculeStructure} instance
+     * @return constructed {@link MoleculeStructure}
      */
     private static MoleculeStructure structure(Graph g) {
         try {
             MoleculeStructure.Builder b = MoleculeStructure.builder(g.id, "");
             int[] heavyIndex = new int[g.atoms.size()];
             for (int i = 0; i < g.atoms.size(); i++) {
-                if ((i & 1023) == 0) MoleculeTasks.checkCancelled();
+                if ((i & 1023) == 0)
+                    MoleculeTasks.checkCancelled();
                 Atom a = g.atoms.get(i);
-                heavyIndex[i] = b.addAtom(AtomElement.bySymbol(a.element), a.x, a.y, 0f);
+                heavyIndex[i] = b.addAtom(AtomElement.bySymbol(a.element), a.x, a.y, 0f, a.annotation);
             }
             for (int bondIndex = 0; bondIndex < g.bonds.size(); bondIndex++) {
-                if ((bondIndex & 1023) == 0) MoleculeTasks.checkCancelled();
+                if ((bondIndex & 1023) == 0)
+                    MoleculeTasks.checkCancelled();
                 Bond bond = g.bonds.get(bondIndex);
                 b.bond(heavyIndex[bond.a], heavyIndex[bond.b], bondType(bond.order));
             }
             for (int i = 0; i < g.atoms.size(); i++) {
-                if ((i & 1023) == 0) MoleculeTasks.checkCancelled();
+                if ((i & 1023) == 0)
+                    MoleculeTasks.checkCancelled();
                 Atom a = g.atoms.get(i);
-                if (a.hydrogens <= 0) continue;
+                if (a.hydrogens <= 0)
+                    continue;
                 float base = g.adjacency == null ? neighborAngle(g, i) : indexedNeighborAngle(g, i);
                 for (int k = 0; k < a.hydrogens; k++) {
-                    if ((k & 1023) == 0) MoleculeTasks.checkCancelled();
+                    if ((k & 1023) == 0)
+                        MoleculeTasks.checkCancelled();
                     float spread = (float) Math.toRadians(60.0 * (k - (a.hydrogens - 1) / 2.0));
                     float angle = base + spread;
                     float hx = a.x + (float) Math.cos(angle) * H_BOND;
@@ -583,13 +652,16 @@ public final class SmilesParser {
                 }
             }
             return b.build();
-        } finally { release(g); }
+        } finally {
+            release(g);
+        }
     }
 
     /**
      * Computes the outward angle for placing implicit hydrogens based on neighboring atoms.
      *
-     5 * @param g   graph instance
+     * 5 * @param g graph instance
+     *
      * @param idx atom index integer
      * @return angle in radians
      */
@@ -600,7 +672,8 @@ public final class SmilesParser {
         for (int bondIndex = 0; bondIndex < g.bonds.size(); bondIndex++) {
             Bond bond = g.bonds.get(bondIndex);
             int other = bond.a == idx ? bond.b : bond.b == idx ? bond.a : -1;
-            if (other < 0) continue;
+            if (other < 0)
+                continue;
             Atom o = g.atoms.get(other);
             float dx = o.x - a.x, dy = o.y - a.y;
             float len = (float) Math.sqrt(dx * dx + dy * dy) + 1e-4f;
@@ -617,7 +690,7 @@ public final class SmilesParser {
     /**
      * Computes the outward angle for placing implicit hydrogens using accelerated adjacency indexes.
      *
-     * @param g   graph instance
+     * @param g graph instance
      * @param idx atom index integer
      * @return angle in radians
      */
@@ -645,7 +718,7 @@ public final class SmilesParser {
      * Resolves bond order integers into corresponding {@link BondType} enums.
      *
      * @param order bond order integer
-     * @return resolved {@link BondType} instance
+     * @return resolved {@link BondType}
      */
     private static BondType bondType(int order) {
         return switch (order) {

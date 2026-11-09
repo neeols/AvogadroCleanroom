@@ -1,18 +1,23 @@
 package io.github.wurtzitane.avogadro.api;
 
+import java.util.Comparator;
+import java.util.List;
+import java.util.Map;
+
 import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStore;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-
 /**
- * An immutable definition and matching snapshot, safe to retain across later reloads.
+ * A read-only view of molecule definitions and item/fluid matching rules.
+ *
+ * <p>
+ * The view keeps the definitions it was created with. If you retain it across a reload, it still describes the old
+ * state; request a new view to see the new definitions.
  */
 public final class MoleculeView {
 
@@ -41,23 +46,21 @@ public final class MoleculeView {
     private final long revision;
 
     /**
-     * Constructs a new {@link MoleculeView} from raw definitions, tags, and a revision count,
-     * compiling them into an immutable snapshot.
+     * Creates a {@link MoleculeView} from raw definitions, tags, and a revision count, compiling them into an immutable
+     * snapshot.
      *
      * @param definitions map of molecule definitions
-     * @param itemTags    map of item tags
-     * @param fluidTags   map of fluid tags
-    5     * @param revision    the revision tracking number
+     * @param itemTags map of item tags
+     * @param fluidTags map of fluid tags 5 * @param revision the revision tracking number
      */
-    public MoleculeView(Map<ResourceLocation, MoleculeDef> definitions,
-                        Map<ResourceLocation, List<String>> itemTags,
-                        Map<ResourceLocation, List<String>> fluidTags, long revision) {
+    public MoleculeView(Map<ResourceLocation, MoleculeDef> definitions, Map<ResourceLocation, List<String>> itemTags,
+            Map<ResourceLocation, List<String>> fluidTags, long revision) {
         this(MoleculeStore.compileSnapshot(definitions, itemTags, fluidTags), revision);
     }
 
     /**
-     * Constructs a new {@link MoleculeView} reusing a store-compiled immutable snapshot
-     * without rebuilding its matching indexes.
+     * Creates a {@link MoleculeView} reusing a store-compiled immutable snapshot without rebuilding its matching
+     * indexes.
      *
      * @param compiled the pre-compiled {@link MoleculeStore.CompiledSnapshot}
      * @param revision the revision tracking number
@@ -74,7 +77,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Creates an empty, default {@link MoleculeView} instance with zeroed definitions, tags, and revision.
+     * Creates an empty, default {@link MoleculeView} with zeroed definitions, tags, and revision.
      *
      * @return an empty {@link MoleculeView}
      */
@@ -83,7 +86,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Retrieves the revision version number of this view.
+     * Returns the revision version number of this view.
      *
      * @return the revision counter
      */
@@ -92,7 +95,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Retrieves a molecule definition by its resource location identifier.
+     * Returns a molecule definition by its resource location identifier.
      *
      * @param id the {@link ResourceLocation} identifier
      * @return the corresponding {@link MoleculeDef}, or {@code null} if not found
@@ -102,7 +105,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Retrieves a molecule definition by its string identifier.
+     * Returns a molecule definition by its string identifier.
      *
      * @param id the string identifier
      * @return the corresponding {@link MoleculeDef}, or {@code null} if not found
@@ -112,7 +115,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Retrieves the complete map of molecule definitions.
+     * Returns the complete map of molecule definitions.
      *
      * @return an immutable map of resource locations to molecule definitions
      */
@@ -121,7 +124,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Retrieves an unsorted list of all molecule definitions in this view.
+     * Returns an unsorted list of all molecule definitions in this view.
      *
      * @return a list of all {@link MoleculeDef} instances
      */
@@ -130,7 +133,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Retrieves a sorted list of all molecule definitions ordered by their identifier strings.
+     * Returns a sorted list of all molecule definitions ordered by their identifier strings.
      *
      * @return a sorted list of {@link MoleculeDef} instances
      */
@@ -139,7 +142,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Retrieves a list of molecule definitions that have item generation enabled.
+     * Returns a list of molecule definitions that have item generation enabled.
      *
      * @return a list of generated item {@link MoleculeDef} instances
      */
@@ -148,7 +151,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Retrieves the map of item tags.
+     * Returns the map of item tags.
      *
      * @return an immutable map of item tag resource locations to string lists
      */
@@ -157,7 +160,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Retrieves the map of fluid tags.
+     * Returns the map of fluid tags.
      *
      * @return an immutable map of fluid tag resource locations to string lists
      */
@@ -176,7 +179,7 @@ public final class MoleculeView {
     }
 
     /**
-     * Finds the molecule definition associated with a given fluid.
+     * Finds a molecule using unqualified fluid rules; NBT-qualified selectors are not considered.
      *
      * @param fluid the {@link Fluid} to look up
      * @return the matching {@link MoleculeDef}, or {@code null} if none match
@@ -186,7 +189,8 @@ public final class MoleculeView {
     }
 
     /**
-     * Finds the molecule definition associated with a given fluid stack.
+     * Finds a molecule using the fluid and its NBT, preferring more-specific matching selectors. Empty stacks do not
+     * match; a positive amount does not otherwise affect matching.
      *
      * @param fluid the {@link FluidStack} to look up
      * @return the matching {@link MoleculeDef}, or {@code null} if none match

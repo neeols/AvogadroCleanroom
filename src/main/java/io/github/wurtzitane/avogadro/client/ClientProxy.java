@@ -3,25 +3,27 @@ package io.github.wurtzitane.avogadro.client;
 import io.github.wurtzitane.avogadro.Avogadro;
 import io.github.wurtzitane.avogadro.CommonProxy;
 import io.github.wurtzitane.avogadro.Config;
-import io.github.wurtzitane.avogadro.compat.CompatibilityHooks;
 import io.github.wurtzitane.avogadro.client.export.ExportCommand;
 import io.github.wurtzitane.avogadro.client.export.MoleculeMediaExport;
+import io.github.wurtzitane.avogadro.compat.CompatibilityHooks;
 import io.github.wurtzitane.avogadro.molecule.MoleculeNetwork;
 import io.github.wurtzitane.avogadro.molecule.MoleculeResources;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.IReloadableResourceManager;
-import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.client.ClientCommandHandler;
+import net.minecraftforge.client.event.GuiOpenEvent;
 import net.minecraftforge.common.MinecraftForge;
+import net.minecraftforge.event.world.WorldEvent;
 import net.minecraftforge.fml.client.event.ConfigChangedEvent;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
 import net.minecraftforge.fml.common.network.FMLNetworkEvent;
-import net.minecraftforge.event.world.WorldEvent;
 
 /**
  * Client-side proxy handling client-only initialization, event subscriptions, and lifecycle hooks.
- * <p>Instantiated only by the CLIENT side of {@code @SidedProxy}.
+ * <p>
+ * Instantiated only by the CLIENT side of {@code @SidedProxy}.
  */
 public final class ClientProxy extends CommonProxy {
 
@@ -62,7 +64,7 @@ public final class ClientProxy extends CommonProxy {
      */
     @Override
     public void interactPeriodicTable(io.github.wurtzitane.avogadro.entity.PeriodicTableEntity entity,
-                                      net.minecraft.entity.player.EntityPlayer player) {
+            net.minecraft.entity.player.EntityPlayer player) {
         var client = Minecraft.getMinecraft();
         if (player != client.player || client.currentScreen != null) {
             return;
@@ -103,6 +105,7 @@ public final class ClientProxy extends CommonProxy {
      */
     @Override
     public void preInit() {
+        UiThemes.initialize(Config.configuration.getConfigFile().toPath().getParent().resolve("avogadro"));
         AvogadroKeys.register();
         PeriodicTableClient.init();
         CompatibilityHooks.initialize();
@@ -126,6 +129,8 @@ public final class ClientProxy extends CommonProxy {
                 .registerReloadListener(manager -> MoleculeRenderer.clearCaches());
         ((IReloadableResourceManager) Minecraft.getMinecraft().getResourceManager())
                 .registerReloadListener(manager -> PixelFont.release());
+        ((IReloadableResourceManager) Minecraft.getMinecraft().getResourceManager())
+                .registerReloadListener(manager -> UiThemes.reload());
         ((IReloadableResourceManager) Minecraft.getMinecraft().getResourceManager())
                 .registerReloadListener(ElementPalette.INSTANCE);
         // Registration immediately invokes the listener for the already-loaded packs.
@@ -181,6 +186,7 @@ public final class ClientProxy extends CommonProxy {
     /** Handles GUI open events to reset active rotations and cameras. */
     @SubscribeEvent
     public void screenChanged(GuiOpenEvent event) {
+        TooltipAtomControl.reset();
         MoleculeRotation.cancelActiveDrag();
         MoleculeCamera.resetAll();
     }
@@ -189,8 +195,10 @@ public final class ClientProxy extends CommonProxy {
     @SubscribeEvent(priority = net.minecraftforge.fml.common.eventhandler.EventPriority.LOWEST)
     public void renderTick(TickEvent.RenderTickEvent event) {
         if (event.phase == TickEvent.Phase.START) {
-            FrameWorkBudget.beginFrame(ViewerFramerate.isActive() ? ViewerFramerate.limit() :
-                    Minecraft.getMinecraft().getLimitFramerate());
+            TooltipAtomControl.poll();
+            FrameWorkBudget.beginFrame(ViewerFramerate.isActive()
+                    ? ViewerFramerate.limit()
+                    : Minecraft.getMinecraft().getLimitFramerate());
             MoleculeClientStore.pump();
             MoleculeItemRenderer.beginFrame();
             MoleculeAnimationCache.beginFrame();
@@ -219,6 +227,7 @@ public final class ClientProxy extends CommonProxy {
         if (Avogadro.MODID.equals(event.getModID())) {
             Config.RenderingMode previousMode = Config.RENDERING_MODE.get();
             Config.sync();
+            UiThemes.reload();
             // Presentation settings are either read per draw or already part of a cache key.
             if (previousMode != Config.RENDERING_MODE.get()) {
                 MoleculeCamera.resetAll();

@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Build, connect, and edit structures</title></head><body>
+<div class="av-guide">
+<nav class="av-breadcrumb" aria-label="Guide navigation"><a href="../../../../../../index.html">Avogadro API</a><a href="examples.html">All examples</a><a href="../package-summary.html">Common reference</a><a href="../client/package-summary.html">Client reference</a></nav>
+<p class="av-kicker">Avogadro guide · Minecraft 1.12.2 / Cleanroom</p>
+<h1>Build, connect, and edit structures</h1><p class="av-lead">A fragment is a reusable set of atoms and bonds. Name the atoms you connect often, then assemble or edit copies without changing the original.</p>
+<div class="av-language"><span class="av-language-controls">Example language</span><noscript>Java, Groovy, and JSON variants are all shown below. Enable JavaScript to choose one.</noscript><span class="av-step"> Your choice applies across the guides.</span></div>
+<details><summary>Imports and complete companion files</summary><p>Examples are methods inside the downloadable companion classes. Copy the methods you need into your own class and keep the imports at the top. <code>GuideModels</code> contains the reusable chemical recipes; <code>GuideTasks</code> contains the operations. These files are documentation examples, not built-in library content.</p><p><a href="GuideModels.java">Java model recipes</a> · <a href="GuideTasks.java">Java operations</a> · <a href="ModelRecipes.groovy">Complete Groovy model script</a> · <a href="ClientRecipes.groovy.txt">Groovy client helpers</a></p><p>The complete Groovy model script can be saved as <code>groovy/postInit/avogadro_examples.groovy</code>. It includes the reusable <code>GuideModels</code> class and registers all ten chemical examples through the reloadable script registry. The separate client helper download is a reference for client integrations: keep it out of common postInit scripts and dedicated-server entry points. Java users should likewise copy common operations into their common class and keep screen/export operations in a client class.</p><pre><code class="language-java">import io.github.wurtzitane.avogadro.api.*;
+import io.github.wurtzitane.avogadro.molecule.*;
+// Client code only:
+import io.github.wurtzitane.avogadro.api.client.*;
+import io.github.wurtzitane.avogadro.client.export.*;
+import java.util.List;
+import java.util.Map;</code></pre></details><h2 id="structures-water">Start with explicit atoms</h2><p>Atom indices start at <strong>zero</strong>. Every explicit atom, including H, must be supplied. Coordinates share one consistent length unit; the examples use ångströms for convenience. Choose explicit bonds to avoid distance-based guesses.</p><div class="av-example" data-example="water"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureFragment water() {
+    // All atoms are explicit: StructureBuilder does not add hydrogens.
+    return new StructureBuilder()
+            .atom(&quot;O&quot;, 0, 0, 0)
+            .atom(&quot;H&quot;, .7586, .5043, 0)
+            .atom(&quot;H&quot;, -.7586, .5043, 0)
+            .bond(0, 1).bond(0, 2)
+            .attachment(&quot;oxygen&quot;, 0)
+            .atomConfiguration(0, new AtomicConfiguration(8, 8, 0, List.of(2, 6)))
+            .atomConfiguration(1, new AtomicConfiguration(1, 0, 0, List.of(1)))
+            .atomConfiguration(2, new AtomicConfiguration(1, 0, 0, List.of(1)))
+            .build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureFragment water() {
+    // All atoms are explicit: StructureBuilder does not add hydrogens.
+    return new StructureBuilder()
+            .atom(&quot;O&quot;, 0, 0, 0)
+            .atom(&quot;H&quot;, .7586, .5043, 0)
+            .atom(&quot;H&quot;, -.7586, .5043, 0)
+            .bond(0, 1).bond(0, 2)
+            .attachment(&quot;oxygen&quot;, 0)
+            .atomConfiguration(0, new AtomicConfiguration(8, 8, 0, List.of(2, 6)))
+            .atomConfiguration(1, new AtomicConfiguration(1, 0, 0, List.of(1)))
+            .atomConfiguration(2, new AtomicConfiguration(1, 0, 0, List.of(1)))
+            .build();
+}</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Water&quot;,
+  &quot;atoms&quot;: [
+    {
+      &quot;e&quot;: &quot;O&quot;,
+      &quot;x&quot;: 0,
+      &quot;y&quot;: 0,
+      &quot;z&quot;: 0
+    },
+    {
+      &quot;e&quot;: &quot;H&quot;,
+      &quot;x&quot;: 0.7586,
+      &quot;y&quot;: 0.5043,
+      &quot;z&quot;: 0
+    },
+    {
+      &quot;e&quot;: &quot;H&quot;,
+      &quot;x&quot;: -0.7586,
+      &quot;y&quot;: 0.5043,
+      &quot;z&quot;: 0
+    }
+  ],
+  &quot;bonds&quot;: [
+    [
+      0,
+      1
+    ],
+    [
+      0,
+      2
+    ]
+  ]
+}</code></pre></div></div><div class="av-reference" data-reference="atoms"><div data-language="java groovy"><table><caption>Start with explicit atoms</caption><thead><tr><th scope="col">Call</th><th scope="col">Meaning</th><th scope="col">Easy mistake</th></tr></thead><tbody><tr><td><code>atom("O", x, y, z)</code></td><td>Append an atom and return the builder</td><td>Does not return its index; use <code>addAtom</code> for that</td></tr><tr><td><code>bond(0, 1)</code></td><td>Single bond between existing atoms</td><td>The second atom is index 1, not 2</td></tr><tr><td><code>attachment("oxygen", 0)</code></td><td>A name for atom 0</td><td>Does not create a new atom or move it</td></tr><tr><td><code>build()</code></td><td>Return an immutable fragment</td><td>Later edits work on copies</td></tr></tbody></table></div><div data-language="json"><table><caption>Start with explicit atoms</caption><thead><tr><th scope="col">JSON field / entry</th><th scope="col">Meaning</th><th scope="col">Easy mistake</th></tr></thead><tbody><tr><td><code>atoms[]</code></td><td>Each object adds one atom: e is its element symbol; x, y, z are its coordinates. Its array position is its zero-based index.</td><td>Include every H atom in an explicit model; no implicit hydrogen is added.</td></tr><tr><td><code>bonds[]</code></td><td>An entry [0,1] makes a single bond between atoms 0 and 1. An optional third entry selects the bond type.</td><td>Omitting bonds enables distance inference; use an empty array for no bonds.</td></tr><tr><td><code>structure.attachments</code></td><td>Map names to atom indices, for example {"oxygen":0} names atom 0.</td><td>Move atoms and bonds inside structure too; do not mix it with top-level atoms/bonds.</td></tr><tr><td>The completed molecule object</td><td>The loader validates and builds the definition when the file is loaded.</td><td>There is no build field. The file path supplies the molecule ID.</td></tr></tbody></table></div></div><h2 id="structures-assembly">Connect methyl and hydroxyl pieces into methanol</h2><div class="av-example" data-example="methyl"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureFragment methyl() {
+    return new StructureBuilder().atom(&quot;C&quot;, 0, 0, 0)
+            .atom(&quot;H&quot;, -.36, 1.03, 0).atom(&quot;H&quot;, -.36, -.515, .892)
+            .atom(&quot;H&quot;, -.36, -.515, -.892)
+            .bond(0, 1).bond(0, 2).bond(0, 3)
+            .attachment(&quot;carbon&quot;, 0).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureFragment methyl() {
+    return new StructureBuilder().atom(&quot;C&quot;, 0, 0, 0)
+            .atom(&quot;H&quot;, -.36, 1.03, 0).atom(&quot;H&quot;, -.36, -.515, .892)
+            .atom(&quot;H&quot;, -.36, -.515, -.892)
+            .bond(0, 1).bond(0, 2).bond(0, 3)
+            .attachment(&quot;carbon&quot;, 0).build();
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-example" data-example="hydroxyl"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureFragment hydroxyl() {
+    // An open O site for assembly; this piece alone is not an alcohol.
+    return new StructureBuilder().atom(&quot;O&quot;, 1.43, 0, 0).atom(&quot;H&quot;, 1.8, .85, 0)
+            .bond(0, 1).attachment(&quot;oxygen&quot;, 0).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureFragment hydroxyl() {
+    // An open O site for assembly; this piece alone is not an alcohol.
+    return new StructureBuilder().atom(&quot;O&quot;, 1.43, 0, 0).atom(&quot;H&quot;, 1.8, .85, 0)
+            .bond(0, 1).attachment(&quot;oxygen&quot;, 0).build();
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-example" data-example="methanol"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureFragment methanol() {
+    // Fragment positions already line up. link() only adds the O–C bond.
+    return StructureAssembly.builder()
+            .part(&quot;methyl&quot;, methyl()).part(&quot;hydroxyl&quot;, hydroxyl())
+            .link(&quot;methyl/carbon&quot;, &quot;hydroxyl/oxygen&quot;, BondType.SINGLE)
+            .build().build(); // recipe first, then finite geometry
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureFragment methanol() {
+    // Fragment positions already line up. link() only adds the O–C bond.
+    return StructureAssembly.builder()
+            .part(&quot;methyl&quot;, methyl()).part(&quot;hydroxyl&quot;, hydroxyl())
+            .link(&quot;methyl/carbon&quot;, &quot;hydroxyl/oxygen&quot;, BondType.SINGLE)
+            .build().build(); // recipe first, then finite geometry
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-result"><strong>Expected result</strong> 6 atoms and 5 single bonds: CH4O. Attachments become <code>methyl/carbon</code> and <code>hydroxyl/oxygen</code>.</div><figure><a href="methanol.png"><img src="methanol.png" alt="Methanol assembled through named atoms. Hydrogen atoms belong to the authored fragments."></a><figcaption>Methanol assembled through named atoms. Hydrogen atoms belong to the authored fragments. <a href="methanol.png">Full size</a></figcaption></figure><div class="av-tip"><strong>Tip</strong> A name identifies an atom, not a direction. Joining attachments adds the requested bond; it does not align pieces, remove H, fix valence, or optimize the shape. Duplicate names and unresolved paths are errors.</div><h2 id="structures-editing">Edit a copy: water to an ammonia model</h2><div class="av-example" data-example="ammonia"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureEditResult ammonia() {
+    // Change O to N and add the third hydrogen: H2O -&gt; NH3 as a graph edit.
+    // This demonstrates authoring; it does not simulate a reaction.
+    var editor = water().edit().replaceAtom(0, &quot;N&quot;).moveAtom(0, 0, 0, .25);
+    int hydrogen = editor.addAtom(&quot;H&quot;, 0, -.85, -.35);
+    return editor.setBond(0, hydrogen, BondType.SINGLE).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureEditResult ammonia() {
+    // Change O to N and add the third hydrogen: H2O -&gt; NH3 as a graph edit.
+    // This demonstrates authoring; it does not simulate a reaction.
+    def editor = water().edit().replaceAtom(0, &quot;N&quot;).moveAtom(0, 0, 0, .25);
+    int hydrogen = editor.addAtom(&quot;H&quot;, 0, -.85, -.35);
+    return editor.setBond(0, hydrogen, BondType.SINGLE).build();
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-result"><strong>Expected result</strong> NH3 has 4 atoms and 3 bonds. The original water is unchanged. Because O changes to N, its previous oxygen-specific atomic configuration is cleared.</div><figure><a href="ammonia.png"><img src="ammonia.png" alt="The edited ammonia graph. Atomic details must be supplied for the replacement nitrogen if you want to inspect it."></a><figcaption>The edited ammonia graph. Atomic details must be supplied for the replacement nitrogen if you want to inspect it. <a href="ammonia.png">Full size</a></figcaption></figure><div class="av-reference" data-reference="edits"><div data-language="java groovy"><table><caption>Edit a copy: water to an ammonia model</caption><thead><tr><th scope="col">Operation</th><th scope="col">Index rule / result</th></tr></thead><tbody><tr><td>Replace or move atom</td><td>Uses the current geometry index; changing element clears its atom configuration</td></tr><tr><td>Create/replace/remove bond</td><td>Use <code>setBond</code> or <code>removeBond</code>; no implied chemistry repair</td></tr><tr><td>Delete several atoms</td><td>The whole selection resolves before deletion; surviving bonds, names, and overrides remap</td></tr><tr><td>Append a fragment</td><td>Appends atoms and qualifies its names with the instance name</td></tr><tr><td>Finish editing</td><td><code>build()</code> returns the fragment plus original-to-final map; removed atoms map to <code>-1</code></td></tr></tbody></table></div><div data-language="json"><table><caption>Edit a copy: water to an ammonia model</caption><thead><tr><th scope="col">JSON edits entry</th><th scope="col">Required fields</th><th scope="col">Index rule / result</th></tr></thead><tbody><tr><td><code>op: "replaceAtom"</code></td><td><code>index, e</code></td><td>Uses the current atom index; changing the element clears its old atomic configuration.</td></tr><tr><td><code>op: "moveAtom"</code></td><td><code>index, x, y, z</code></td><td>Moves one atom without changing its identity or bonds.</td></tr><tr><td><code>op: "setBond" / "removeBond"</code></td><td><code>from, to</code>; optional <code>type</code> for setBond</td><td>Creates/replaces or removes one bond. No implied chemistry repair.</td></tr><tr><td><code>op: "removeAtoms"</code></td><td><code>indices</code> array</td><td>Resolves the entire selection first, then remaps surviving bonds, names, and atomic data.</td></tr><tr><td><code>op: "append"</code></td><td><code>instance, structure</code></td><td>Appends the fragment and prefixes its attachment names with the instance name.</td></tr><tr><td>End of the <code>edits</code> array</td><td>No extra finish field</td><td>Edits run in array order on a copy. JSON does not expose the Java index-map result.</td></tr></tbody></table></div></div><h2 id="structures-delete">Read the index map after deleting atoms</h2><div class="av-example" data-example="remap"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureEditResult isolateOxygen() {
+    // Both selections refer to the ORIGINAL three-atom water fragment.
+    // Deletion resolves the whole selection before removing any atoms.
+    return GuideModels.water().edit().removeAtoms(1, 2).build();
+    // oldToNew() is [0, -1, -1]. The resulting O atom is not a water molecule.
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureEditResult isolateOxygen() {
+    // Both selections refer to the ORIGINAL three-atom water fragment.
+    // Deletion resolves the whole selection before removing any atoms.
+    return GuideModels.water().edit().removeAtoms(1, 2).build();
+    // oldToNew() is [0, -1, -1]. The resulting O atom is not a water molecule.
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-tip"><strong>Tip</strong> After deletion, later operations use the <em>current</em> indices. Keep <code>result.oldToNew()</code> when another part of your code still refers to the original atoms. Newly appended atoms have no original index.</div><h2 id="structures-copy">Save edits or copy a registered definition</h2><p>This second example changes water into an H2O2 model. Its method names and sequential indices are the same ones used by JSON edits.</p><div class="av-example" data-example="saved-edits"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureEdits hydrogenPeroxideEdits() {
+    // Water indices: O=0, H=1, H=2. Replace H=2 with O, then add its H.
+    return StructureEdits.builder().replaceAtom(2, &quot;O&quot;).moveAtom(2, -.9, -.95, 0)
+            .atom(&quot;H&quot;, -1.65, -.6, .4).setBond(2, 3, BondType.SINGLE).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureEdits hydrogenPeroxideEdits() {
+    // Water indices: O=0, H=1, H=2. Replace H=2 with O, then add its H.
+    return StructureEdits.builder().replaceAtom(2, &quot;O&quot;).moveAtom(2, -.9, -.95, 0)
+            .atom(&quot;H&quot;, -1.65, -.6, .4).setBond(2, 3, BondType.SINGLE).build();
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-example" data-example="copy-edit"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static MoleculeSpec peroxideCopy() {
+    return AvogadroApi.builder(&quot;guide:peroxide&quot;).copy(&quot;guide:water&quot;)
+            .name(&quot;Hydrogen peroxide&quot;).edits(hydrogenPeroxideEdits()).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static MoleculeSpec peroxideCopy() {
+    return AvogadroApi.builder(&quot;guide:peroxide&quot;).copy(&quot;guide:water&quot;)
+            .name(&quot;Hydrogen peroxide&quot;).edits(hydrogenPeroxideEdits()).build();
+}</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;copy&quot;: &quot;guide:water&quot;,
+  &quot;name&quot;: &quot;Hydrogen peroxide&quot;,
+  &quot;edits&quot;: [
+    {
+      &quot;op&quot;: &quot;replaceAtom&quot;,
+      &quot;index&quot;: 2,
+      &quot;e&quot;: &quot;O&quot;
+    },
+    {
+      &quot;op&quot;: &quot;moveAtom&quot;,
+      &quot;index&quot;: 2,
+      &quot;x&quot;: -0.9,
+      &quot;y&quot;: -0.95,
+      &quot;z&quot;: 0
+    },
+    {
+      &quot;op&quot;: &quot;atom&quot;,
+      &quot;e&quot;: &quot;H&quot;,
+      &quot;x&quot;: -1.65,
+      &quot;y&quot;: -0.6,
+      &quot;z&quot;: 0.4
+    },
+    {
+      &quot;op&quot;: &quot;setBond&quot;,
+      &quot;from&quot;: 2,
+      &quot;to&quot;: 3,
+      &quot;type&quot;: &quot;SINGLE&quot;
+    }
+  ]
+}</code></pre></div></div><div class="av-example" data-example="definition-edit"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static MoleculeDef peroxide(MoleculeDef water) {
+    // Carries over names and associations. Rename/rebind deliberately if needed.
+    return MoleculeEdits.apply(&quot;guide:peroxide&quot;, water, hydrogenPeroxideEdits(), false);
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static MoleculeDef peroxide(MoleculeDef water) {
+    // Carries over names and associations. Rename/rebind deliberately if needed.
+    return MoleculeEdits.apply(&quot;guide:peroxide&quot;, water, hydrogenPeroxideEdits(), false);
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-tip"><strong>Tip</strong> Copying preserves associations and ordinary metadata. Reusing a water-bucket binding for peroxide may be wrong for your pack: choose the new name and matching rules deliberately. Composition-changing edits recalculate the finite formula. Editing a crystal/polymer preview requires explicit <code>materialize(true)</code>; edit the template if it should remain adjustable.</div><h2 id="structures-transforms">Place multiple copies</h2><div class="av-example" data-example="transform"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureFragment waterPair() {
+    var water = GuideModels.water();
+    // A disconnected pair of water molecules, not an inferred hydrogen bond.
+    return water.qualified(&quot;first&quot;).append(&quot;second&quot;,
+            water.rotate(0, 0, 1, 180).translate(3.2, 0, 0));
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureFragment waterPair() {
+    def water = GuideModels.water();
+    // A disconnected pair of water molecules, not an inferred hydrogen bond.
+    return water.qualified(&quot;first&quot;).append(&quot;second&quot;,
+            water.rotate(0, 0, 1, 180).translate(3.2, 0, 0));
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-reference" data-reference="transforms"><div data-language="java groovy"><table><caption>Place multiple copies</caption><thead><tr><th scope="col">Tool</th><th scope="col">Use it for</th></tr></thead><tbody><tr><td><code>translate / rotate / scale / affine</code></td><td>Return transformed copies. Rotate takes axis x/y/z plus degrees.</td></tr><tr><td><code>qualified("first")</code></td><td>Give existing attachment names an instance prefix</td></tr><tr><td><code>instances(prefix, transforms)</code></td><td>Make authored instances named <code>prefix[0]</code>, <code>prefix[1]</code>, …</td></tr><tr><td><code>group(name, assembly, transform)</code></td><td>Place a nested collection as one unit</td></tr><tr><td><code>transformLast(matrix)</code></td><td>Replace the last node’s transform; compose matrices yourself when combining transforms</td></tr></tbody></table></div><div data-language="json"><table><caption>Place multiple copies</caption><thead><tr><th scope="col">JSON location / entry</th><th scope="col">Use it for</th></tr></thead><tbody><tr><td><code>structure.operations[]</code></td><td>Ordered operations. Use op="translate" with by:[x,y,z], op="rotate" with axis and degrees, op="scale" with by, or op="affine" with matrix.</td></tr><tr><td><code>op: "append", instance: "first"</code></td><td>Append the supplied structure and qualify its attachment names. There is no standalone qualified JSON operation.</td></tr><tr><td><code>op: "instances", prefix, transforms</code></td><td>Place authored matrix copies named prefix[0], prefix[1], and so on.</td></tr><tr><td>Assembly node <code>kind: "group", name, body, transform</code></td><td>Place a nested assembly as one unit.</td></tr><tr><td>Assembly node <code>transform</code></td><td>A 3 × 4 authored matrix on that node; there is no transformLast field.</td></tr></tbody></table></div></div><h2 id="structures-ring">Close an 18-crown-6 ring</h2><p>Six OCC units make the 18-membered ring. The author supplies the radius and rotation; the last link closes the open repeat boundary. This is a simple planar display model of C12H24O6, not its preferred conformation.</p><div class="av-example" data-example="crown-ring"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureAssembly crownRing() {
+    var unit = new StructureBuilder();
+    for (int i = 0; i &lt; 3; i++) {
+        double angle = Math.toRadians(i * 20);
+        double x = 4.4 * Math.cos(angle), y = 4.4 * Math.sin(angle);
+        int atom = unit.addAtom(i == 0 ? &quot;O&quot; : &quot;C&quot;, x, y, 0);
+        if (i &gt; 0) {
+            int h1 = unit.addAtom(&quot;H&quot;, x, y, .95);
+            int h2 = unit.addAtom(&quot;H&quot;, x, y, -.95);
+            unit.bond(atom, h1).bond(atom, h2);
+        }
+    }
+    // Indices after H insertion: O=0, first C=1, second C=4.
+    var fragment = unit.bond(0, 1).bond(1, 4).attachment(&quot;head&quot;, 0).attachment(&quot;tail&quot;, 4).build();
+    double c = Math.cos(Math.PI / 3), s = Math.sin(Math.PI / 3);
+    double[][] turn = {{c,-s,0,0}, {s,c,0,0}, {0,0,1,0}};
+    return StructureAssembly.builder()
+            .repeat(&quot;ring&quot;, StructureAssembly.builder().part(&quot;unit&quot;, fragment).build(), 6, turn)
+            .neighbor(&quot;unit/tail&quot;, &quot;unit/head&quot;, 1, BondType.SINGLE)
+            // Neighbor links leave the boundary open; this closes it explicitly.
+            .link(&quot;ring[last]/unit/tail&quot;, &quot;ring[first]/unit/head&quot;, BondType.SINGLE).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">// Groovy can read the identical assembly recipe exported by the Java companion.
+import com.google.gson.JsonParser
+import io.github.wurtzitane.avogadro.api.StructureAssembly
+def recipe = JsonParser.parseString(new File(&#x27;scripts/examples/crown-assembly.json&#x27;).text).asJsonObject
+def ring = StructureAssembly.fromJson(recipe).build()
+mods.avogadro.molecules.register(mods.avogadro.molecules.builder(&#x27;guide:crown&#x27;).structure(ring))</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><p><a href="crown-assembly.json">Download the complete JSON assembly</a>. In a molecule file use <code>{"structure":{"assembly": …}}</code> with this recipe as the value.</p><figure><a href="crown.png"><img src="crown.png" alt="18-crown-6. The gallery’s SMILES layout and the downloadable planar assembly share the same composition."></a><figcaption>18-crown-6. The gallery’s SMILES layout and the downloadable planar assembly share the same composition. <a href="crown.png">Full size</a></figcaption></figure><nav class="av-pager" aria-label="Guide pages"><a href="examples.html">← Example gallery</a><a href="matching.html">Items and fluids →</a></nav>
+</div></body></html>

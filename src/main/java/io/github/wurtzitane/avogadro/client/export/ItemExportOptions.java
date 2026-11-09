@@ -1,21 +1,22 @@
 package io.github.wurtzitane.avogadro.client.export;
 
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.ToIntFunction;
 
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+
 /**
  * Validated configuration options for exporting item cards.
- * <p>Item cards share the encoder/timing settings while retaining native GUI proportions.
+ * <p>
+ * Item cards share the encoder/timing settings while retaining native GUI proportions.
  *
- * @param media     the underlying export media options
- * @param scale     GUI pixel scale factor (1..8)
+ * @param media the underlying export media options
+ * @param scale GUI pixel scale factor (1..8)
  * @param selection the item export selection details
- * @param layout    computed item card layout configuration
+ * @param layout computed item card layout configuration
  */
 public record ItemExportOptions(ExportOptions media, int scale, ItemExportSelection selection, ItemCardLayout layout) {
 
@@ -24,40 +25,47 @@ public record ItemExportOptions(ExportOptions media, int scale, ItemExportSelect
         java.util.Objects.requireNonNull(media);
         java.util.Objects.requireNonNull(selection);
         java.util.Objects.requireNonNull(layout);
-        if (scale < 1 || scale > 8 || media.moleculeCount() != 1 || media.background() == null || media.width() % scale != 0 || media.height() % scale != 0) {
-            throw new IllegalArgumentException("Item cards require one molecule, an opaque background, scale 1..8 and dimensions divisible by scale");
+        if (scale < 1 || scale > 8 || media.moleculeCount() != 1 || media.background() == null
+                || media.width() % scale != 0 || media.height() % scale != 0) {
+            throw new IllegalArgumentException(
+                    "Item cards require one molecule, an opaque background, scale 1..8 and dimensions divisible by scale");
         }
-        if (layout.width() != media.width() / scale || layout.height() != media.height() / scale || layout.modelWidth() < 16 || layout.modelHeight() < 16 || layout.modelLeft() < 0 || layout.modelTop() < 0 ||
-                layout.modelLeft() + layout.modelWidth() > layout.width() || layout.modelTop() + layout.modelHeight() > layout.height() || layout.imageSize() <= 0) {
+        if (layout.width() != media.width() / scale || layout.height() != media.height() / scale
+                || layout.modelWidth() < 16 || layout.modelHeight() < 16 || layout.modelLeft() < 0
+                || layout.modelTop() < 0 || layout.modelLeft() + layout.modelWidth() > layout.width()
+                || layout.modelTop() + layout.modelHeight() > layout.height() || layout.imageSize() <= 0) {
             throw new IllegalArgumentException("Item card layout does not fit its export settings");
         }
     }
 
     /**
-     * Creates an {@link ItemExportOptions} instance for a given selection, media options, and scale.
+     * Creates an {@link ItemExportOptions} for a given selection, media options, and scale.
      *
      * @param selection item export selection
-     * @param media     export options
-     * @param scale     pixel scale factor
-     * @return a new validated {@link ItemExportOptions} instance
+     * @param media export options
+     * @param scale pixel scale factor
+     * @return a new validated {@link ItemExportOptions}
      * @throws IllegalArgumentException if scale is out of range
      */
     public static ItemExportOptions of(ItemExportSelection selection, ExportOptions media, int scale) {
         if (scale < 1 || scale > 8) {
             throw new IllegalArgumentException("Item scale must be 1..8");
         }
-        return new ItemExportOptions(media, scale, selection, ItemCardLayout.create(media, scale, selection.definition(), selection.title(), selection.font()::getStringWidth, selection.font().FONT_HEIGHT));
+        return new ItemExportOptions(media, scale, selection,
+                ItemCardLayout.create(media, scale, selection.definition(), selection.title(),
+                        selection.font()::getStringWidth, selection.font().FONT_HEIGHT));
     }
 
     /** Internal settings record holding media, scale, and layout during parsing. */
-    record Settings(ExportOptions media, int scale, ItemCardLayout layout) {}
+    record Settings(ExportOptions media, int scale, ItemCardLayout layout) {
+    }
 
     /**
-     * Parses command-line arguments to construct an {@link ItemExportOptions} instance.
+     * Parses command-line arguments to construct an {@link ItemExportOptions}.
      *
      * @param selection item export selection
      * @param arguments command-line arguments array
-     * @return a new parsed {@link ItemExportOptions} instance
+     * @return a new parsed {@link ItemExportOptions}
      */
     public static ItemExportOptions parse(ItemExportSelection selection, String[] arguments) {
         Settings settings = settings(arguments, selection.definition(), selection.title(),
@@ -77,8 +85,8 @@ public record ItemExportOptions(ExportOptions media, int scale, ItemExportSelect
     }
 
     /** Parses and builds item export settings from arguments and molecule definitions. */
-    static Settings settings(String[] arguments, MoleculeDef definition, String title,
-                             ToIntFunction<String> measure, int fontHeight) {
+    static Settings settings(String[] arguments, MoleculeDef definition, String title, ToIntFunction<String> measure,
+            int fontHeight) {
         Map<String, String> flags = new LinkedHashMap<>(itemFlags(arguments));
         if (flags.containsKey("columns")) {
             throw new IllegalArgumentException("--columns is only available for molecule galleries.");
@@ -99,10 +107,12 @@ public record ItemExportOptions(ExportOptions media, int scale, ItemExportSelect
             throw new IllegalArgumentException("Item cards need a solid fill. Set --background \"#RRGGBB\".");
         }
         if (media.width() % scale != 0 || media.height() % scale != 0) {
-            throw new IllegalArgumentException("--width and --height must be multiples of --scale for crisp GUI pixels.");
+            throw new IllegalArgumentException(
+                    "--width and --height must be multiples of --scale for crisp GUI pixels.");
         }
         if (!explicitHeight) {
-            int height = ItemCardLayout.defaultHeight(media, scale, title, MediaLayout.displayFormula(definition), measure, fontHeight);
+            int height = ItemCardLayout.defaultHeight(media, scale, title, MediaLayout.displayFormula(definition),
+                    measure, fontHeight);
             if (media.format() == ExportOptions.Format.MP4 && (height & 1) != 0) {
                 height += scale;
             }
@@ -135,7 +145,9 @@ public record ItemExportOptions(ExportOptions media, int scale, ItemExportSelect
             if (parsed >= minimum && parsed <= maximum) {
                 return parsed;
             }
-        } catch (NumberFormatException ignored) { }
-        throw new IllegalArgumentException("--" + name + " must be a whole number from " + minimum + " to " + maximum + ".");
+        } catch (NumberFormatException ignored) {
+        }
+        throw new IllegalArgumentException(
+                "--" + name + " must be a whole number from " + minimum + " to " + maximum + ".");
     }
 }

@@ -1,13 +1,5 @@
 package io.github.wurtzitane.avogadro.client;
 
-import com.google.gson.stream.JsonReader;
-import com.google.gson.stream.JsonToken;
-import io.github.wurtzitane.avogadro.Avogadro;
-import net.minecraft.client.resources.IResource;
-import net.minecraft.client.resources.IResourceManager;
-import net.minecraft.client.resources.IResourceManagerReloadListener;
-import net.minecraft.util.ResourceLocation;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
@@ -21,9 +13,20 @@ import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.regex.Pattern;
 
+import com.google.gson.stream.JsonReader;
+import com.google.gson.stream.JsonToken;
+
+import io.github.wurtzitane.avogadro.Avogadro;
+
+import net.minecraft.client.resources.IResource;
+import net.minecraft.client.resources.IResourceManager;
+import net.minecraft.client.resources.IResourceManagerReloadListener;
+import net.minecraft.util.ResourceLocation;
+
 /**
  * Manages client-side element color palettes, configuration file loading, and resource reloading.
- * <p>Client colors are independent of atom sizes and of the synchronized molecule definitions.
+ * <p>
+ * Client colors are independent of atom sizes and of the synchronized molecule definitions.
  */
 public final class ElementPalette implements IResourceManagerReloadListener {
 
@@ -48,26 +51,51 @@ public final class ElementPalette implements IResourceManagerReloadListener {
     /** Current volatile palette snapshot instance. */
     private static volatile Snapshot current = new Snapshot(DEFAULTS, REVISIONS.incrementAndGet());
 
-    /** Private constructor to prevent instantiation of utility class. */
+    /** Last valid bundled/resource-pack base; local user values remain a separate highest-priority layer. */
+    private static Map<String, Integer> resourceColors = DEFAULTS, localColors = Map.of();
+    /** Programmatic snapshot already composed into current; identity permits an allocation-free fast path. */
+    private static volatile io.github.wurtzitane.avogadro.api.ElementColors.Snapshot appliedOverrides;
+
     private ElementPalette() {}
 
     /**
-     * Retrieves the current palette snapshot.
-     * <p>Retain this immutable value for an entire draw or media export.
+     * Returns the current palette snapshot.
+     * <p>
+     * Retain this immutable value for an entire draw or media export.
      *
-     * @return current {@link Snapshot} instance
+     * @return current {@link Snapshot}
      */
     public static Snapshot snapshot() {
+        var overrides = io.github.wurtzitane.avogadro.api.ElementColors.snapshot();
+        if (overrides != appliedOverrides) {
+            synchronized (INSTANCE) { compose(io.github.wurtzitane.avogadro.api.ElementColors.snapshot()); }
+        }
+        return current;
+    }
+
+    /**
+     * Composes a complete palette only when a resource layer or registration changes.
+     * Called under the listener lock; existing snapshots remain immutable for exports and cached draw options.
+     * @param overrides atomic programmatic contributions
+     * @return resulting palette snapshot
+     */
+    private static Snapshot compose(io.github.wurtzitane.avogadro.api.ElementColors.Snapshot overrides) {
+        Map<String, Integer> colors = new LinkedHashMap<>(resourceColors);
+        overrides.colors().forEach((symbol, rgb) -> colors.put(symbol, rgb | 0xFF000000));
+        colors.putAll(localColors);
+        if (!colors.equals(current.colors)) current = new Snapshot(colors, REVISIONS.incrementAndGet());
+        appliedOverrides = overrides;
         return current;
     }
 
     /**
      * Creates an independent palette snapshot with custom overrides.
-     * <p>Identical overrides preserve the original cache identity.
+     * <p>
+     * Identical overrides preserve the original cache identity.
      *
-     * @param base      base snapshot
+     * @param base base snapshot
      * @param overrides map of symbol-to-color overrides
-     * @return new or reused {@link Snapshot} instance
+     * @return new or reused {@link Snapshot}
      */
     public static Snapshot withOverrides(Snapshot base, Map<String, Integer> overrides) {
         java.util.Objects.requireNonNull(base);
@@ -81,50 +109,49 @@ public final class ElementPalette implements IResourceManagerReloadListener {
         return colors.equals(base.colors) ? base : new Snapshot(colors, REVISIONS.incrementAndGet());
     }
 
-    /**
-     * {@inheritDoc}
-     */
+    /** Reloads F3+T resources atomically; malformed files keep the previous palette and log their cause. */
     @Override
     public void onResourceManagerReload(IResourceManager manager) {
-        Path local = Avogadro.configDirectory == null ? null : Avogadro.configDirectory.resolve("element-colors.json");
-        try {
-            Map<String, Integer> colors = new LinkedHashMap<>(DEFAULTS);
-            var layers = manager.getAllResources(RESOURCE);
-            try {
-                for (IResource resource : layers) {
-                    try (Reader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
-                        colors.putAll(parse(reader));
-                    }
-                }
-            } finally {
-                for (IResource resource : layers) {
-                    try {
-                        resource.close();
-                    } catch (IOException ignored) {}
-                }
-            }
-            if (local != null) {
-                Files.createDirectories(local.getParent());
-                if (!Files.exists(local)) {
-                    // A partial file lets a resource pack keep controlling every unedited element.
-                    try {
-                        Files.writeString(local, "{}\n", StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.CREATE_NEW);
-                    } catch (java.nio.file.FileAlreadyExistsException ignored) {}
-                }
-                if (Files.size(local) > MAX_FILE_BYTES) {
-                    throw new IOException("Palette file exceeds 32 KiB: " + local);
-                }
-                try (Reader reader = Files.newBufferedReader(local, StandardCharsets.UTF_8)) {
-                    colors.putAll(parse(reader));
-                }
-            }
-            if (!current.colors.equals(colors)) {
-                current = new Snapshot(colors, REVISIONS.incrementAndGet());
-            }
-        } catch (Exception failure) {
-            Avogadro.LOGGER.warn("Cannot reload element colors from {} or {}; keeping the previous palette: {}",
-                    RESOURCE, local, failure.getMessage());
+        try { reload(manager); }
+        catch (Exception failure) {
+            Avogadro.LOGGER.warn("Cannot reload element colors from {} or config/avogadro/element-colors.json; keeping the previous palette: {}",
+                    RESOURCE, failure.getMessage());
         }
+    }
+
+    /**
+     * Reads resource packs and the local partial override, then publishes a complete valid palette.
+     * Call on the client thread; external callers should use the scheduled client API. No graphics
+     * handles are created here. Palette revisions select fresh bounded GPU/animation-cache entries;
+     * already-started exports retain their old snapshot.
+     * @param manager active Minecraft resource manager
+     * @return effective colors after resource/API/local precedence
+     * @throws IOException if any layer is malformed or unreadable; previous valid layers remain active
+     */
+    public synchronized Snapshot reload(IResourceManager manager) throws IOException {
+        Path local = Avogadro.configDirectory == null ? null : Avogadro.configDirectory.resolve("element-colors.json");
+        Map<String, Integer> resources = new LinkedHashMap<>(DEFAULTS), user = Map.of();
+        var layers = manager.getAllResources(RESOURCE);
+        try {
+            for (IResource resource : layers)
+                try (Reader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
+                    resources.putAll(parse(reader));
+                }
+        } finally {
+            for (IResource resource : layers) try { resource.close(); } catch (IOException ignored) { }
+        }
+        if (local != null) {
+            Files.createDirectories(local.getParent());
+            if (!Files.exists(local)) {
+                try { Files.writeString(local, "{}\n", StandardCharsets.UTF_8, java.nio.file.StandardOpenOption.CREATE_NEW); }
+                catch (java.nio.file.FileAlreadyExistsException ignored) { }
+            }
+            if (Files.size(local) > MAX_FILE_BYTES) throw new IOException("Palette file exceeds 32 KiB: " + local);
+            try (Reader reader = Files.newBufferedReader(local, StandardCharsets.UTF_8)) { user = parse(reader); }
+        }
+        resourceColors = Map.copyOf(resources);
+        localColors = Map.copyOf(user);
+        return compose(io.github.wurtzitane.avogadro.api.ElementColors.snapshot());
     }
 
     /** Parses element colors from a JSON reader against default elements. */
@@ -141,9 +168,8 @@ public final class ElementPalette implements IResourceManagerReloadListener {
         int characters = 0;
         while (reader.hasNext()) {
             String symbol = reader.nextName();
-            if (known != null && !known.containsKey(symbol) &&
-                    io.github.wurtzitane.avogadro.api.ElementCatalog.additionalElements().stream()
-                            .noneMatch(element -> element.symbol().equals(symbol))) {
+            if (known != null && !known.containsKey(symbol) && io.github.wurtzitane.avogadro.api.ElementCatalog
+                    .additionalElements().stream().noneMatch(element -> element.symbol().equals(symbol))) {
                 throw new IOException("Unknown element color: " + symbol);
             }
             if (colors.containsKey(symbol)) {
@@ -192,21 +218,22 @@ public final class ElementPalette implements IResourceManagerReloadListener {
         private final Map<String, Integer> colors;
         private final long revision;
 
-        /** Constructs a new {@link Snapshot}. */
+        /** Creates a {@link Snapshot}. */
         private Snapshot(Map<String, Integer> colors, long revision) {
             this.colors = Collections.unmodifiableMap(new LinkedHashMap<>(colors));
             this.revision = revision;
         }
 
-        /** Retrieves the color for an element symbol. */
+        /** Returns the color for an element symbol. */
         public int color(String symbol) {
             Integer color = colors.get(symbol);
             return color == null ? io.github.wurtzitane.avogadro.api.ElementCatalog.color(symbol) : color;
         }
 
         /**
-         * Retrieves the color for an element symbol with a fallback value.
-         * <p>Unknown custom elements retain their existing explicitly assigned color.
+         * Returns the color for an element symbol with a fallback value.
+         * <p>
+         * Unknown custom elements retain their existing explicitly assigned color.
          */
         public int color(String symbol, int fallback) {
             return colors.getOrDefault(symbol, fallback);

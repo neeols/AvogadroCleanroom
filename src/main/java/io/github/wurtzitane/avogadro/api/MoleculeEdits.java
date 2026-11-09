@@ -1,33 +1,30 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
-import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
-
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
+import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
+
 /**
- * Definition-preserving snapshots and edits.
- * <p>Geometry changes never silently rewrite template families.
+ * Copies or edits a molecule definition while keeping its name, matching rules, and other metadata.
  */
 public final class MoleculeEdits {
 
-    /**
-     * Private constructor to prevent instantiation of this utility class.
-     */
     private MoleculeEdits() {}
 
     /**
      * Applies structure edits to a source molecule definition, producing a new modified {@link MoleculeDef}.
      *
-     * @param newId       the new resource identifier for the resulting molecule
-     * @param source      the source {@link MoleculeDef} to edit
-     * @param edits       the {@link StructureEdits} to apply
+     * @param newId the new resource identifier for the resulting molecule
+     * @param source the source {@link MoleculeDef} to edit
+     * @param edits the {@link StructureEdits} to apply
      * @param materialize whether to materialize templates into concrete structures when edited
      * @return a new {@link MoleculeDef} containing the applied edits
      * @throws IllegalArgumentException if attempting to edit a template preview without materialization
@@ -42,7 +39,8 @@ public final class MoleculeEdits {
                 || metadata.containsKey(CrystalCell.METADATA_KEY);
 
         if (template && !edits.isEmpty() && !materialize) {
-            throw new IllegalArgumentException("Materialize the polymer/crystal preview before editing its preview, or edit its template.");
+            throw new IllegalArgumentException(
+                    "Materialize the polymer/crystal preview before editing its preview, or edit its template.");
         }
 
         StructureFragment sourceFragment = StructureFragment.from(source);
@@ -57,20 +55,20 @@ public final class MoleculeEdits {
         }
 
         putAuthoringMetadata(metadata, result);
-        String formula = edits.changesComposition() || (materialize && template) ? MoleculeLoader.formula(structure) : source.formula();
+        String formula = edits.changesComposition() || (materialize && template)
+                ? MoleculeLoader.formula(structure)
+                : source.formula();
         MoleculeInspection inspection = new MoleculeInspection(source.inspection().elements(), result.configurations(),
                 source.inspection().components(), metadata);
 
-        return new MoleculeDef(
-                id, structure, formula, source.items(), source.itemTags(), source.fluids(),
-                source.fluidTags(), source.materials(), source.matchContainers(), source.name(),
-                source.generateItem(), inspection
-        );
+        return new MoleculeDef(id, structure, formula, source.items(), source.itemTags(), source.fluids(),
+                source.fluidTags(), source.materials(), source.matchContainers(), source.name(), source.generateItem(),
+                inspection);
     }
 
     /**
-     * Creates a self-contained source JSON snapshot of a molecule definition,
-     * retaining template families when the source has one.
+     * Creates a self-contained source JSON snapshot of a molecule definition, retaining template families when the
+     * source has one.
      *
      * @param source the {@link MoleculeDef} to snapshot
      * @return a {@link JsonObject} representing the complete molecule specification
@@ -116,7 +114,8 @@ public final class MoleculeEdits {
         // Network per-atom configurations belong to its templates; flattened preview indices are unstable.
         if (polymer != null && !inspection.atoms().isEmpty()) {
             JsonObject configurations = new JsonObject();
-            inspection.atoms().forEach((index, configuration) -> configurations.add(index.toString(), configuration.toJson()));
+            inspection.atoms()
+                    .forEach((index, configuration) -> configurations.add(index.toString(), configuration.toJson()));
             result.add("atom_configurations", configurations);
         }
 
@@ -135,7 +134,7 @@ public final class MoleculeEdits {
      * Injects authoring metadata (attachments and link capacities) into the metadata map.
      *
      * @param metadata the metadata map to update
-     * @param result   the structure fragment providing attachments and capacities
+     * @param result the structure fragment providing attachments and capacities
      */
     static void putAuthoringMetadata(java.util.Map<String, String> metadata, StructureFragment result) {
         metadata.remove(StructureFragment.ATTACHMENTS_METADATA_KEY);
@@ -149,7 +148,8 @@ public final class MoleculeEdits {
 
         if (!result.randomLinkCapacities().isEmpty()) {
             JsonObject capacities = new JsonObject();
-            new java.util.TreeMap<>(result.randomLinkCapacities()).forEach((index, capacity) -> capacities.addProperty(index.toString(), capacity));
+            new java.util.TreeMap<>(result.randomLinkCapacities())
+                    .forEach((index, capacity) -> capacities.addProperty(index.toString(), capacity));
             metadata.put(StructureFragment.CAPACITIES_METADATA_KEY, capacities.toString());
         }
     }
@@ -158,7 +158,7 @@ public final class MoleculeEdits {
      * Helper method to serialize a list of strings into a JSON array property.
      *
      * @param result the parent {@link JsonObject}
-     * @param key    the property key
+     * @param key the property key
      * @param values the list of string values
      */
     private static void strings(JsonObject result, String key, List<String> values) {

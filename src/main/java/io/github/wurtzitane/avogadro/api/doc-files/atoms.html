@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Add atom details</title></head><body>
+<div class="av-guide">
+<nav class="av-breadcrumb" aria-label="Guide navigation"><a href="../../../../../../index.html">Avogadro API</a><a href="examples.html">All examples</a><a href="../package-summary.html">Common reference</a><a href="../client/package-summary.html">Client reference</a></nav>
+<p class="av-kicker">Avogadro guide · Minecraft 1.12.2 / Cleanroom</p>
+<h1>Add atom details</h1><p class="av-lead">Tell the examiner exactly which isotope and charge you intend. Nuclear data is separate from the structure’s element labels and bond graph.</p>
+<div class="av-language"><span class="av-language-controls">Example language</span><noscript>Java, Groovy, and JSON variants are all shown below. Enable JavaScript to choose one.</noscript><span class="av-step"> Your choice applies across the guides.</span></div>
+<details><summary>Imports and complete companion files</summary><p>Examples are methods inside the downloadable companion classes. Copy the methods you need into your own class and keep the imports at the top. <code>GuideModels</code> contains the reusable chemical recipes; <code>GuideTasks</code> contains the operations. These files are documentation examples, not built-in library content.</p><p><a href="GuideModels.java">Java model recipes</a> · <a href="GuideTasks.java">Java operations</a> · <a href="ModelRecipes.groovy">Complete Groovy model script</a> · <a href="ClientRecipes.groovy.txt">Groovy client helpers</a></p><p>The complete Groovy model script can be saved as <code>groovy/postInit/avogadro_examples.groovy</code>. It includes the reusable <code>GuideModels</code> class and registers all ten chemical examples through the reloadable script registry. The separate client helper download is a reference for client integrations: keep it out of common postInit scripts and dedicated-server entry points. Java users should likewise copy common operations into their common class and keep screen/export operations in a client class.</p><pre><code class="language-java">import io.github.wurtzitane.avogadro.api.*;
+import io.github.wurtzitane.avogadro.molecule.*;
+// Client code only:
+import io.github.wurtzitane.avogadro.api.client.*;
+import io.github.wurtzitane.avogadro.client.export.*;
+import java.util.List;
+import java.util.Map;</code></pre></details><h2 id="atoms-configuration">Read an atomic configuration</h2><div class="av-reference" data-reference="atomic"><div data-language="java groovy"><table><caption>Read an atomic configuration</caption><thead><tr><th scope="col">Value</th><th scope="col">Meaning</th><th scope="col">Example</th></tr></thead><tbody><tr><td>Atomic number Z</td><td>Proton count</td><td>Carbon: 6</td></tr><tr><td>Neutrons N</td><td>Neutron count</td><td>Carbon-13: 7</td></tr><tr><td>Charge</td><td>Positive means electrons removed</td><td>Na+: +1</td></tr><tr><td>Shell counts</td><td>Electrons in each authored shell; sum must equal Z − charge</td><td>Na+: [2, 8]</td></tr><tr><td>Atom index</td><td>Zero-based position in the current fragment</td><td>Methanol’s carbon in our recipe: 0</td></tr></tbody></table></div><div data-language="json"><table><caption>Read an atomic configuration</caption><thead><tr><th scope="col">JSON field / location</th><th scope="col">Meaning</th><th scope="col">Example</th></tr></thead><tbody><tr><td><code>atomic_number</code></td><td>Proton count.</td><td>Carbon: 6</td></tr><tr><td><code>neutrons</code></td><td>Neutron count.</td><td>Carbon-13: 7</td></tr><tr><td><code>charge</code></td><td>Positive means electrons removed; defaults to zero.</td><td>Na+: 1</td></tr><tr><td><code>electron_shells</code></td><td>Electrons in each shell; the sum must equal atomic_number − charge.</td><td>Na+: [2, 8]</td></tr><tr><td><code>atom_configurations["0"]</code> or local <code>atoms[].nuclear</code></td><td>Assign atomic data to a specific atom. For network fragments, use local nuclear data.</td><td>The string key "0" selects the first atom.</td></tr></tbody></table></div></div><div class="av-example" data-example="isotope"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureFragment carbon13Methanol() {
+    return GuideModels.methanol().edit()
+            .atomConfiguration(0, new AtomicConfiguration(6, 7, 0, List.of(2, 4))).fragment();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureFragment carbon13Methanol() {
+    return GuideModels.methanol().edit()
+            .atomConfiguration(0, new AtomicConfiguration(6, 7, 0, List.of(2, 4))).fragment();
+}</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;copy&quot;: &quot;guide:methanol&quot;,
+  &quot;atom_configurations&quot;: {
+    &quot;0&quot;: {
+      &quot;atomic_number&quot;: 6,
+      &quot;neutrons&quot;: 7,
+      &quot;charge&quot;: 0,
+      &quot;electron_shells&quot;: [
+        2,
+        4
+      ]
+    }
+  }
+}</code></pre></div></div><div class="av-result"><strong>Expected result</strong> The carbon atom is displayed as carbon-13. Ordinary molecule mass calculations still use standard element weights.</div><h2 id="atoms-ions">Supply an ion explicitly</h2><div class="av-example" data-example="ion"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static MoleculeSpec sodiumIon() {
+    return AvogadroApi.builder(&quot;guide:sodium_ion&quot;).name(&quot;Sodium ion&quot;)
+            .atom(&quot;Na&quot;, 0, 0, 0).noBonds().atomConfiguration(0, 11, 12, 1, 2, 8).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static MoleculeSpec sodiumIon() {
+    return AvogadroApi.builder(&quot;guide:sodium_ion&quot;).name(&quot;Sodium ion&quot;)
+            .atom(&quot;Na&quot;, 0, 0, 0).noBonds().atomConfiguration(0, 11, 12, 1, 2, 8).build();
+}</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Sodium ion&quot;,
+  &quot;atoms&quot;: [
+    {
+      &quot;e&quot;: &quot;Na&quot;,
+      &quot;x&quot;: 0,
+      &quot;y&quot;: 0,
+      &quot;z&quot;: 0
+    }
+  ],
+  &quot;bonds&quot;: [],
+  &quot;atom_configurations&quot;: {
+    &quot;0&quot;: {
+      &quot;atomic_number&quot;: 11,
+      &quot;neutrons&quot;: 12,
+      &quot;charge&quot;: 1,
+      &quot;electron_shells&quot;: [
+        2,
+        8
+      ]
+    }
+  }
+}</code></pre></div></div><p>Use <code>element(symbol,Z,N,shells…)</code> for a neutral per-symbol default, or <code>atomConfiguration</code> for a specific atom/ion. The salt example supplies Na+ and Cl− separately. SMILES isotope/charge notation does not automatically populate the examiner’s nuclear data.</p><table><caption>Supply an ion explicitly</caption><thead><tr><th scope="col">Validation</th><th scope="col">Rule</th></tr></thead><tbody><tr><td>Protons</td><td>0–1,000; zero requires neutrons and zero charge</td></tr><tr><td>Neutrons</td><td>0–10,000</td></tr><tr><td>Shells</td><td>At most 32; each shell respects 2n² capacity</td></tr><tr><td>Electrons</td><td>Shell sum equals Z − charge</td></tr><tr><td>Charge</td><td>−1,000 through Z</td></tr><tr><td>Editing to another element</td><td>Clears the old atom-specific configuration</td></tr><tr><td>Missing data</td><td>No guessed neutron count from rounded atomic weight</td></tr></tbody></table><h2 id="atoms-components">Link related definitions in the examiner</h2><div class="av-example" data-example="components"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static MoleculeSpec waterAndEthanol() {
+    // Component references add inspection links, not geometry.
+    return AvogadroApi.builder(&quot;guide:water_ethanol_pair&quot;).name(&quot;Water and ethanol&quot;)
+            .smiles(&quot;O.CCO&quot;).component(&quot;guide:water&quot;).component(&quot;guide:ethanol&quot;)
+            .classification(MoleculeClassification.MIXTURE)
+            .inspectionMetadata(&quot;note&quot;, &quot;One molecule of each; an illustrative pair, not a bulk concentration.&quot;)
+            .build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static MoleculeSpec waterAndEthanol() {
+    // Component references add inspection links, not geometry.
+    return AvogadroApi.builder(&quot;guide:water_ethanol_pair&quot;).name(&quot;Water and ethanol&quot;)
+            .smiles(&quot;O.CCO&quot;).component(&quot;guide:water&quot;).component(&quot;guide:ethanol&quot;)
+            .classification(MoleculeClassification.MIXTURE)
+            .inspectionMetadata(&quot;note&quot;, &quot;One molecule of each; an illustrative pair, not a bulk concentration.&quot;)
+            .build();
+}</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Water and ethanol&quot;,
+  &quot;smiles&quot;: &quot;O.CCO&quot;,
+  &quot;components&quot;: [
+    &quot;guide:water&quot;,
+    &quot;guide:ethanol&quot;
+  ],
+  &quot;inspection&quot;: {
+    &quot;classification&quot;: &quot;MIXTURE&quot;,
+    &quot;note&quot;: &quot;One molecule of each; illustrative, not a bulk concentration.&quot;
+  }
+}</code></pre></div></div><p>Register the component targets too. References add inspection links; they do not append atoms. The disconnected SMILES supplies the actual geometry. A pair of molecules does not define a real solution’s concentration.</p><h2 id="atoms-mass">Show a standard-weight mass</h2><div class="av-example" data-example="mass"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static MoleculeWeight.Result mass() {
+    // Uses standard element weights, not isotope-specific measured masses.
+    return AvogadroApi.weight(&quot;C9H8O4&quot;);
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static MoleculeWeight.Result mass() {
+    // Uses standard element weights, not isotope-specific measured masses.
+    return AvogadroApi.weight(&quot;C9H8O4&quot;);
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><p><code>result.molarMass()</code> is grams per mole; <code>gramsPerEntity()</code> is grams per entity. Formatting helpers provide ready-to-show text. Unknown element weights can make the result unavailable: check for <code>null</code>. Network mass belongs to the selected finite realization; a bulk network has no single molecular mass.</p><h2 id="atoms-view">Inspect and export</h2><p>In HEI, a single-atom element card shows its nucleus, electrons, and cloud. Click it to open the atom viewer directly, or drag to rotate it. Other molecule cards open their examiner with <strong>Shift+N</strong>. Click an atom there for details; Space/Pause freezes rotation and electron motion.</p><p>Item tooltips keep the solid molecular ball by default. Hold <strong>Left Ctrl</strong> to show a single element’s atomic model at the same size, position, and rotation. In <strong>Mod Options → Avogadro → Tooltips → Atomic tooltip key mode</strong>, choose HOLD or TOGGLE. Toggle lasts until the menu closes or loses focus. Rebind <strong>Atomic tooltip preview</strong> in Controls → Avogadro. This affects single-atom elements; O2 and other multi-atom structures keep their molecular preview.</p><p>At ordinary molecule zoom, atom balls remain opaque; close inspection reveals their internal cloud/particle view. Particle visibility and viewer settings are presentation choices, not changes to the bond graph. Cards, tooltips, the atom viewer, and exports use the same supplied isotope and charge data.</p><figure><a href="element-hei-and-tooltips.png"><img src="element-hei-and-tooltips.png" alt="Carbon in an HEI atom card, with matching solid and atomic tooltip previews."></a><figcaption>Carbon in an HEI atom card, with matching solid and atomic tooltip previews. <a href="element-hei-and-tooltips.png">Full size</a></figcaption></figure><p>The <a href="exports.html#exports-atom">atomic export example</a> uses the same supplied data. For invented nuclei, see the clearly labeled <a href="fictional.html">fictional appendix</a>.</p><nav class="av-pager" aria-label="Guide pages"><a href="polymers.html">← Chains, networks, crystals</a><a href="rendering.html">Viewers and rendering →</a></nav>
+</div></body></html>

@@ -24,7 +24,7 @@ public enum BondType {
     /**
      * Constructs a bond type with the specified bond order and radius.
      *
-     * @param order  bond order integer
+     * @param order bond order integer
      * @param radius rendering radius float
      */
     BondType(int order, float radius) {
@@ -33,7 +33,7 @@ public enum BondType {
     }
 
     /**
-     * Retrieves the numerical bond order.
+     * Returns the numerical bond order.
      *
      * @return bond order integer
      */
@@ -42,7 +42,7 @@ public enum BondType {
     }
 
     /**
-     * Retrieves the visual rendering radius.
+     * Returns the visual rendering radius.
      *
      * @return bond radius float
      */

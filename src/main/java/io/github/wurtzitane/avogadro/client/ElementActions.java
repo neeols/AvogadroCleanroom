@@ -18,14 +18,13 @@ public final class ElementActions {
     /** Flag tracking whether all windows are currently closing. */
     private static boolean closingAll;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private ElementActions() {}
 
     /**
      * Registers material forms availability predicate and opening handler.
      *
      * @param available predicate testing element symbol availability
-     * @param open      consumer action to open material forms
+     * @param open consumer action to open material forms
      */
     public static void registerMaterialForms(Predicate<String> available, BiConsumer<String, Runnable> open) {
         ElementActions.available = Objects.requireNonNull(available);

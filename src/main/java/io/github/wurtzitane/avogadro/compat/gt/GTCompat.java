@@ -1,20 +1,21 @@
 package io.github.wurtzitane.avogadro.compat.gt;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.ModContainer;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.lang.reflect.Field;
-import java.lang.reflect.Method;
-
 /**
  * Optional adapter for GregTechCEu 1.12.2 2.8.10-beta (release tag v2.8.10), source commit
- * 9fe140febe8747bbe2f06dfd570421331ec06f4b. No GregTech classes are linked
- * when the standalone library is loaded, including on a dedicated server.
+ * 9fe140febe8747bbe2f06dfd570421331ec06f4b. No GregTech classes are linked when the standalone library is loaded,
+ * including on a dedicated server.
  */
 public final class GTCompat {
 
@@ -39,7 +40,6 @@ public final class GTCompat {
     /** Reason description for why the adapter is unavailable. */
     private static String unavailableReason = "GregTechCEu 1.12.2 " + SUPPORTED_VERSION + " is not installed";
 
-    /** Private constructor to prevent instantiation of utility class. */
     private GTCompat() {}
 
     /**
@@ -55,7 +55,9 @@ public final class GTCompat {
     public static synchronized void warnIfUnavailable() {
         if (!isLoaded() && !warned) {
             warned = true;
-            LOG.warn("Molecule material associations are retained but inactive: {}. Item/fluid associations and standalone rendering remain available.", unavailableReason);
+            LOG.warn(
+                    "Molecule material associations are retained but inactive: {}. Item/fluid associations and standalone rendering remain available.",
+                    unavailableReason);
         }
     }
 
@@ -71,15 +73,17 @@ public final class GTCompat {
     }
 
     /**
-     * Retrieves the GregTech material identifier associated with an item stack.
+     * Returns the GregTech material identifier associated with an item stack.
      *
      * @param stack item stack instance
      * @return material resource location, or {@code null} if unavailable
      */
     public static ResourceLocation materialId(ItemStack stack) {
-        if (stack == null || stack.isEmpty()) return null;
+        if (stack == null || stack.isEmpty())
+            return null;
         Adapter active = activeAdapter();
-        if (active == null) return null;
+        if (active == null)
+            return null;
         try {
             Object materialStack = active.itemMaterial.invoke(null, stack);
             return materialStack == null ? null : active.id(active.materialField.get(materialStack));
@@ -90,15 +94,17 @@ public final class GTCompat {
     }
 
     /**
-     * Retrieves the GregTech material identifier associated with a fluid.
+     * Returns the GregTech material identifier associated with a fluid.
      *
      * @param fluid fluid instance
      * @return material resource location, or {@code null} if unavailable
      */
     public static ResourceLocation materialId(Fluid fluid) {
-        if (fluid == null) return null;
+        if (fluid == null)
+            return null;
         Adapter active = activeAdapter();
-        if (active == null) return null;
+        if (active == null)
+            return null;
         try {
             return active.id(active.fluidMaterial.invoke(null, fluid));
         } catch (ReflectiveOperationException | LinkageError ex) {
@@ -109,13 +115,15 @@ public final class GTCompat {
 
     /** Hover lookups avoid the initialization monitor and retain a stable adapter for each call. */
     private static Adapter activeAdapter() {
-        if (!initialized) initialize();
+        if (!initialized)
+            initialize();
         return adapter;
     }
 
     /** Initializes the reflection adapter discovery process. */
     private static synchronized void initialize() {
-        if (initialized) return;
+        if (initialized)
+            return;
         try {
             adapter = discoverAdapter();
         } catch (ReflectiveOperationException | LinkageError ex) {
@@ -129,18 +137,21 @@ public final class GTCompat {
     /**
      * Discovers and reflects upon GregTech classes to construct an operational compatibility adapter.
      *
-     * @return discovered {@link Adapter} instance, or {@code null} if unsupported/missing
+     * @return discovered {@link Adapter}, or {@code null} if unsupported/missing
      * @throws ReflectiveOperationException if reflection lookup fails
      */
     private static Adapter discoverAdapter() throws ReflectiveOperationException {
         // Avoid creating Forge's Loader in standalone parser/matching tests. This is also
         // the common production path for the library without the optional integration.
         ClassLoader loader = GTCompat.class.getClassLoader();
-        if (loader.getResource("gregtech/api/unification/OreDictUnifier.class") == null) return null;
+        if (loader.getResource("gregtech/api/unification/OreDictUnifier.class") == null)
+            return null;
         ModContainer mod = Loader.instance().getIndexedModList().get(MODID);
-        if (mod == null) return null;
+        if (mod == null)
+            return null;
         if (!SUPPORTED_VERSION.equals(mod.getVersion())) {
-            unavailableReason = "installed gregtech version " + mod.getVersion() + " is not the verified " + SUPPORTED_VERSION + " adapter target";
+            unavailableReason = "installed gregtech version " + mod.getVersion() + " is not the verified "
+                    + SUPPORTED_VERSION + " adapter target";
             return null;
         }
         Class<?> unifier = Class.forName("gregtech.api.unification.OreDictUnifier", false, loader);
@@ -148,8 +159,8 @@ public final class GTCompat {
         Class<?> stack = Class.forName("gregtech.api.unification.stack.MaterialStack", false, loader);
         Class<?> material = Class.forName("gregtech.api.unification.material.Material", false, loader);
         Adapter discovered = new Adapter(unifier.getMethod("getMaterial", ItemStack.class),
-                fluidUnifier.getMethod("getMaterialFromFluid", Fluid.class),
-                stack.getField("material"), material.getMethod("getResourceLocation"));
+                fluidUnifier.getMethod("getMaterialFromFluid", Fluid.class), stack.getField("material"),
+                material.getMethod("getResourceLocation"));
         LOG.info("Enabled optional GregTechCEu {} material adapter (gtceu:* aliases gregtech:*).", SUPPORTED_VERSION);
         return discovered;
     }
@@ -171,9 +182,9 @@ public final class GTCompat {
     /**
      * Record holding reflected methods and fields for GregTech material interactions.
      *
-     * @param itemMaterial     reflected method to get material from item stack
-     * @param fluidMaterial    reflected method to get material from fluid
-     * @param materialField    reflected field for material stack material reference
+     * @param itemMaterial reflected method to get material from item stack
+     * @param fluidMaterial reflected method to get material from fluid
+     * @param materialField reflected field for material stack material reference
      * @param resourceLocation reflected method to get resource location from material
      */
     private record Adapter(Method itemMaterial, Method fluidMaterial, Field materialField, Method resourceLocation) {

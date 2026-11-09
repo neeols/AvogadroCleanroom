@@ -3,8 +3,8 @@ package io.github.wurtzitane.avogadro.client;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
 
 /**
- * Manages model-space instance buffers for atoms and bonds.
- * Camera transformations and rotations never enter these buffers.
+ * Manages model-space instance buffers for atoms and bonds. Camera transformations and rotations never enter these
+ * buffers.
  */
 final class MoleculeInstances {
 
@@ -24,7 +24,7 @@ final class MoleculeInstances {
      * Constructs molecule instances using the default styling.
      *
      * @param molecule the molecule structure
-     * @param palette  the element color palette snapshot
+     * @param palette the element color palette snapshot
      */
     MoleculeInstances(MoleculeStructure molecule, ElementPalette.Snapshot palette) {
         this(molecule, palette, MoleculeStyle.DEFAULT);
@@ -34,8 +34,8 @@ final class MoleculeInstances {
      * Constructs molecule instances using a custom molecule style.
      *
      * @param molecule the molecule structure
-     * @param palette  the element color palette snapshot
-     * @param style    the molecule display style configuration
+     * @param palette the element color palette snapshot
+     * @param style the molecule display style configuration
      */
     MoleculeInstances(MoleculeStructure molecule, ElementPalette.Snapshot palette, MoleculeStyle style) {
         atoms = new float[molecule.atoms().size() * ATOM_STRIDE];
@@ -76,7 +76,8 @@ final class MoleculeInstances {
                 index = line(lines, index, a.x(), a.y(), a.z(), b.x(), b.y(), b.z(), 0.15f * style.bonds());
                 continue;
             }
-            if (dx * dx + dy * dy + dz * dz < 0.00000001f) continue;
+            if (dx * dx + dy * dy + dz * dz < 0.00000001f)
+                continue;
 
             float px, py, pz;
             if (Math.abs(dx) <= Math.abs(dy) && Math.abs(dx) <= Math.abs(dz)) {
@@ -107,8 +108,10 @@ final class MoleculeInstances {
                 oz *= 2;
             }
 
-            index = line(lines, index, a.x() + ox, a.y() + oy, a.z() + oz, b.x() + ox, b.y() + oy, b.z() + oz, 0.10f * style.bonds());
-            index = line(lines, index, a.x() - ox, a.y() - oy, a.z() - oz, b.x() - ox, b.y() - oy, b.z() - oz, 0.10f * style.bonds());
+            index = line(lines, index, a.x() + ox, a.y() + oy, a.z() + oz, b.x() + ox, b.y() + oy, b.z() + oz,
+                    0.10f * style.bonds());
+            index = line(lines, index, a.x() - ox, a.y() - oy, a.z() - oz, b.x() - ox, b.y() - oy, b.z() - oz,
+                    0.10f * style.bonds());
         }
 
         // Offset arithmetic can round a very short multiple bond to zero length.
@@ -119,27 +122,32 @@ final class MoleculeInstances {
     /**
      * Appends cylinder data for a single bond line into the output float buffer.
      *
-     * @param out    the destination float array buffer
-     * @param i      the current buffer index pointer
-     * @param fx     from x coordinate
-     * @param fy     from y coordinate
-     * @param fz     from z coordinate
-     * @param tx     to x coordinate
-     * @param ty     to y coordinate
-     * @param tz     to z coordinate
+     * @param out the destination float array buffer
+     * @param i the current buffer index pointer
+     * @param fx from x coordinate
+     * @param fy from y coordinate
+     * @param fz from z coordinate
+     * @param tx to x coordinate
+     * @param ty to y coordinate
+     * @param tz to z coordinate
      * @param radius the cylinder radius
      * @return the updated index pointer
      */
-    private static int line(float[] out, int i, float fx, float fy, float fz, float tx, float ty, float tz, float radius) {
+    private static int line(float[] out, int i, float fx, float fy, float fz, float tx, float ty, float tz,
+            float radius) {
         float dx = tx - fx, dy = ty - fy, dz = tz - fz;
         float len = (float) Math.sqrt(dx * dx + dy * dy + dz * dz);
-        if (len < 0.0001f) return i;
+        if (len < 0.0001f)
+            return i;
         float nx = dx / len, ny = dy / len, nz = dz / len;
         float ax = Math.abs(nx), ay = Math.abs(ny), az = Math.abs(nz);
         float refx = 0, refy = 0, refz = 0;
-        if (ax <= ay && ax <= az) refx = 1;
-        else if (ay <= az) refy = 1;
-        else refz = 1;
+        if (ax <= ay && ax <= az)
+            refx = 1;
+        else if (ay <= az)
+            refy = 1;
+        else
+            refz = 1;
         float ux = ny * refz - nz * refy, uy = nz * refx - nx * refz, uz = nx * refy - ny * refx;
         float ul = (float) Math.sqrt(ux * ux + uy * uy + uz * uz);
         ux /= ul;

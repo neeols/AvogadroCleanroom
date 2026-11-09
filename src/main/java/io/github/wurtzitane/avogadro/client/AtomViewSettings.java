@@ -1,14 +1,16 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.util.function.BooleanSupplier;
+import java.util.function.Supplier;
+
 import com.cleanroommc.modularui.screen.ModularPanel;
 import com.cleanroommc.modularui.widget.Widget;
+
 import io.github.wurtzitane.avogadro.Config;
+
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.resources.I18n;
 import net.minecraftforge.common.config.Property;
-
-import java.util.function.BooleanSupplier;
-import java.util.function.Supplier;
 
 /**
  * The examiner's compact settings page; each user action saves once.
@@ -18,27 +20,25 @@ final class AtomViewSettings {
     /** Array of configurable toggle setting keys. */
     private static final String[] TOGGLES = {"atomCloud", "atomOrbits", "atomNucleus", "atomElectrons", "atomDetails"};
 
-    /** Private constructor to prevent instantiation of utility class. */
     private AtomViewSettings() {}
 
     /**
      * Adds the atom view settings panel components to a ModularPanel.
      *
-     * @param panel    the modular panel container
-     * @param top      top coordinate offset
-     * @param width    total panel width
-     * @param height   total panel height
-     * @param visible  supplier checking panel visibility
+     * @param panel the modular panel container
+     * @param top top coordinate offset
+     * @param width total panel width
+     * @param height total panel height
+     * @param visible supplier checking panel visibility
      * @param keepView runnable action to preserve the view state
      */
-    static void addTo(ModularPanel panel, int top, int width, int height,
-                      BooleanSupplier visible, Runnable keepView) {
-        panel.child(new Widget<>().pos(10, top).size(width - 20, height)
-                .setEnabledIf(widget -> visible.getAsBoolean())
+    static void addTo(ModularPanel panel, int top, int width, int height, BooleanSupplier visible, Runnable keepView) {
+        panel.child(new Widget<>().pos(10, top).size(width - 20, height).setEnabledIf(widget -> visible.getAsBoolean())
                 .background((context, x, y, w, h, theme) -> {
                     keepView.run();
-                    Gui.drawRect(x, y, x + w, y + h, StructureStyle.PAPER);
-                    StructureStyle.text(I18n.format("avogadro.examiner.settings.heading"), x + 8, y + 8, w - 16, StructureStyle.INK);
+                    Gui.drawRect(x, y, x + w, y + h, StructureStyle.PAPER());
+                    StructureStyle.text(I18n.format("avogadro.examiner.settings.heading"), x + 8, y + 8, w - 16,
+                            StructureStyle.INK());
                 }));
         int columnWidth = (width - 40) / 2;
         int pitch = Math.min(30, Math.max(14, (height - 26) / 6));
@@ -46,8 +46,8 @@ final class AtomViewSettings {
         for (int index = 0; index < TOGGLES.length; index++) {
             String key = TOGGLES[index];
             add(panel, top, columnWidth, pitch, buttonHeight, index, visible,
-                    () -> I18n.format("avogadro.examiner.setting." + key) + ": " +
-                            I18n.format(property(key).getBoolean() ? "options.on" : "options.off"),
+                    () -> I18n.format("avogadro.examiner.setting." + key) + ": "
+                            + I18n.format(property(key).getBoolean() ? "options.on" : "options.off"),
                     () -> {
                         property(key).set(!property(key).getBoolean());
                         Config.sync();
@@ -69,8 +69,7 @@ final class AtomViewSettings {
                     Config.sync();
                 });
         add(panel, top, columnWidth, pitch, buttonHeight, 7, visible,
-                () -> I18n.format("avogadro.examiner.setting.fps", Config.ATOM_FPS.get()),
-                () -> {
+                () -> I18n.format("avogadro.examiner.setting.fps", Config.ATOM_FPS.get()), () -> {
                     int next = 24;
                     for (int preset : new int[]{24, 30, 50, 60, 120, 240, 360, 1000}) {
                         if (preset > Config.ATOM_FPS.get()) {
@@ -82,15 +81,16 @@ final class AtomViewSettings {
                     Config.sync();
                 });
         add(panel, top, columnWidth, pitch, buttonHeight, 8, visible,
-                () -> I18n.format("avogadro.examiner.setting.turn", Config.SPIN_SECONDS.get()),
-                () -> {
+                () -> I18n.format("avogadro.examiner.setting.turn", Config.SPIN_SECONDS.get()), () -> {
                     Config.configuration.getCategory(Config.APPEARANCE).get("spinSeconds")
                             .set(Config.SPIN_SECONDS.get() < 6 ? 6 : Config.SPIN_SECONDS.get() < 12 ? 12 : 3);
                     Config.sync();
                 });
         add(panel, top, columnWidth, pitch, buttonHeight, 9, visible,
-                () -> I18n.format("avogadro.examiner.setting.viewerFps", Config.VIEWER_FPS.get() == 0
-                        ? I18n.format("avogadro.examiner.setting.unlimited") : Config.VIEWER_FPS.get()),
+                () -> I18n.format("avogadro.examiner.setting.viewerFps",
+                        Config.VIEWER_FPS.get() == 0
+                                ? I18n.format("avogadro.examiner.setting.unlimited")
+                                : Config.VIEWER_FPS.get()),
                 () -> {
                     int fps = Config.VIEWER_FPS.get();
                     property("viewerFps").set(fps == 0 ? 60 : fps < 120 ? 120 : fps < 240 ? 240 : 0);
@@ -99,8 +99,8 @@ final class AtomViewSettings {
         add(panel, top, columnWidth, pitch, buttonHeight, 10, visible,
                 () -> I18n.format("avogadro.examiner.setting.restore"), AtomViewSettings::restore);
         add(panel, top, columnWidth, pitch, buttonHeight, 11, visible,
-                () -> I18n.format("avogadro.examiner.setting.predictNeutralElectronConfigs") + ": " +
-                        I18n.format(Config.PREDICT_NEUTRAL_ELECTRON_CONFIGS.get() ? "options.on" : "options.off"),
+                () -> I18n.format("avogadro.examiner.setting.predictNeutralElectronConfigs") + ": "
+                        + I18n.format(Config.PREDICT_NEUTRAL_ELECTRON_CONFIGS.get() ? "options.on" : "options.off"),
                 () -> {
                     property("predictNeutralElectronConfigs").set(!Config.PREDICT_NEUTRAL_ELECTRON_CONFIGS.get());
                     Config.sync();
@@ -109,13 +109,12 @@ final class AtomViewSettings {
 
     /** Helper method to add a configured setting button to the panel. */
     private static void add(ModularPanel panel, int top, int width, int pitch, int height, int index,
-                            BooleanSupplier visible, Supplier<String> label, Runnable action) {
-        panel.child(StructureStyle.button(label, action)
-                .pos(16 + index % 2 * (width + 8), top + 26 + index / 2 * pitch).size(width, height)
-                .setEnabledIf(widget -> visible.getAsBoolean()));
+            BooleanSupplier visible, Supplier<String> label, Runnable action) {
+        panel.child(StructureStyle.button(label, action).pos(16 + index % 2 * (width + 8), top + 26 + index / 2 * pitch)
+                .size(width, height).setEnabledIf(widget -> visible.getAsBoolean()));
     }
 
-    /** Retrieves a configuration property by its key. */
+    /** Returns a configuration property by its key. */
     private static Property property(String key) {
         return Config.configuration.getCategory(Config.ATOMS).get(key);
     }

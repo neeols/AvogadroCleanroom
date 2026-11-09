@@ -1,11 +1,11 @@
 package io.github.wurtzitane.avogadro.client;
 
-import io.github.wurtzitane.avogadro.Avogadro;
-
 import java.util.concurrent.Callable;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+
+import io.github.wurtzitane.avogadro.Avogadro;
 
 /** Client-thread owner of one replaceable job; workers never touch the live screen. */
 final class PreviewPreparation<T> implements AutoCloseable {
@@ -32,14 +32,17 @@ final class PreviewPreparation<T> implements AutoCloseable {
     }
 
     /**
-     * Retrieves the completed preview preparation result, or {@code null} if pending or failed.
+     * Returns the completed preview preparation result, or {@code null} if pending or failed.
      *
      * @return prepared result instance, or {@code null}
      */
     T take() {
-        if (requested == null) return null;
-        if (future == null) future = GeometryPreparation.submitForeground(requested);
-        if (future == null || !future.isDone()) return null;
+        if (requested == null)
+            return null;
+        if (future == null)
+            future = GeometryPreparation.submitForeground(requested);
+        if (future == null || !future.isDone())
+            return null;
         try {
             return future.get();
         } catch (CancellationException cancelled) {
@@ -62,19 +65,24 @@ final class PreviewPreparation<T> implements AutoCloseable {
      *
      * @return {@code true} if pending, {@code false} otherwise
      */
-    boolean isPending() { return requested != null; }
+    boolean isPending() {
+        return requested != null;
+    }
 
     /**
      * Checks whether the last preparation attempt failed.
      *
      * @return {@code true} if failed, {@code false} otherwise
      */
-    boolean failed() { return failed; }
+    boolean failed() {
+        return failed;
+    }
 
     /** Cancels any active futures and resets preparation state. */
     @Override
     public void close() {
-        if (future != null) future.cancel(true);
+        if (future != null)
+            future.cancel(true);
         future = null;
         requested = null;
         failed = false;

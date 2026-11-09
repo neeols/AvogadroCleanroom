@@ -1,17 +1,18 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.lang.ref.WeakReference;
+import java.util.HashMap;
+import java.util.Map;
+
 import io.github.wurtzitane.avogadro.api.AtomicConfiguration;
 import io.github.wurtzitane.avogadro.molecule.AtomElement;
 import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
 
-import java.lang.ref.WeakReference;
-import java.util.HashMap;
-import java.util.Map;
-
 /**
  * Caches immutable inspection model data shared when molecule definitions are reopened.
- * <p>Immutable inspection data shared when the same definition is reopened. No GPU handles.
+ * <p>
+ * Immutable inspection data shared when the same definition is reopened. No GPU handles.
  */
 final class InspectionModelData {
 
@@ -33,7 +34,7 @@ final class InspectionModelData {
         final InspectionModelData data;
         long used;
 
-        /** Constructs a new inspection cache entry. */
+        /** Creates a inspection cache entry. */
         Entry(MoleculeDef definition, InspectionModelData data) {
             this.definition = new WeakReference<>(definition);
             this.data = data;
@@ -56,8 +57,8 @@ final class InspectionModelData {
             GeometryPreparation.checkCancelled();
             var atom = atoms.get(i);
             configurations[i] = definition.inspection().atom(definition.structure(), i);
-            AtomElement point = points.computeIfAbsent(atom.element(), element ->
-                    new AtomElement(element.symbol(), element.color(), 0));
+            AtomElement point = points.computeIfAbsent(atom.element(),
+                    element -> new AtomElement(element.symbol(), element.color(), 0));
             links.addAtom(point, atom.x(), atom.y(), atom.z());
             mask.addAtom(atom.element(), atom.x(), atom.y(), atom.z());
         }
@@ -68,8 +69,8 @@ final class InspectionModelData {
         bonds = links.build();
         cloudMask = mask.build();
         int missing = 0;
-        for (AtomicConfiguration configuration : configurations) {
-            if (configuration == null) {
+        for (int index = 0; index < configurations.length; index++) {
+            if (configurations[index] == null && canInspect(definition.structure(), index)) {
                 missing++;
             }
         }
@@ -81,7 +82,7 @@ final class InspectionModelData {
     }
 
     /**
-     * Retrieves or builds inspection model data for the given molecule definition.
+     * Returns or builds inspection model data for the given molecule definition.
      *
      * @param definition molecule definition
      * @return inspection model data instance
@@ -124,9 +125,15 @@ final class InspectionModelData {
         return built;
     }
 
-    /** Retrieves the atomic configuration at the specified atom index. */
+    /** Returns the atomic configuration at the specified atom index. */
     AtomicConfiguration configuration(int index) {
         return configurations[index];
+    }
+
+    /** Real atoms, including authored radicals, can be inspected; an R group has no nucleus. */
+    static boolean canInspect(MoleculeStructure structure, int index) {
+        return index >= 0 && index < structure.atoms().size()
+                && !structure.atoms().get(index).element().symbol().equals("*");
     }
 
     /** Returns the inspection bonds molecule structure. */

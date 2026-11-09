@@ -1,5 +1,12 @@
 package io.github.wurtzitane.avogadro.item;
 
+import java.util.*;
+
+import io.github.wurtzitane.avogadro.Avogadro;
+import io.github.wurtzitane.avogadro.api.MoleculeClassification;
+import io.github.wurtzitane.avogadro.api.MoleculeView;
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
@@ -11,13 +18,6 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
 import net.minecraftforge.fml.relauncher.SideOnly;
-
-import io.github.wurtzitane.avogadro.Avogadro;
-import io.github.wurtzitane.avogadro.api.MoleculeClassification;
-import io.github.wurtzitane.avogadro.api.MoleculeView;
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-
-import java.util.*;
 
 /** One permanent registry entry; molecule identity is saved as an ID, never as an ordinal. */
 @Mod.EventBusSubscriber(modid = Avogadro.MODID)
@@ -47,7 +47,8 @@ public final class MoleculeItems {
 
         @Override
         public void displayAllRelevantItems(NonNullList<ItemStack> items) {
-            if (ELEMENTS_TAB == null) items.add(PeriodicTableItem.stack());
+            if (ELEMENTS_TAB == null && io.github.wurtzitane.avogadro.Config.PERIODIC_TABLE_CRAFTING.get())
+                items.add(PeriodicTableItem.stack());
             variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.MOLECULE).forEach(items::add);
         }
     };
@@ -61,7 +62,6 @@ public final class MoleculeItems {
     /** Optional creative tab for polymer structures. */
     public static CreativeTabs POLYMERS_TAB;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeItems() {}
 
     /** Native tabs are created at startup; changing the split preference takes effect after restart. */
@@ -96,7 +96,8 @@ public final class MoleculeItems {
                 }
             };
         }
-        if (ELEMENTS_TAB != null || !io.github.wurtzitane.avogadro.Config.SPLIT_CREATIVE_TABS.get()) return;
+        if (ELEMENTS_TAB != null || !io.github.wurtzitane.avogadro.Config.SPLIT_CREATIVE_TABS.get())
+            return;
         ELEMENTS_TAB = new CreativeTabs("avogadro.elements") {
 
             @Override
@@ -107,7 +108,8 @@ public final class MoleculeItems {
 
             @Override
             public void displayAllRelevantItems(NonNullList<ItemStack> items) {
-                items.add(PeriodicTableItem.stack());
+                if (io.github.wurtzitane.avogadro.Config.PERIODIC_TABLE_CRAFTING.get())
+                    items.add(PeriodicTableItem.stack());
                 variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.ELEMENT).forEach(items::add);
             }
         };
@@ -126,13 +128,14 @@ public final class MoleculeItems {
     }
 
     /**
-     * Retrieves the resource location identifier stored on a molecule item stack.
+     * Returns the resource location identifier stored on a molecule item stack.
      *
      * @param stack item stack instance
      * @return resource location identifier, or {@code null}
      */
     public static ResourceLocation id(ItemStack stack) {
-        if (stack == null || stack.isEmpty() || stack.getItem() != MODEL || !stack.hasTagCompound()) return null;
+        if (stack == null || stack.isEmpty() || stack.getItem() != MODEL || !stack.hasTagCompound())
+            return null;
         return MoleculeItemMetadata.validatedId(stack.getTagCompound().getString(ID_TAG));
     }
 
@@ -140,7 +143,7 @@ public final class MoleculeItems {
      * Resolves a molecule definition from an item stack and view.
      *
      * @param stack item stack instance
-     * @param view  molecule view instance
+     * @param view molecule view instance
      * @return resolved {@link MoleculeDef}, or {@code null}
      */
     public static MoleculeDef resolve(ItemStack stack, MoleculeView view) {
@@ -166,36 +169,36 @@ public final class MoleculeItems {
     }
 
     /**
-     * Retrieves all sorted item stack variants for a molecule view.
+     * Returns all sorted item stack variants for a molecule view.
      *
      * @param view molecule view instance
      * @return list of item stacks
      */
     public static List<ItemStack> variants(MoleculeView view) {
         return MoleculeItemOrder.sort(view.generatedItemDefinitions(),
-                        io.github.wurtzitane.avogadro.Config.CREATIVE_SORT.get(), Avogadro.proxy::moleculeItemName).stream()
+                io.github.wurtzitane.avogadro.Config.CREATIVE_SORT.get(), Avogadro.proxy::moleculeItemName).stream()
                 .map(MoleculeItems::stack).toList();
     }
 
     /**
-     * Retrieves filtered and sorted item stack variants for a specific classification tab.
+     * Returns filtered and sorted item stack variants for a specific classification tab.
      *
      * @param view molecule view instance
-     * @param tab  molecule classification tab
+     * @param tab molecule classification tab
      * @return list of item stacks
      */
     private static List<ItemStack> variants(MoleculeView view, MoleculeClassification tab) {
-        return MoleculeItemOrder
-                .sort(MoleculeItemOrder.group(view.all(), ELEMENTS_TAB != null, CRYSTALS_TAB != null,
-                                POLYMERS_TAB != null, tab),
-                        (tab == MoleculeClassification.ELEMENT ? io.github.wurtzitane.avogadro.Config.ELEMENT_SORT.get() :
-                                io.github.wurtzitane.avogadro.Config.CREATIVE_SORT.get()),
-                        Avogadro.proxy::moleculeItemName)
-                .stream().map(MoleculeItems::stack).toList();
+        return MoleculeItemOrder.sort(
+                MoleculeItemOrder.group(view.all(), ELEMENTS_TAB != null, CRYSTALS_TAB != null, POLYMERS_TAB != null,
+                        tab),
+                (tab == MoleculeClassification.ELEMENT
+                        ? io.github.wurtzitane.avogadro.Config.ELEMENT_SORT.get()
+                        : io.github.wurtzitane.avogadro.Config.CREATIVE_SORT.get()),
+                Avogadro.proxy::moleculeItemName).stream().map(MoleculeItems::stack).toList();
     }
 
     /**
-     * Retrieves the fallback name string for a molecule definition.
+     * Returns the fallback name string for a molecule definition.
      *
      * @param definition molecule definition
      * @return fallback name string
@@ -205,7 +208,7 @@ public final class MoleculeItems {
     }
 
     /**
-     * Retrieves the localized display name for a molecule definition on the client side.
+     * Returns the localized display name for a molecule definition on the client side.
      *
      * @param definition molecule definition
      * @return localized display name string
@@ -219,15 +222,17 @@ public final class MoleculeItems {
     @SideOnly(Side.CLIENT)
     public static String displayFormula(MoleculeDef definition) {
         String formula = io.github.wurtzitane.avogadro.api.ChemicalFormula.display(definition.formula());
-        return definition.inspection().metadata().containsKey(io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY)
-                ? net.minecraft.client.resources.I18n.format("avogadro.network.default_formula", formula) : formula;
+        return definition.inspection().metadata()
+                .containsKey(io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY)
+                        ? net.minecraft.client.resources.I18n.format("avogadro.network.default_formula", formula)
+                        : formula;
     }
 
     /** Internal item implementation handling subtypes, tooltips, and creative tabs. */
     private static final class ModelItem extends Item {
 
         /**
-         * Retrieves the item stack display name.
+         * Returns the item stack display name.
          *
          * @param stack item stack instance
          * @return display name string
@@ -235,27 +240,33 @@ public final class MoleculeItems {
         @Override
         public String getItemStackDisplayName(ItemStack stack) {
             MoleculeDef definition = resolve(stack, Avogadro.proxy.moleculeItemView());
-            return definition == null ? super.getItemStackDisplayName(stack) :
-                    Avogadro.proxy.moleculeItemName(definition);
+            return definition == null
+                    ? super.getItemStackDisplayName(stack)
+                    : Avogadro.proxy.moleculeItemName(definition);
         }
 
         /**
          * Populates sub-items for creative inventory tabs.
          *
-         * @param tab   creative tab
+         * @param tab creative tab
          * @param items non-null item stack list
          */
         @Override
         public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
-            if (tab == CreativeTabs.SEARCH) items.addAll(variants(Avogadro.proxy.moleculeItemView()));
-            else if (tab == TAB) items.addAll(variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.MOLECULE));
-            else if (tab == ELEMENTS_TAB) items.addAll(variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.ELEMENT));
-            else if (tab == CRYSTALS_TAB) items.addAll(variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.CRYSTAL));
-            else if (tab == POLYMERS_TAB) items.addAll(variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.POLYMER));
+            if (tab == CreativeTabs.SEARCH)
+                items.addAll(variants(Avogadro.proxy.moleculeItemView()));
+            else if (tab == TAB)
+                items.addAll(variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.MOLECULE));
+            else if (tab == ELEMENTS_TAB)
+                items.addAll(variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.ELEMENT));
+            else if (tab == CRYSTALS_TAB)
+                items.addAll(variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.CRYSTAL));
+            else if (tab == POLYMERS_TAB)
+                items.addAll(variants(Avogadro.proxy.moleculeItemView(), MoleculeClassification.POLYMER));
         }
 
         /**
-         * Retrieves all creative tabs associated with this item.
+         * Returns all creative tabs associated with this item.
          *
          * @return array of creative tabs
          */
@@ -263,29 +274,34 @@ public final class MoleculeItems {
         public CreativeTabs[] getCreativeTabs() {
             List<CreativeTabs> tabs = new ArrayList<>();
             tabs.add(TAB);
-            if (ELEMENTS_TAB != null) tabs.add(ELEMENTS_TAB);
-            if (CRYSTALS_TAB != null) tabs.add(CRYSTALS_TAB);
-            if (POLYMERS_TAB != null) tabs.add(POLYMERS_TAB);
+            if (ELEMENTS_TAB != null)
+                tabs.add(ELEMENTS_TAB);
+            if (CRYSTALS_TAB != null)
+                tabs.add(CRYSTALS_TAB);
+            if (POLYMERS_TAB != null)
+                tabs.add(POLYMERS_TAB);
             return tabs.toArray(CreativeTabs[]::new);
         }
 
         /**
          * Adds tooltip information lines to item stacks.
          *
-         5         * @param stack item stack instance
+         * 5 * @param stack item stack instance
+         *
          * @param world world instance
          * @param lines tooltip lines list
-         * @param flag  tooltip flag instance
+         * @param flag tooltip flag instance
          */
         @SideOnly(Side.CLIENT)
         @Override
         public void addInformation(ItemStack stack, net.minecraft.world.World world, List<String> lines,
-                                   net.minecraft.client.util.ITooltipFlag flag) {
+                net.minecraft.client.util.ITooltipFlag flag) {
             MoleculeDef definition = resolve(stack, Avogadro.proxy.moleculeItemView());
             if (definition == null) {
                 lines.add(net.minecraft.client.resources.I18n.format("avogadro.item.unavailable"));
                 ResourceLocation id = id(stack);
-                if (id != null) lines.add(id.toString());
+                if (id != null)
+                    lines.add(id.toString());
                 return;
             }
             lines.add(displayFormula(definition));
@@ -296,13 +312,17 @@ public final class MoleculeItems {
             }
             Optional<String> result = MoleculeItemMetadata.weightText(definition);
             if (result.isPresent()) {
-                lines.add(net.minecraft.client.resources.I18n
-                        .format(definition.inspection().metadata().containsKey(io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY) ?
-                                "avogadro.network.default_mass" : classification == io.github.wurtzitane.avogadro.api.MoleculeClassification.POLYMER ?
-                                                                  "avogadro.polymer.repeat_unit_molar_mass" :
-                                                                  classification == io.github.wurtzitane.avogadro.api.MoleculeClassification.CRYSTAL ?
-                                                                  "avogadro.crystal.molar_mass" : "avogadro.item.entity_mass", result.get()));
-            } else lines.add(net.minecraft.client.resources.I18n.format("avogadro.item.mass_unavailable"));
+                lines.add(net.minecraft.client.resources.I18n.format(definition.inspection().metadata()
+                        .containsKey(io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY)
+                                ? "avogadro.network.default_mass"
+                                : classification == io.github.wurtzitane.avogadro.api.MoleculeClassification.POLYMER
+                                        ? "avogadro.polymer.repeat_unit_molar_mass"
+                                        : classification == io.github.wurtzitane.avogadro.api.MoleculeClassification.CRYSTAL
+                                                ? "avogadro.crystal.molar_mass"
+                                                : "avogadro.item.entity_mass",
+                        result.get()));
+            } else
+                lines.add(net.minecraft.client.resources.I18n.format("avogadro.item.mass_unavailable"));
         }
     }
 }

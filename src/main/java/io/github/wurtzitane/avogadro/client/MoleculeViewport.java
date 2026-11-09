@@ -9,42 +9,42 @@ public final class MoleculeViewport {
     /** Precalculated diagonal cube radius multiplier constant. */
     private static final float CUBE_RADIUS = (float) Math.sqrt(3.0) * 0.9f;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeViewport() {}
 
     /**
      * Calculates fitted render size using default molecule styles.
      *
-     * @param molecule       molecule structure
-     * @param requestedSize  requested target render size
-     * @param viewportWidth  viewport width in pixels
+     * @param molecule molecule structure
+     * @param requestedSize requested target render size
+     * @param viewportWidth viewport width in pixels
      * @param viewportHeight viewport height in pixels
-     * @param cubic          whether cubic rendering is enabled
+     * @param cubic whether cubic rendering is enabled
      * @return fitted render size in pixels
      */
-    public static int fitSize(MoleculeStructure molecule, int requestedSize,
-                              int viewportWidth, int viewportHeight, boolean cubic) {
+    public static int fitSize(MoleculeStructure molecule, int requestedSize, int viewportWidth, int viewportHeight,
+            boolean cubic) {
         return fitSize(molecule, requestedSize, viewportWidth, viewportHeight, cubic, MoleculeStyle.DEFAULT);
     }
 
     /**
      * Calculates fitted render size honoring explicit style scaling options.
      *
-     * @param molecule       molecule structure
-     * @param requestedSize  requested target render size
-     * @param viewportWidth  viewport width in pixels
+     * @param molecule molecule structure
+     * @param requestedSize requested target render size
+     * @param viewportWidth viewport width in pixels
      * @param viewportHeight viewport height in pixels
-     * @param cubic          whether cubic rendering is enabled
-     * @param style          molecule style configuration
+     * @param cubic whether cubic rendering is enabled
+     * @param style molecule style configuration
      * @return fitted render size in pixels
      */
-    static int fitSize(MoleculeStructure molecule, int requestedSize,
-                       int viewportWidth, int viewportHeight, boolean cubic, MoleculeStyle style) {
-        if (requestedSize <= 0 || viewportWidth <= 0 || viewportHeight <= 0) return 0;
+    static int fitSize(MoleculeStructure molecule, int requestedSize, int viewportWidth, int viewportHeight,
+            boolean cubic, MoleculeStyle style) {
+        if (requestedSize <= 0 || viewportWidth <= 0 || viewportHeight <= 0)
+            return 0;
         float bound = 0f;
         for (Atom atom : molecule.atoms()) {
-            bound = Math.max(bound, distance(molecule, atom)
-                    + atom.element().radius() * (cubic ? CUBE_RADIUS : 0.9f) * style.atoms());
+            bound = Math.max(bound,
+                    distance(molecule, atom) + atom.element().radius() * (cubic ? CUBE_RADIUS : 0.9f) * style.atoms());
         }
         for (MoleculeStructure.Bond bond : molecule.bonds()) {
             Atom from = molecule.atoms().get(bond.from());
@@ -56,7 +56,8 @@ public final class MoleculeViewport {
                 case 2 -> 0.14f + 0.10f * cylinderRadius;
                 default -> 0.28f + 0.10f * cylinderRadius;
             };
-            bound = Math.max(bound, Math.max(distance(molecule, from), distance(molecule, to)) + radius * style.bonds());
+            bound = Math.max(bound,
+                    Math.max(distance(molecule, from), distance(molecule, to)) + radius * style.bonds());
         }
         float available = Math.max(1f, Math.min(viewportWidth, viewportHeight) * 0.5f - 1f);
         float originalRadius = molecule.radius() > 0.001f ? molecule.radius() : 1f;
@@ -69,7 +70,7 @@ public final class MoleculeViewport {
      * Computes the Euclidean distance from the molecule center to a given atom position.
      *
      * @param molecule molecule structure reference
-     * @param atom     target atom
+     * @param atom target atom
      * @return distance in world units
      */
     private static float distance(MoleculeStructure molecule, Atom atom) {

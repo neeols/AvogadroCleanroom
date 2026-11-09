@@ -1,0 +1,9 @@
+{
+  "name": "Methyl radical · one unpaired electron",
+  "smiles": "[CH3]",
+  "atom_annotations": {
+    "0": {
+      "radical_electrons": 1
+    }
+  }
+}

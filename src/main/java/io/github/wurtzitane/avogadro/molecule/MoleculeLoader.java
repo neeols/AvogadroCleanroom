@@ -1,13 +1,5 @@
 package io.github.wurtzitane.avogadro.molecule;
 
-import net.minecraft.util.ResourceLocation;
-
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import org.apache.logging.log4j.LogManager;
-
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -18,21 +10,30 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
-import java.util.function.Consumer;
 import java.util.concurrent.CancellationException;
+import java.util.function.Consumer;
 import java.util.regex.Pattern;
+
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import net.minecraft.util.ResourceLocation;
+
+import org.apache.logging.log4j.LogManager;
 
 /** Parses a complete merged source layer, so copies may refer to lower-priority sources. */
 public final class MoleculeLoader {
 
     /** Allowed root fields in molecule JSON definitions. Legacy presentation keys are accepted but ignored. */
-    private static final Set<String> FIELDS = Set.of("smiles", "atoms", "bonds", "formula", "items",
-            "item_tags", "fluids", "fluid_tags", "materials", "match_containers", "copy", "structure", "diagram",
-            "tooltip", "name", "generate_item", "elements", "atom_configurations", "components", "inspection", "crystal",
-            "polymer", "polymer_network", "edits", "materialize");
+    private static final Set<String> FIELDS = Set.of("smiles", "atoms", "bonds", "formula", "items", "item_tags",
+            "fluids", "fluid_tags", "materials", "match_containers", "copy", "structure", "diagram", "tooltip", "name",
+            "generate_item", "elements", "atom_configurations", "components", "inspection", "crystal", "polymer",
+            "polymer_network", "edits", "materialize", "atom_annotations", "constraints");
 
     /** Allowed atom object fields in explicit JSON geometry definitions. */
-    private static final Set<String> ATOM_FIELDS = Set.of("e", "x", "y", "z", "nuclear");
+    private static final Set<String> ATOM_FIELDS = Set.of("e", "x", "y", "z", "nuclear", "label", "radical_electrons");
 
     /** Regular expression pattern validating resource location identifiers. */
     private static final Pattern IDENTIFIER = Pattern.compile("(?:[a-z0-9_.-]+:)?[a-z0-9_./-]+");
@@ -46,14 +47,13 @@ public final class MoleculeLoader {
     /** Reusable definition cache bound by storage size to optimize molecule compilation. */
     private static final ReuseCache<DefinitionKey, MoleculeDef> DEFINITIONS = new ReuseCache<>(64 * 1024 * 1024);
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeLoader() {}
 
     /**
      * Represents loaded molecule definitions along with their raw JSON source strings.
      *
      * @param definitions map of resource locations to parsed molecule definitions
-     * @param raw         map of resource locations to raw JSON strings
+     * @param raw map of resource locations to raw JSON strings
      */
     public record Loaded(Map<ResourceLocation, MoleculeDef> definitions, Map<ResourceLocation, String> raw) {
 
@@ -61,7 +61,7 @@ public final class MoleculeLoader {
          * Canonical constructor ensuring unmodifiable definition and raw source maps.
          *
          * @param definitions map of parsed molecule definitions
-         * @param raw         map of raw JSON strings
+         * @param raw map of raw JSON strings
          */
         public Loaded {
             definitions = Collections.unmodifiableMap(new LinkedHashMap<>(definitions));
@@ -84,7 +84,7 @@ public final class MoleculeLoader {
         /**
          * Constructs a candidate with the specified raw source and JSON object.
          *
-         * @param raw    raw JSON string
+         * @param raw raw JSON string
          * @param object parsed JSON object
          */
         Candidate(String raw, JsonObject object) {
@@ -94,13 +94,16 @@ public final class MoleculeLoader {
     }
 
     /** Represents a failure reason for unresolvable molecule definitions. */
-    private record Failure(String reason) {}
+    private record Failure(String reason) {
+    }
 
     /** Represents parsed syntax results containing either a JSON object or an error message. */
-    private record Syntax(JsonObject object, String error) {}
+    private record Syntax(JsonObject object, String error) {
+    }
 
     /** Composite key used for caching compiled molecule definitions. */
-    private record DefinitionKey(ResourceLocation id, String raw, MoleculeDef dependency) {}
+    private record DefinitionKey(ResourceLocation id, String raw, MoleculeDef dependency) {
+    }
 
     /**
      * A memory-bounded LRU cache for reuse during molecule reloading and compilation.
@@ -111,7 +114,8 @@ public final class MoleculeLoader {
     private static final class ReuseCache<K, V> {
 
         /** Cached entry holding a value and its estimated byte size. */
-        private record Entry<V>(V value, long bytes) {}
+        private record Entry<V>(V value, long bytes) {
+        }
 
         /** Linked hash map maintaining LRU order. */
         private final LinkedHashMap<K, Entry<V>> entries = new LinkedHashMap<>(64, .75f, true);
@@ -132,7 +136,7 @@ public final class MoleculeLoader {
         }
 
         /**
-         * Retrieves a cached value for the given key.
+         * Returns a cached value for the given key.
          *
          * @param key cache key
          * @return cached value, or {@code null} if not present
@@ -143,16 +147,18 @@ public final class MoleculeLoader {
         }
 
         /**
-         * Stores a value in the cache, evicting older entries if limits are exceeded.
-         10 *
-         * @param key   cache key
+         * Stores a value in the cache, evicting older entries if limits are exceeded. 10 *
+         *
+         * @param key cache key
          * @param value cache value
-         * @param size  estimated byte size of the entry
+         * @param size estimated byte size of the entry
          */
         synchronized void put(K key, V value, long size) {
-            if (size > limit) return;
+            if (size > limit)
+                return;
             Entry<V> previous = entries.put(key, new Entry<>(value, size));
-            if (previous != null) bytes -= previous.bytes;
+            if (previous != null)
+                bytes -= previous.bytes;
             bytes += size;
             var oldest = entries.entrySet().iterator();
             while (bytes > limit || entries.size() > MoleculeSync.MAX_ENTRIES) {
@@ -170,22 +176,27 @@ public final class MoleculeLoader {
      */
     private static Syntax syntax(String source) {
         Syntax cached = SYNTAX.get(source);
-        if (cached != null) return cached;
+        if (cached != null)
+            return cached;
         Syntax parsed;
         try {
             JsonElement json = JsonParser.parseString(source);
             require(json.isJsonObject(), "root must be an object");
             JsonObject object = json.getAsJsonObject();
-            for (String key : object.keySet()) require(FIELDS.contains(key), "unsupported field '" + key + "'");
+            for (String key : object.keySet())
+                require(FIELDS.contains(key), "unsupported field '" + key + "'");
             if (object.has("edits")) {
                 require(object.has("copy"), "edits requires a copy source");
                 io.github.wurtzitane.avogadro.api.StructureEdits.fromJson(object.getAsJsonArray("edits"));
             }
-            if (object.has("materialize")) require(object.has("copy") && object.get("materialize").isJsonPrimitive()
-                    && object.getAsJsonPrimitive("materialize").isBoolean(), "materialize requires copy and a boolean value");
+            if (object.has("materialize"))
+                require(object.has("copy") && object.get("materialize").isJsonPrimitive()
+                        && object.getAsJsonPrimitive("materialize").isBoolean(),
+                        "materialize requires copy and a boolean value");
             if (object.has("polymer_network")) {
                 require(object.get("polymer_network").isJsonObject(), "polymer_network must be an object");
-                for (String other : List.of("copy", "atoms", "bonds", "smiles", "structure", "crystal", "polymer", "atom_configurations"))
+                for (String other : List.of("copy", "atoms", "bonds", "smiles", "structure", "crystal", "polymer",
+                        "atom_configurations"))
                     require(!object.has(other), "polymer_network cannot be combined with " + other);
             }
             if (object.has("polymer")) {
@@ -225,7 +236,7 @@ public final class MoleculeLoader {
         /**
          * Constructs a resolution frame with an identifier and candidate list.
          *
-         * @id         molecule resource location
+         * @param id molecule resource location
          * @param candidates list of candidate definitions
          */
         Frame(ResourceLocation id, List<Candidate> candidates) {
@@ -247,38 +258,36 @@ public final class MoleculeLoader {
     /**
      * Parses all raw molecule definitions with a custom diagnostics consumer.
      *
-     * @param raw         map of resource locations to raw JSON source strings
+     * @param raw map of resource locations to raw JSON source strings
      * @param diagnostics diagnostics consumer for error reporting
      * @return map of resource locations to parsed molecule definitions
      */
     public static Map<ResourceLocation, MoleculeDef> parseAll(Map<ResourceLocation, String> raw,
-                                                              Consumer<String> diagnostics) {
+            Consumer<String> diagnostics) {
         return load(raw, Map.of(), diagnostics).definitions();
     }
 
     /**
      * Loads and resolves molecule definitions given raw sources and fallbacks.
      *
-     * @param raw       map of resource locations to primary raw JSON strings
+     * @param raw map of resource locations to primary raw JSON strings
      * @param fallbacks map of resource locations to fallback raw JSON strings
      * @return loaded definitions and raw sources wrapper
      */
-    public static Loaded load(Map<ResourceLocation, String> raw,
-                              Map<ResourceLocation, List<String>> fallbacks) {
+    public static Loaded load(Map<ResourceLocation, String> raw, Map<ResourceLocation, List<String>> fallbacks) {
         return load(raw, fallbacks, text -> LogManager.getLogger("avogadro").warn(text));
     }
 
     /**
      * Retain earlier same-id definitions only when a later override cannot be resolved.
      *
-     * @param raw       map of resource locations to primary raw JSON strings
+     * @param raw map of resource locations to primary raw JSON strings
      * @param fallbacks map of resource locations to fallback raw JSON strings
      * @param diagnostics diagnostics consumer for warning and error reporting
      * @return loaded definitions and raw sources wrapper
      */
-    public static Loaded load(Map<ResourceLocation, String> raw,
-                              Map<ResourceLocation, List<String>> fallbacks,
-                              Consumer<String> diagnostics) {
+    public static Loaded load(Map<ResourceLocation, String> raw, Map<ResourceLocation, List<String>> fallbacks,
+            Consumer<String> diagnostics) {
         Map<ResourceLocation, List<Candidate>> objects = new LinkedHashMap<>();
         for (Map.Entry<ResourceLocation, String> entry : raw.entrySet()) {
             checkCancelled();
@@ -288,10 +297,13 @@ public final class MoleculeLoader {
             List<Candidate> candidates = new ArrayList<>();
             for (String source : sources) {
                 Syntax syntax = syntax(source);
-                if (syntax.error == null) candidates.add(new Candidate(source, syntax.object));
-                else diagnostics.accept(entry.getKey() + ": " + syntax.error);
+                if (syntax.error == null)
+                    candidates.add(new Candidate(source, syntax.object));
+                else
+                    diagnostics.accept(entry.getKey() + ": " + syntax.error);
             }
-            if (!candidates.isEmpty()) objects.put(entry.getKey(), candidates);
+            if (!candidates.isEmpty())
+                objects.put(entry.getKey(), candidates);
         }
         Map<ResourceLocation, MoleculeDef> resolved = new LinkedHashMap<>();
         Map<ResourceLocation, String> selected = new LinkedHashMap<>();
@@ -321,20 +333,21 @@ public final class MoleculeLoader {
     /**
      * Recursively resolves a molecule definition and its dependencies, handling cycles and candidate fallbacks.
      *
-     * @param id          molecule resource location identifier
-     * @param objects     map of all candidate objects grouped by resource location
-     * @param resolved    map of successfully resolved molecule definitions
-     * @param selected    map of selected raw JSON strings
-     * @param failed      map of failed resolution states
+     * @param id molecule resource location identifier
+     * @param objects map of all candidate objects grouped by resource location
+     * @param resolved map of successfully resolved molecule definitions
+     * @param selected map of selected raw JSON strings
+     * @param failed map of failed resolution states
      * @param diagnostics diagnostics consumer for reporting rejections
      */
     private static void resolve(ResourceLocation id, Map<ResourceLocation, List<Candidate>> objects,
-                                Map<ResourceLocation, MoleculeDef> resolved,
-                                Map<ResourceLocation, String> selected,
-                                Map<ResourceLocation, Failure> failed, Consumer<String> diagnostics) {
-        if (resolved.containsKey(id)) return;
+            Map<ResourceLocation, MoleculeDef> resolved, Map<ResourceLocation, String> selected,
+            Map<ResourceLocation, Failure> failed, Consumer<String> diagnostics) {
+        if (resolved.containsKey(id))
+            return;
         Failure cached = failed.get(id);
-        if (cached != null) throw new IllegalArgumentException(cached.reason);
+        if (cached != null)
+            throw new IllegalArgumentException(cached.reason);
         ArrayDeque<Frame> pending = new ArrayDeque<>();
         Set<ResourceLocation> visiting = new HashSet<>();
         pending.addLast(new Frame(id, objects.get(id)));
@@ -348,7 +361,8 @@ public final class MoleculeLoader {
                 failed.put(frame.id, new Failure(frame.failure));
                 pending.removeLast();
                 visiting.remove(frame.id);
-                if (pending.isEmpty()) throw new IllegalArgumentException(frame.failure);
+                if (pending.isEmpty())
+                    throw new IllegalArgumentException(frame.failure);
                 continue;
             }
             Candidate candidate = frame.candidates.get(frame.index);
@@ -362,11 +376,13 @@ public final class MoleculeLoader {
                         // the cycle may still validly copy the repaired definition.
                         boolean cycle = false;
                         for (Frame active : pending) {
-                            if (active.id.equals(source)) cycle = true;
+                            if (active.id.equals(source))
+                                cycle = true;
                             if (cycle)
                                 active.candidates.get(active.index).rejection = "cyclic copy reference to " + source;
                         }
-                        while (!pending.getLast().id.equals(source)) visiting.remove(pending.removeLast().id);
+                        while (!pending.getLast().id.equals(source))
+                            visiting.remove(pending.removeLast().id);
                         continue;
                     }
                     if (!resolved.containsKey(source)) {
@@ -378,14 +394,15 @@ public final class MoleculeLoader {
                         continue;
                     }
                 }
-                MoleculeDef dependency = candidate.object.has("copy") ?
-                        resolved.get(identifier(requiredString(candidate.object.get("copy"), "copy"))) : null;
+                MoleculeDef dependency = candidate.object.has("copy")
+                        ? resolved.get(identifier(requiredString(candidate.object.get("copy"), "copy")))
+                        : null;
                 DefinitionKey key = new DefinitionKey(frame.id, candidate.raw, dependency);
                 MoleculeDef definition = DEFINITIONS.get(key);
                 if (definition == null) {
                     definition = definition(frame.id, candidate.object, resolved);
-                    long bytes = 512L + candidate.raw.length() * 2L + definition.structure().atoms().size() * 64L +
-                            definition.structure().bonds().size() * 32L;
+                    long bytes = 512L + candidate.raw.length() * 2L + definition.structure().atoms().size() * 64L
+                            + definition.structure().bonds().size() * 32L;
                     DEFINITIONS.put(key, definition, bytes);
                 }
                 resolved.put(frame.id, definition);
@@ -397,27 +414,29 @@ public final class MoleculeLoader {
             } catch (RuntimeException bad) {
                 frame.failure = message(bad);
                 frame.index++;
-                if (frame.index < frame.candidates.size()) diagnostics.accept(
-                        frame.id + ": rejected override (" + frame.failure + "); using an earlier definition if valid");
+                if (frame.index < frame.candidates.size())
+                    diagnostics.accept(frame.id + ": rejected override (" + frame.failure
+                            + "); using an earlier definition if valid");
             }
         }
     }
 
     /** Checks whether the current thread has been interrupted and throws a cancellation exception if so. */
     private static void checkCancelled() {
-        if (Thread.currentThread().isInterrupted()) throw new CancellationException("Molecule loading cancelled");
+        if (Thread.currentThread().isInterrupted())
+            throw new CancellationException("Molecule loading cancelled");
     }
 
     /**
      * Compiles a molecule definition from a parsed JSON object and resolved base dependencies.
      *
-     * @param id       molecule resource location identifier
-     * @param object   JSON object containing definition data
+     * @param id molecule resource location identifier
+     * @param object JSON object containing definition data
      * @param resolved map of already resolved molecule definitions
-     * @return constructed {@link MoleculeDef} instance
+     * @return constructed {@link MoleculeDef}
      */
     private static MoleculeDef definition(ResourceLocation id, JsonObject object,
-                                          Map<ResourceLocation, MoleculeDef> resolved) {
+            Map<ResourceLocation, MoleculeDef> resolved) {
         String formula = optionalString(object, "formula");
         String name = optionalString(object, "name");
         boolean generateItem = false;
@@ -442,21 +461,28 @@ public final class MoleculeLoader {
         io.github.wurtzitane.avogadro.api.MoleculeInspection inherited = io.github.wurtzitane.avogadro.api.MoleculeInspection.EMPTY;
         // Original precedence is copy > atoms > smiles. Lower-priority geometry is intentionally unused.
         if (object.has("polymer_network")) {
-            var network = io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.fromJson(object.getAsJsonObject("polymer_network"));
+            var network = io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition
+                    .fromJson(object.getAsJsonObject("polymer_network"));
             var preview = network.preview(network.defaults());
             structure = preview.fragment().toStructure(id.toString());
-            if (formula == null) formula = preview.formula();
+            if (formula == null)
+                formula = preview.formula();
             object = fragmentMetadata(object, preview.fragment());
-            object.getAsJsonObject("inspection").addProperty(io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY, network.toJson().toString());
+            object.getAsJsonObject("inspection").addProperty(
+                    io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY,
+                    network.toJson().toString());
             object.getAsJsonObject("inspection").addProperty("classification", "polymer");
         } else if (object.has("polymer")) {
-            var polymer = io.github.wurtzitane.avogadro.api.PolymerDefinition.fromJson(object.getAsJsonObject("polymer"));
+            var polymer = io.github.wurtzitane.avogadro.api.PolymerDefinition
+                    .fromJson(object.getAsJsonObject("polymer"));
             structure = io.github.wurtzitane.avogadro.api.PolymerGeometry.chain(polymer, polymer.previewUnits());
-            if (formula == null) formula = polymer.formula();
+            if (formula == null)
+                formula = polymer.formula();
             object = fragmentMetadata(object,
                     io.github.wurtzitane.avogadro.api.PolymerGeometry.chainFragment(polymer, polymer.previewUnits()));
-            JsonObject metadata = object.has("inspection") ? object.getAsJsonObject("inspection").deepCopy() :
-                    new JsonObject();
+            JsonObject metadata = object.has("inspection")
+                    ? object.getAsJsonObject("inspection").deepCopy()
+                    : new JsonObject();
             metadata.addProperty(io.github.wurtzitane.avogadro.api.PolymerDefinition.METADATA_KEY,
                     polymer.toJson().toString());
             metadata.addProperty("classification", "polymer");
@@ -468,23 +494,29 @@ public final class MoleculeLoader {
             require(base != null, "copy refers to invalid molecule " + source);
             if (object.has("edits") || object.has("materialize") && object.get("materialize").getAsBoolean())
                 base = io.github.wurtzitane.avogadro.api.MoleculeEdits.apply(id.toString(), base,
-                        object.has("edits") ? io.github.wurtzitane.avogadro.api.StructureEdits.fromJson(object.getAsJsonArray("edits"))
+                        object.has("edits")
+                                ? io.github.wurtzitane.avogadro.api.StructureEdits
+                                        .fromJson(object.getAsJsonArray("edits"))
                                 : io.github.wurtzitane.avogadro.api.StructureEdits.builder().build(),
                         object.has("materialize") && object.get("materialize").getAsBoolean());
-            require(!object.has("atom_configurations") || !base.inspection().metadata().containsKey(
-                            io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY),
+            require(!object.has("atom_configurations") || !base.inspection().metadata()
+                    .containsKey(io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY),
                     "Network atom configurations belong to template-local atoms; materialize before overriding preview indices");
             inherited = base.inspection();
             structure = base.structure();
-            if (formula == null) formula = base.formula();
-            if (name == null) name = base.name();
-            if (!object.has("generate_item")) generateItem = base.generateItem();
+            if (formula == null)
+                formula = base.formula();
+            if (name == null)
+                name = base.name();
+            if (!object.has("generate_item"))
+                generateItem = base.generateItem();
             items = union(base.items(), items);
             itemTags = union(base.itemTags(), itemTags);
             fluids = union(base.fluids(), fluids);
             fluidTags = union(base.fluidTags(), fluidTags);
             materials = union(base.materials(), materials);
-            if (!object.has("match_containers")) matchContainers = base.matchContainers();
+            if (!object.has("match_containers"))
+                matchContainers = base.matchContainers();
         } else if (object.has("structure")) {
             var fragment = StructureRecipe.parse(object.getAsJsonObject("structure"));
             structure = fragment.toStructure(id.toString());
@@ -499,39 +531,69 @@ public final class MoleculeLoader {
         } else {
             throw new IllegalArgumentException("one of copy, atoms, smiles, structure, or polymer is required");
         }
+        if (object.has("atom_annotations")) {
+            require(object.get("atom_annotations").isJsonObject(), "atom_annotations must be an object keyed by atom index");
+            Map<Integer, AtomAnnotation> annotations = new LinkedHashMap<>();
+            for (var entry : object.getAsJsonObject("atom_annotations").entrySet()) {
+                require(entry.getKey().matches("0|[1-9][0-9]*"), "atom_annotations keys must be zero-based atom indices");
+                int index = Integer.parseInt(entry.getKey());
+                require(index < structure.atoms().size(), "atom_annotations index outside the structure: " + index);
+                require(entry.getValue().isJsonObject(), "Each atom annotation must be an object");
+                JsonObject annotation = entry.getValue().getAsJsonObject();
+                for (String field : annotation.keySet())
+                    require(field.equals("label") || field.equals("radical_electrons"), "Unsupported atom annotation: " + field);
+                annotations.put(index, AtomAnnotation.fromJson(annotation, structure.atoms().get(index).element().symbol()));
+            }
+            structure = structure.withAtomAnnotations(annotations);
+        }
+        if (object.has("constraints")) {
+            require(object.get("constraints").isJsonArray(), "constraints must be an array");
+            structure = io.github.wurtzitane.avogadro.api.StructureConstraints.fromJson(object.getAsJsonArray("constraints")).apply(structure);
+        }
         if (object.has("crystal")) {
             var cell = io.github.wurtzitane.avogadro.api.CrystalCell.fromJson(object.getAsJsonObject("crystal"));
-            JsonObject metadata = object.has("inspection") ? object.getAsJsonObject("inspection").deepCopy() :
-                    new JsonObject();
+            JsonObject metadata = object.has("inspection")
+                    ? object.getAsJsonObject("inspection").deepCopy()
+                    : new JsonObject();
             metadata.addProperty(io.github.wurtzitane.avogadro.api.CrystalCell.METADATA_KEY, cell.toJson().toString());
             metadata.addProperty("classification", "crystal");
             object = object.deepCopy();
             object.add("inspection", metadata);
         }
-        if (formula == null) formula = formula(structure);
-        return new MoleculeDef(id, structure, formula, items, itemTags, fluids,
-                fluidTags, materials, matchContainers, name, generateItem, inspection(object, structure, inherited));
+        if (formula == null)
+            formula = formula(structure);
+        return new MoleculeDef(id, structure, formula, items, itemTags, fluids, fluidTags, materials, matchContainers,
+                name, generateItem, inspection(object, structure, inherited));
     }
 
     /**
      * Enriches structural fragment metadata into the JSON object representation.
      *
-     * @param source   source JSON object
+     * @param source source JSON object
      * @param fragment structure fragment instance
-     * @return enriched {@link JsonObject} instance
+     * @return enriched {@link JsonObject}
      */
-    private static JsonObject fragmentMetadata(JsonObject source, io.github.wurtzitane.avogadro.api.StructureFragment fragment) {
+    private static JsonObject fragmentMetadata(JsonObject source,
+            io.github.wurtzitane.avogadro.api.StructureFragment fragment) {
         JsonObject result = source.deepCopy();
         JsonObject metadata = result.has("inspection") ? result.getAsJsonObject("inspection") : new JsonObject();
         result.add("inspection", metadata);
         JsonObject attachments = new JsonObject(), capacities = new JsonObject(), configurations = new JsonObject();
         fragment.attachments().forEach(attachments::addProperty);
-        new java.util.TreeMap<>(fragment.randomLinkCapacities()).forEach((index, value) -> capacities.addProperty(Integer.toString(index), value));
-        fragment.configurations().forEach((index, value) -> configurations.add(Integer.toString(index), value.toJson()));
-        if (result.has("atom_configurations")) result.getAsJsonObject("atom_configurations").entrySet().forEach(e -> configurations.add(e.getKey(), e.getValue()));
+        new java.util.TreeMap<>(fragment.randomLinkCapacities())
+                .forEach((index, value) -> capacities.addProperty(Integer.toString(index), value));
+        fragment.configurations()
+                .forEach((index, value) -> configurations.add(Integer.toString(index), value.toJson()));
+        if (result.has("atom_configurations"))
+            result.getAsJsonObject("atom_configurations").entrySet()
+                    .forEach(e -> configurations.add(e.getKey(), e.getValue()));
         result.add("atom_configurations", configurations);
-        if (!attachments.entrySet().isEmpty()) metadata.addProperty(io.github.wurtzitane.avogadro.api.StructureFragment.ATTACHMENTS_METADATA_KEY, attachments.toString());
-        if (!capacities.entrySet().isEmpty()) metadata.addProperty(io.github.wurtzitane.avogadro.api.StructureFragment.CAPACITIES_METADATA_KEY, capacities.toString());
+        if (!attachments.entrySet().isEmpty())
+            metadata.addProperty(io.github.wurtzitane.avogadro.api.StructureFragment.ATTACHMENTS_METADATA_KEY,
+                    attachments.toString());
+        if (!capacities.entrySet().isEmpty())
+            metadata.addProperty(io.github.wurtzitane.avogadro.api.StructureFragment.CAPACITIES_METADATA_KEY,
+                    capacities.toString());
         return result;
     }
 
@@ -549,23 +611,23 @@ public final class MoleculeLoader {
     /**
      * Builds molecule inspection metadata from JSON definitions and structural contexts.
      *
-     * @param object    JSON object containing inspection data
+     * @param object JSON object containing inspection data
      * @param structure molecule structure instance
-     * @param base      base molecule inspection instance to inherit from
-     * @return constructed {@link io.github.wurtzitane.avogadro.api.MoleculeInspection} instance
+     * @param base base molecule inspection instance to inherit from
+     * @return constructed {@link io.github.wurtzitane.avogadro.api.MoleculeInspection}
      */
     private static io.github.wurtzitane.avogadro.api.MoleculeInspection inspection(JsonObject object,
-                                                                                   MoleculeStructure structure,
-                                                                                   io.github.wurtzitane.avogadro.api.MoleculeInspection base) {
+            MoleculeStructure structure, io.github.wurtzitane.avogadro.api.MoleculeInspection base) {
         var elements = new LinkedHashMap<>(base.elements());
         var atoms = new LinkedHashMap<>(base.atoms());
         var metadata = new LinkedHashMap<>(base.metadata());
         var components = new LinkedHashSet<>(base.components());
-        if (object.has("elements")) object.getAsJsonObject("elements").entrySet().forEach(entry -> {
-            require(ELEMENT_SYMBOL.matcher(entry.getKey()).matches(), "Invalid inspection element symbol");
-            elements.put(entry.getKey(),
-                    io.github.wurtzitane.avogadro.api.AtomicConfiguration.fromJson(entry.getValue().getAsJsonObject()));
-        });
+        if (object.has("elements"))
+            object.getAsJsonObject("elements").entrySet().forEach(entry -> {
+                require(ELEMENT_SYMBOL.matcher(entry.getKey()).matches(), "Invalid inspection element symbol");
+                elements.put(entry.getKey(), io.github.wurtzitane.avogadro.api.AtomicConfiguration
+                        .fromJson(entry.getValue().getAsJsonObject()));
+            });
         if (object.has("atom_configurations"))
             object.getAsJsonObject("atom_configurations").entrySet().forEach(entry -> {
                 int index = Integer.parseInt(entry.getKey());
@@ -577,18 +639,25 @@ public final class MoleculeLoader {
             JsonArray explicit = object.getAsJsonArray("atoms");
             for (int i = 0; i < explicit.size(); i++) {
                 var atom = explicit.get(i).getAsJsonObject();
-                if (atom.has("nuclear")) atoms.put(i, io.github.wurtzitane.avogadro.api.AtomicConfiguration
-                        .fromJson(atom.getAsJsonObject("nuclear")));
+                if (atom.has("nuclear"))
+                    atoms.put(i, io.github.wurtzitane.avogadro.api.AtomicConfiguration
+                            .fromJson(atom.getAsJsonObject("nuclear")));
             }
         }
-        if (object.has("inspection")) object.getAsJsonObject("inspection").entrySet().forEach(
-                entry -> metadata.put(entry.getKey(), requiredString(entry.getValue(), "inspection metadata")));
-        for (String id : strings(object, "components", false)) components.add(identifier(id));
+        if (object.has("inspection"))
+            object.getAsJsonObject("inspection").entrySet().forEach(
+                    entry -> metadata.put(entry.getKey(), requiredString(entry.getValue(), "inspection metadata")));
+        for (String id : strings(object, "components", false))
+            components.add(identifier(id));
+        for (int index : atoms.keySet())
+            require(!structure.atoms().get(index).element().symbol().equals("*"),
+                    "An unresolved external group cannot have a nuclear/electron configuration; resolve it first");
         return new io.github.wurtzitane.avogadro.api.MoleculeInspection(elements, atoms, List.copyOf(components),
                 metadata);
     }
 
-    /** Registry-wide strings remain valid; @metadata and #compound-SNBT add narrower predicates.
+    /**
+     * Registry-wide strings remain valid; @metadata and #compound-SNBT add narrower predicates.
      *
      * @param text item association selector string
      * @return validated item association string
@@ -601,9 +670,9 @@ public final class MoleculeLoader {
     /**
      * Parses explicit atom and bond arrays into a molecule structure.
      *
-     * @param id     molecule resource location identifier
+     * @param id molecule resource location identifier
      * @param object JSON object containing atoms and optional bonds
-     * @return constructed {@link MoleculeStructure} instance
+     * @return constructed {@link MoleculeStructure}
      */
     private static MoleculeStructure explicit(ResourceLocation id, JsonObject object) {
         JsonElement atomJson = object.get("atoms");
@@ -614,13 +683,15 @@ public final class MoleculeLoader {
         for (JsonElement element : atoms) {
             require(element.isJsonObject(), "each atom must be an object");
             JsonObject atom = element.getAsJsonObject();
-            for (String key : atom.keySet()) require(ATOM_FIELDS.contains(key), "unsupported atom field '" + key + "'");
+            for (String key : atom.keySet())
+                require(ATOM_FIELDS.contains(key), "unsupported atom field '" + key + "'");
             String symbol = requiredString(atom.get("e"), "atom.e");
-            require(ELEMENT_SYMBOL.matcher(symbol).matches(), "atom.e must be an element symbol");
+            require(symbol.equals("*") || ELEMENT_SYMBOL.matcher(symbol).matches(), "atom.e must be an element symbol or *");
             builder.addAtom(AtomElement.bySymbol(symbol), coordinate(atom, "x"), coordinate(atom, "y"),
-                    coordinate(atom, "z"));
+                    coordinate(atom, "z"), AtomAnnotation.fromJson(atom, symbol));
         }
-        if (!object.has("bonds")) return builder.autoBond().build();
+        if (!object.has("bonds"))
+            return builder.autoBond().build();
         JsonElement bondJson = object.get("bonds");
         require(bondJson.isJsonArray(), "bonds must be an array");
         for (JsonElement element : bondJson.getAsJsonArray()) {
@@ -637,7 +708,7 @@ public final class MoleculeLoader {
      * Extracts a finite coordinate float value from an atom JSON object.
      *
      * @param object atom JSON object
-     * @param key    coordinate key string (e.g., "x", "y", "z")
+     * @param key coordinate key string (e.g., "x", "y", "z")
      * @return coordinate float value
      */
     private static float coordinate(JsonObject object, String key) {
@@ -667,14 +738,15 @@ public final class MoleculeLoader {
      * Parses and validates a bond type from a JSON element.
      *
      * @param element JSON element representing bond type
-     * @return resolved {@link BondType} instance
+     * @return resolved {@link BondType}
      */
     private static BondType bondType(JsonElement element) {
         require(element.isJsonPrimitive(), "bond type must be a string or number");
         if (element.getAsJsonPrimitive().isNumber()) {
             int order = index(element);
-            return order >= 4 ? BondType.QUADRUPLE :
-                    order == 3 ? BondType.TRIPLE : order == 2 ? BondType.DOUBLE : BondType.SINGLE;
+            return order >= 4
+                    ? BondType.QUADRUPLE
+                    : order == 3 ? BondType.TRIPLE : order == 2 ? BondType.DOUBLE : BondType.SINGLE;
         }
         String text = requiredString(element, "bond type").trim().toUpperCase(Locale.ROOT);
         return switch (text) {
@@ -690,7 +762,7 @@ public final class MoleculeLoader {
      * Parses and validates a resource location identifier string.
      *
      * @param text resource location string
-     * @return parsed {@link ResourceLocation} instance
+     * @return parsed {@link ResourceLocation}
      */
     public static ResourceLocation identifier(String text) {
         require(text != null && IDENTIFIER.matcher(text).matches(), "invalid resource id '" + text + "'");
@@ -701,30 +773,35 @@ public final class MoleculeLoader {
      * Parses a list of strings from a JSON object array field.
      *
      * @param object parent JSON object
-     * @param key    array field key
-     * @param tags   {@code true} if entries represent tags, {@code false} otherwise
+     * @param key array field key
+     * @param tags {@code true} if entries represent tags, {@code false} otherwise
      * @return list of parsed string values
      */
     private static List<String> strings(JsonObject object, String key, boolean tags) {
-        if (!object.has(key)) return List.of();
+        if (!object.has(key))
+            return List.of();
         require(object.get(key).isJsonArray(), key + " must be an array of strings");
         List<String> values = new ArrayList<>();
         for (JsonElement element : object.getAsJsonArray(key)) {
             String value = requiredString(element, key + " entry");
-            if (tags && value.startsWith("#")) value = value.substring(1);
-            if (key.equals("items")) itemAssociation(value);
-            else if (key.equals("fluids")) value = FluidAssociation.parse(value).selector();
-            else identifier(value);
+            if (tags && value.startsWith("#"))
+                value = value.substring(1);
+            if (key.equals("items"))
+                itemAssociation(value);
+            else if (key.equals("fluids"))
+                value = FluidAssociation.parse(value).selector();
+            else
+                identifier(value);
             values.add(value);
         }
         return values;
     }
 
     /**
-     * Retrieves an optional string value from a JSON object.
+     * Returns an optional string value from a JSON object.
      *
      * @param object parent JSON object
-     * @param key    string field key
+     * @param key string field key
      * @return string value, or {@code null} if absent
      */
     private static String optionalString(JsonObject object, String key) {
@@ -732,10 +809,10 @@ public final class MoleculeLoader {
     }
 
     /**
-     * Retrieves a required string value from a JSON element.
+     * Returns a required string value from a JSON element.
      *
      * @param element JSON element
-     * @param label   descriptive label for error reporting
+     * @param label descriptive label for error reporting
      * @return string value
      */
     private static String requiredString(JsonElement element, String label) {
@@ -747,12 +824,13 @@ public final class MoleculeLoader {
     /**
      * Computes the union of two string lists while preserving insertion order and uniqueness.
      *
-     * @param first  first string list
+     * @param first first string list
      * @param second second string list
      * @return combined unmodifiable list
      */
     private static List<String> union(List<String> first, List<String> second) {
-        if (first.isEmpty() && second.isEmpty()) return List.of();
+        if (first.isEmpty() && second.isEmpty())
+            return List.of();
         LinkedHashSet<String> values = new LinkedHashSet<>(first);
         values.addAll(second);
         return List.copyOf(values);
@@ -766,7 +844,8 @@ public final class MoleculeLoader {
      */
     public static String formula(MoleculeStructure structure) {
         Map<String, Integer> counts = new LinkedHashMap<>();
-        for (MoleculeStructure.Atom atom : structure.atoms()) counts.merge(atom.element().symbol(), 1, Integer::sum);
+        for (MoleculeStructure.Atom atom : structure.atoms())
+            counts.merge(atom.element().symbol().equals("*") ? atom.annotation().label() : atom.element().symbol(), 1, Integer::sum);
         StringBuilder result = new StringBuilder();
         take(counts, result, "C");
         take(counts, result, "H");
@@ -778,24 +857,28 @@ public final class MoleculeLoader {
      * Appends an element symbol and its subscripted atom count to the formula string builder.
      *
      * @param counts atom count map
-     * @param out    target string builder
-     * @param key    element symbol key
+     * @param out target string builder
+     * @param key element symbol key
      */
     private static void take(Map<String, Integer> counts, StringBuilder out, String key) {
         Integer count = counts.remove(key);
-        if (count == null) return;
+        if (count == null)
+            return;
         out.append(key);
-        if (count > 1) for (char digit : count.toString().toCharArray()) out.append((char) (0x2080 + digit - '0'));
+        if (count > 1)
+            for (char digit : count.toString().toCharArray())
+                out.append((char) (0x2080 + digit - '0'));
     }
 
     /**
      * Asserts that a condition is true, throwing an illegal argument exception with the specified message otherwise.
      *
      * @param condition boolean condition to test
-     * @param message   error message string
+     * @param message error message string
      */
     private static void require(boolean condition, String message) {
-        if (!condition) throw new IllegalArgumentException(message);
+        if (!condition)
+            throw new IllegalArgumentException(message);
     }
 
     /**

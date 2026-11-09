@@ -1,24 +1,26 @@
 package io.github.wurtzitane.avogadro.client;
 
-import io.github.wurtzitane.avogadro.api.ElementCatalog;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.function.ToIntFunction;
+import java.util.regex.Pattern;
+
 import io.github.wurtzitane.avogadro.Config;
+import io.github.wurtzitane.avogadro.api.ElementCatalog;
 import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.Gui;
 import net.minecraft.client.renderer.GlStateManager;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Locale;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.function.ToIntFunction;
-import java.util.regex.Pattern;
-
 /**
  * Renders structured element cards containing facts, configurations, and reference properties.
- * <p>Shared by the examiner and exports. Reference facts never replace the host's isotope data.
+ * <p>
+ * Shared by the examiner and exports. Reference facts never replace the host's isotope data.
  */
 public final class ElementCard {
     public static final int WIDTH = 188, HEIGHT = 270;
@@ -26,21 +28,32 @@ public final class ElementCard {
     private static final int INK = StructureStyle.INK, MUTED = StructureStyle.MUTED, BLUE = 0x24618A;
     private static final int RULE = StructureStyle.RULE;
     private static final Pattern ORBITAL = Pattern.compile("(\\[[^]]+\\])|(\\d+[spdfg])(\\d+)");
-    private static final Pattern QUALIFIER = Pattern.compile("\\s*(\\((?:calculated|predicted)\\))\\s*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern QUALIFIER = Pattern.compile("\\s*(\\((?:calculated|predicted)\\))\\s*$",
+            Pattern.CASE_INSENSITIVE);
     private static final Map<LayoutKey, Layout> LAYOUTS = new HashMap<>();
     private static long layoutRevision = Long.MIN_VALUE;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private ElementCard() {}
 
-    /** Retrieves a reference fact for an element symbol and key. */
+    /** Returns the selected theme's element-card paper color; PAPER remains the legacy default. */
+    public static int paperColor() {
+        return UiThemes.color("frame.background", PAPER);
+    }
+
+    /** Invalidates measured labels that include resolved theme colors. */
+    static void clearThemeLayouts() {
+        LAYOUTS.clear();
+    }
+
+    /** Returns a reference fact for an element symbol and key. */
     public static String fact(String symbol, String key) {
         return ElementCatalog.fact(symbol, key);
     }
 
     /**
      * Converts numeric electron counts in an orbital label into superscript unicode characters.
-     * <p>Plain-text callers can still use Unicode occupancies; the card draws measured raised digits.
+     * <p>
+     * Plain-text callers can still use Unicode occupancies; the card draws measured raised digits.
      *
      * @param input raw orbital string
      * @return formatted orbital label with superscript digits
@@ -58,24 +71,40 @@ public final class ElementCard {
         return matcher.appendTail(result).toString();
     }
 
-    /** Retrieves the display color associated with an element symbol. */
+    /** Returns the display color associated with an element symbol. */
     public static int color(String symbol) {
-        return ElementCatalog.color(symbol);
+        return UiThemes.color("element." + symbol, ElementCatalog.color(symbol));
+    }
+
+    /** Theme ink for symbols, with separate defaults for dark and light element tiles. */
+    public static int symbolColor(int tileColor) {
+        return UiThemes.color("element.symbol." + (isDarkTile(tileColor) ? "light" : "dark"), tileTextColor(tileColor));
+    }
+
+    /** Theme ink for atomic numbers, independent of symbols and tile backgrounds. */
+    public static int numberColor(int tileColor) {
+        return UiThemes.color("element.number." + (isDarkTile(tileColor) ? "light" : "dark"), tileTextColor(tileColor));
+    }
+
+    private static boolean isDarkTile(int color) {
+        return (color >> 16 & 255) * 299 + (color >> 8 & 255) * 587 + (color & 255) * 114 < 128000;
     }
 
     /** Calculates text tile color based on background lightness. */
     static int tileTextColor(int background) {
+        background = UiThemes.originalColor(background);
         int lightness = 299 * (background >>> 16 & 255) + 587 * (background >>> 8 & 255) + 114 * (background & 255);
-        return lightness < 128000 ? 0xFFFFFFFF : 0xFF000000 | INK;
+        return lightness < 128000 ? UiThemes.color("tile.lightText", 0xFFFFFFFF) : UiThemes.color("tile.darkText", 0xFF3F3A30);
     }
 
     /**
      * Represents a configuration text run and whether it requires superscript scaling.
      *
-     * @param text       run string content
+     * @param text run string content
      * @param superscript whether the run is superscript
      */
-    public record ConfigurationRun(String text, boolean superscript) {}
+    public record ConfigurationRun(String text, boolean superscript) {
+    }
 
     /** Extracts qualification markers from an electron configuration string. */
     static String configurationQualifier(String input) {
@@ -85,11 +114,12 @@ public final class ElementCard {
 
     /** Resolves neutral electron configuration text considering prediction settings. */
     static String configurationText(String input, String status, boolean predictions) {
-        if (input.isBlank() || input.equals("-") || input.equalsIgnoreCase("unknown") || input.equalsIgnoreCase("not specified")) {
+        if (input.isBlank() || input.equals("-") || input.equalsIgnoreCase("unknown")
+                || input.equalsIgnoreCase("not specified")) {
             return "UNKNOWN";
         }
-        boolean estimated = !configurationQualifier(input).isEmpty() ||
-                List.of("predicted", "calculated", "authored").contains(status.toLowerCase(Locale.ROOT));
+        boolean estimated = !configurationQualifier(input).isEmpty()
+                || List.of("predicted", "calculated", "authored").contains(status.toLowerCase(Locale.ROOT));
         return estimated && !predictions ? "UNKNOWN" : input;
     }
 
@@ -101,22 +131,22 @@ public final class ElementCard {
 
     /**
      * Splits an electron configuration string into wrapped layout lines.
-     * <p>An orbital and its occupancy stay together when a configuration wraps.
+     * <p>
+     * An orbital and its occupancy stay together when a configuration wraps.
      *
-     * @param input   configuration string
-     * @param width   available display width
+     * @param input configuration string
+     * @param width available display width
      * @param measure function measuring string width
      * @return list of configuration run lines
      */
     public static List<List<ConfigurationRun>> configurationLines(String input, int width,
-                                                                  ToIntFunction<String> measure) {
+            ToIntFunction<String> measure) {
         return configurationLines(input, width, measure, 1, .7f);
     }
 
     /** Splits an configuration string with custom scale factors. */
     private static List<List<ConfigurationRun>> configurationLines(String input, float width,
-                                                                   ToIntFunction<String> measure,
-                                                                   float scale, float superscriptScale) {
+            ToIntFunction<String> measure, float scale, float superscriptScale) {
         var qualifier = QUALIFIER.matcher(input);
         if (qualifier.find()) {
             input = input.substring(0, qualifier.start());
@@ -132,7 +162,7 @@ public final class ElementCard {
             words.add(matcher.group(1) != null
                     ? List.of(new ConfigurationRun(matcher.group(1), false))
                     : List.of(new ConfigurationRun(matcher.group(2), false),
-                    new ConfigurationRun(matcher.group(3), true)));
+                            new ConfigurationRun(matcher.group(3), true)));
             end = matcher.end();
         }
         String tail = input.substring(end).trim();
@@ -177,7 +207,8 @@ public final class ElementCard {
     }
 
     /** Header structure holding name and category text blocks. */
-    private record Header(TextBlock name, int categoryTop, TextBlock category) {}
+    private record Header(TextBlock name, int categoryTop, TextBlock category) {
+    }
 
     /** Measured configuration block container. */
     private record Configuration(float scale, float superscriptScale, List<List<ConfigurationRun>> lines) {
@@ -190,24 +221,27 @@ public final class ElementCard {
     }
 
     /** Cache key for layout metric measurements. */
-    private record LayoutKey(String symbol, float scale, float physicalScale, boolean matches, boolean predictions) {}
+    private record LayoutKey(String symbol, float scale, float physicalScale, boolean matches, boolean predictions) {
+    }
 
     /** Complete layout metrics record for drawing element cards. */
-    private record Layout(float physicalScale, Header header, int massCaption, TextBlock massHeading,
-                          int massTop, TextBlock mass, int configurationCaption, TextBlock configurationHeading,
-                          int configurationTop, Configuration configuration, int propertyTop, TextBlock[] propertyNames,
-                          TextBlock[] propertyValues, int[] valueOffsets, int[] rowHeights, int divider,
-                          float countScale, int countLabelTop, TextBlock[] countLabels, int height) {}
+    private record Layout(float physicalScale, Header header, int massCaption, TextBlock massHeading, int massTop,
+            TextBlock mass, int configurationCaption, TextBlock configurationHeading, int configurationTop,
+            Configuration configuration, int propertyTop, TextBlock[] propertyNames, TextBlock[] propertyValues,
+            int[] valueOffsets, int[] rowHeights, int divider, float countScale, int countLabelTop,
+            TextBlock[] countLabels, int height) {
+    }
 
     /** Container pairing a measured layout with its scaling factor. */
-    private record SizedLayout(Layout layout, float scale) {}
+    private record SizedLayout(Layout layout, float scale) {
+    }
 
-    /** Retrieves or computes a cached layout for an element. */
+    /** Returns or computes a cached layout for an element. */
     private static Layout layout(String symbol, float requestedScale, boolean matches) {
         return layout(symbol, requestedScale, matches, 0);
     }
 
-    /** Computes or retrieves a cached layout with physical scaling. */
+    /** Computes or returns a cached layout with physical scaling. */
     private static Layout layout(String symbol, float requestedScale, boolean matches, float physicalScale) {
         float textScale = Float.isFinite(requestedScale) ? Math.clamp(requestedScale, .5f, 3f) : 1;
         long revision = MoleculeCategoryStyle.reloadRevision();
@@ -215,7 +249,8 @@ public final class ElementCard {
             LAYOUTS.clear();
             layoutRevision = revision;
         }
-        var key = new LayoutKey(symbol, textScale, physicalScale, matches, Config.PREDICT_NEUTRAL_ELECTRON_CONFIGS.get());
+        var key = new LayoutKey(symbol, textScale, physicalScale, matches,
+                Config.PREDICT_NEUTRAL_ELECTRON_CONFIGS.get());
         Layout cached = LAYOUTS.get(key);
         if (cached != null) {
             return cached;
@@ -237,9 +272,11 @@ public final class ElementCard {
         String name = matches ? capital(fact(symbol, "name")) : symbol;
         float singleLineScale = 74f / Math.max(1, font().getStringWidth(name));
         TextBlock nameBlock = singleLineScale >= 1.2f
-                ? fittedBlock(name, nameScale, 74, physicalScale) : block(name, nameScale, 74, physicalScale);
+                ? fittedBlock(name, nameScale, 74, physicalScale)
+                : block(name, nameScale, 74, physicalScale);
         int categoryTop = Math.max(40, 17 + nameBlock.height() + 6);
-        TextBlock category = block(matches ? categoryName(fact(symbol, "category")) : "Custom atom", 1, 74, physicalScale);
+        TextBlock category = block(matches ? categoryName(fact(symbol, "category")) : "Custom atom", 1, 74,
+                physicalScale);
         Header header = new Header(nameBlock, categoryTop, category);
         TextBlock massHeading = fittedBlock("REFERENCE MASS", .8f, 168, physicalScale);
         TextBlock configurationHeading = fittedBlock("NEUTRAL ELECTRON CONFIGURATION", .8f, 168, physicalScale);
@@ -248,7 +285,8 @@ public final class ElementCard {
         TextBlock mass = block(matches ? fact(symbol, "mass") : "Not specified", bodyScale, 168, 0);
         int configurationCaption = Math.max(massCaption + 36, massTop + mass.height() + 10);
         int configurationTop = configurationCaption + Math.max(15, configurationHeading.height() + 5);
-        Configuration configuration = measuredConfiguration(matches ? configurationText(symbol) : "UNKNOWN", 168, textScale, physicalScale);
+        Configuration configuration = measuredConfiguration(matches ? configurationText(symbol) : "UNKNOWN", 168,
+                textScale, physicalScale);
         int propertyTop = Math.max(massCaption + 68, configurationTop + Math.max(12, configuration.height()) + 5);
         int[] rows = new int[3];
         int[] valueOffsets = new int[3];
@@ -273,16 +311,17 @@ public final class ElementCard {
             countLabels[i] = fittedBlock(labels[i], .8f, 54, physicalScale);
             countLabelHeight = Math.max(countLabelHeight, countLabels[i].height());
         }
-        return new Layout(physicalScale, header, massCaption, massHeading, massTop, mass,
-                configurationCaption, configurationHeading, configurationTop, configuration, propertyTop,
-                propertyNames, propertyValues, valueOffsets, rows, divider, countScale, countLabelTop, countLabels,
+        return new Layout(physicalScale, header, massCaption, massHeading, massTop, mass, configurationCaption,
+                configurationHeading, configurationTop, configuration, propertyTop, propertyNames, propertyValues,
+                valueOffsets, rows, divider, countScale, countLabelTop, countLabels,
                 divider + countLabelTop + countLabelHeight);
     }
 
     /** Snaps pixel scale values to physical screen pixels. */
     static float pixelScale(float requested, float physicalScale) {
         return physicalScale > 0 && Float.isFinite(physicalScale)
-                ? Math.max(1, Math.round(requested * physicalScale)) / physicalScale : requested;
+                ? Math.max(1, Math.round(requested * physicalScale)) / physicalScale
+                : requested;
     }
 
     /** Calculates fitted font scaling to fit specified widths. */
@@ -299,8 +338,8 @@ public final class ElementCard {
     /** Creates a text block wrapping text within a given width. */
     private static TextBlock block(String value, float requested, int width, float physicalScale) {
         float scale = pixelScale(requested, physicalScale);
-        return new TextBlock(scale, List.copyOf(font().listFormattedStringToWidth(value,
-                Math.max(1, (int) Math.floor(width / scale + 1e-4f)))));
+        return new TextBlock(scale, List.copyOf(
+                font().listFormattedStringToWidth(value, Math.max(1, (int) Math.floor(width / scale + 1e-4f)))));
     }
 
     /** Creates a fitted text block wrapping text within a given width. */
@@ -310,7 +349,7 @@ public final class ElementCard {
 
     /** Computes a sized layout fitting specified panel dimensions. */
     private static SizedLayout sizedLayout(String symbol, float textScale, boolean matches, int width, int height,
-                                           float parentScale) {
+            float parentScale) {
         Layout natural = layout(symbol, textScale, matches);
         float scale = Math.min(width / (float) WIDTH, height / (float) natural.height());
         if (!(parentScale > 0) || !Float.isFinite(parentScale)) {
@@ -327,13 +366,14 @@ public final class ElementCard {
         return new SizedLayout(natural, Math.min(width / (float) WIDTH, height / (float) natural.height()));
     }
 
-    /** Retrieves the total content height for an element card. */
+    /** Returns the total content height for an element card. */
     public static int contentHeight(String symbol, float textScale) {
         return layout(symbol, textScale, true).height();
     }
 
     /** Resolves configuration tooltips for hovered regions on element cards. */
-    static String configurationTooltip(MoleculeDef definition, int index, int width, int height, float mouseX, float mouseY) {
+    static String configurationTooltip(MoleculeDef definition, int index, int width, int height, float mouseX,
+            float mouseY) {
         if (width <= 0 || height <= 0 || !Float.isFinite(mouseX) || !Float.isFinite(mouseY)) {
             return "";
         }
@@ -356,12 +396,14 @@ public final class ElementCard {
         Layout layout = sized.layout();
         float x = (mouseX - (width - WIDTH * sized.scale()) / 2) / sized.scale();
         float y = mouseY / sized.scale();
-        return x >= 10 && x < 178 && y >= layout.configurationCaption() && y < layout.propertyTop() - 6 ? qualifier : "";
+        return x >= 10 && x < 178 && y >= layout.configurationCaption() && y < layout.propertyTop() - 6
+                ? qualifier
+                : "";
     }
 
     /** Checks whether the configuration section is currently hovered. */
     static boolean configurationHovered(int width, int height, int cardHeight, int captionTop, int propertyTop,
-                                        float mouseX, float mouseY) {
+            float mouseX, float mouseY) {
         if (width <= 0 || height <= 0 || cardHeight <= 0 || !Float.isFinite(mouseX) || !Float.isFinite(mouseY)) {
             return false;
         }
@@ -388,7 +430,7 @@ public final class ElementCard {
         // A caller may have changed GL directly while drawing a model or framebuffer.
         org.lwjgl.opengl.GL11.glBindTexture(org.lwjgl.opengl.GL11.GL_TEXTURE_2D, 0);
         GlStateManager.bindTexture(0);
-        Gui.drawRect(0, 0, width, height, PAPER);
+        Gui.drawRect(0, 0, width, height, StructureStyle.PAPER());
         SizedLayout sized = sizedLayout(symbol, textScale, matches, width, height, PixelFont.physicalScale());
         Layout layout = sized.layout();
         float scale = sized.scale();
@@ -397,22 +439,29 @@ public final class ElementCard {
         GlStateManager.scale(scale, scale, 1);
         try {
             // The category color belongs only to the small periodic-table tile.
-            int tileColor = matches ? color(symbol) : 0xFFE3E3DE;
-            int tileInk = tileTextColor(tileColor);
+            int tileColor = matches ? color(symbol) : UiThemes.color("tile.unknown", 0xFFE3E3DE);
             Gui.drawRect(10, 10, 90, 90, tileColor);
             String number = config == null ? fact(symbol, "number") : Integer.toString(config.atomicNumber());
-            text(number, 17, 17, fittedScale(number, 1.15f, 66, layout.physicalScale()), tileInk);
+            try (var ignored = UiThemes.element("element/" + symbol + "/number")) {
+                text(number, 17, 17, fittedScale(number, 1.15f, 66, layout.physicalScale()), numberColor(tileColor));
+            }
             float symbolScale = fittedScale(symbol, 5.2f, 66, layout.physicalScale());
-            text(symbol, 50 - font().getStringWidth(symbol) * symbolScale / 2,
-                    58 - font().FONT_HEIGHT * symbolScale / 2, symbolScale, tileInk);
+            try (var ignored = UiThemes.element("element/" + symbol + "/symbol")) {
+                text(symbol, 50 - font().getStringWidth(symbol) * symbolScale / 2,
+                        58 - font().FONT_HEIGHT * symbolScale / 2, symbolScale, symbolColor(tileColor));
+            }
             Header header = layout.header();
-            textBlock(header.name(), 104, 17, INK);
-            textBlock(header.category(), 104, header.categoryTop(), MUTED);
+            textBlock("name", header.name(), 104, 17, UiThemes.color("text.title", StructureStyle.INK));
+            textBlock("category", header.category(), 104, header.categoryTop(), StructureStyle.MUTED());
 
-            caption(layout.massHeading(), layout.massCaption());
-            textBlock(layout.mass(), 10, layout.massTop(), INK);
-            caption(layout.configurationHeading(), layout.configurationCaption());
-            configuration(layout.configuration(), 10, layout.configurationTop());
+            try (var ignored = UiThemes.element("reference-mass")) {
+                caption(layout.massHeading(), layout.massCaption());
+                textBlock("value", layout.mass(), 10, layout.massTop(), StructureStyle.INK());
+            }
+            try (var ignored = UiThemes.element("electron-configuration")) {
+                caption(layout.configurationHeading(), layout.configurationCaption());
+                configuration(layout.configuration(), 10, layout.configurationTop());
+            }
 
             int y = layout.propertyTop();
             property(0, matches ? fact(symbol, "oxide") : "-", y, layout);
@@ -421,15 +470,17 @@ public final class ElementCard {
             y += layout.rowHeights()[1];
             property(2, matches ? fact(symbol, "reference_state") : "-", y, layout);
 
-            Gui.drawRect(10, layout.divider(), 178, layout.divider() + 1, RULE);
+            Gui.drawRect(10, layout.divider(), 178, layout.divider() + 1, StructureStyle.RULE());
             if (config != null) {
                 int[] counts = {config.atomicNumber(), config.neutrons(), config.electrons()};
                 for (int i = 0; i < 3; i++) {
+                    try (var ignored = UiThemes.element("particle-count-" + i)) {
                     float column = 10 + i * 56;
                     String count = Integer.toString(counts[i]);
-                    text(count, column, layout.divider() + 6,
-                            fittedScale(count, layout.countScale(), 54, layout.physicalScale()), INK);
-                    textBlock(layout.countLabels()[i], column, layout.divider() + layout.countLabelTop(), MUTED);
+                    text("value", count, column, layout.divider() + 6,
+                            fittedScale(count, layout.countScale(), 54, layout.physicalScale()), StructureStyle.INK());
+                    textBlock("label", layout.countLabels()[i], column, layout.divider() + layout.countLabelTop(), StructureStyle.MUTED());
+                    }
                 }
             }
         } finally {
@@ -440,8 +491,8 @@ public final class ElementCard {
 
     /** Draws a section caption divider and heading. */
     private static void caption(TextBlock heading, int y) {
-        Gui.drawRect(10, y - 7, 178, y - 6, RULE);
-        textBlock(heading, 10, y, MUTED);
+        Gui.drawRect(10, y - 7, 178, y - 6, StructureStyle.RULE());
+        textBlock("heading", heading, 10, y, StructureStyle.MUTED());
     }
 
     /** Calculates natural font scaling for electron configurations. */
@@ -470,7 +521,9 @@ public final class ElementCard {
             float cursor = x;
             for (var run : configuration.lines().get(row)) {
                 float scale = run.superscript() ? configuration.superscriptScale() : configuration.scale();
-                text(run.text(), cursor, y + row * configuration.lineHeight() - (run.superscript() ? 3 * configuration.scale() : 0), scale, INK);
+                text("value", run.text(), cursor,
+                        y + row * configuration.lineHeight() - (run.superscript() ? 3 * configuration.scale() : 0),
+                        scale, StructureStyle.INK());
                 cursor += font().getStringWidth(run.text()) * scale;
             }
         }
@@ -478,32 +531,43 @@ public final class ElementCard {
 
     /** Draws an individual property row with its corresponding icon. */
     private static void property(int kind, String code, int y, Layout layout) {
+        try (var ignored = UiThemes.element("reference-property-" + kind)) {
         switch (kind) {
-            case 0 -> ElementCardIcons.drawOxide(code, 12, y, 20, BLUE);
-            case 1 -> ElementCardIcons.drawCrystal(code, 12, y, 20, BLUE);
-            case 2 -> ElementCardIcons.drawState(code, 12, y, 20, BLUE);
+            case 0 -> ElementCardIcons.drawOxide(code, 12, y, 20, UiThemes.color("icon.primary", BLUE));
+            case 1 -> ElementCardIcons.drawCrystal(code, 12, y, 20, UiThemes.color("icon.primary", BLUE));
+            case 2 -> ElementCardIcons.drawState(code, 12, y, 20, UiThemes.color("icon.primary", BLUE));
             default -> throw new IllegalArgumentException("Unknown reference property");
         }
-        textBlock(layout.propertyNames()[kind], 42, y, MUTED);
-        textBlock(layout.propertyValues()[kind], 42, y + layout.valueOffsets()[kind], INK);
+        textBlock("label", layout.propertyNames()[kind], 42, y, StructureStyle.MUTED());
+        textBlock("value", layout.propertyValues()[kind], 42, y + layout.valueOffsets()[kind], StructureStyle.INK());
+        }
     }
 
     /** Translates property codes into human-readable text values. */
     static String propertyValue(int kind, String code) {
         return switch (kind) {
             case 0 -> switch (code) {
-                case "sb" -> "Strongly basic"; case "wb" -> "Weakly basic";
-                case "eq" -> "Amphoteric"; case "wa" -> "Weakly acidic";
-                case "sa" -> "Strongly acidic"; case "none" -> "Not applicable";
+                case "sb" -> "Strongly basic";
+                case "wb" -> "Weakly basic";
+                case "eq" -> "Amphoteric";
+                case "wa" -> "Weakly acidic";
+                case "sa" -> "Strongly acidic";
+                case "none" -> "Not applicable";
                 default -> "Not specified";
             };
             case 1 -> switch (code) {
-                case "hex" -> "Hexagonal"; case "bcc" -> "Body-centred cubic";
-                case "hcp" -> "Hexagonal close-packed"; case "diamond" -> "Diamond cubic";
+                case "hex" -> "Hexagonal";
+                case "bcc" -> "Body-centred cubic";
+                case "hcp" -> "Hexagonal close-packed";
+                case "diamond" -> "Diamond cubic";
                 case "neutron-cluster" -> "Neutron-cluster packing";
-                case "fcc" -> "Face-centred cubic"; case "ortho" -> "Orthorhombic";
-                case "rhomb" -> "Rhombohedral"; case "tetr" -> "Tetragonal";
-                case "mono" -> "Monoclinic"; case "cubic" -> "Cubic"; default -> "Not specified";
+                case "fcc" -> "Face-centred cubic";
+                case "ortho" -> "Orthorhombic";
+                case "rhomb" -> "Rhombohedral";
+                case "tetr" -> "Tetragonal";
+                case "mono" -> "Monoclinic";
+                case "cubic" -> "Cubic";
+                default -> "Not specified";
             };
             case 2 -> code.equals("synthetic") ? "Synthetic" : code.equals("-") ? "Not specified" : capital(code);
             default -> "";
@@ -518,14 +582,17 @@ public final class ElementCard {
     /** Maps element category keys to display names. */
     private static String categoryName(String value) {
         return switch (value) {
-            case "alkali" -> "Alkali metal"; case "alkaline" -> "Alkaline-earth metal";
-            case "transition" -> "Transition metal"; case "rare-earth" -> "Rare-earth element";
-            case "actinoid" -> "Actinoid element"; case "noble" -> "Noble gas";
+            case "alkali" -> "Alkali metal";
+            case "alkaline" -> "Alkaline-earth metal";
+            case "transition" -> "Transition metal";
+            case "rare-earth" -> "Rare-earth element";
+            case "actinoid" -> "Actinoid element";
+            case "noble" -> "Noble gas";
             default -> capital(value);
         };
     }
 
-    /** Retrieves the pixel font renderer instance. */
+    /** Returns the pixel font renderer instance. */
     private static FontRenderer font() {
         return PixelFont.renderer();
     }
@@ -534,6 +601,21 @@ public final class ElementCard {
     private static void textBlock(TextBlock block, float x, float y, int color) {
         for (int i = 0; i < block.lines().size(); i++) {
             text(block.lines().get(i), x, y + i * block.lineHeight(), block.scale(), color);
+        }
+    }
+
+    /** Keeps a wrapped label's color address independent of its measured line count. */
+    private static void textBlock(String name, TextBlock block, float x, float y, int color) {
+        String role = UiThemes.textRole(color);
+        try (var ignored = UiThemes.element(name)) {
+            textBlock(block, x, y, UiThemes.color(role, UiThemes.originalColor(color)));
+        }
+    }
+
+    private static void text(String name, String value, float x, float y, float scale, int color) {
+        String role = UiThemes.textRole(color);
+        try (var ignored = UiThemes.element(name)) {
+            text(value, x, y, scale, UiThemes.color(role, UiThemes.originalColor(color)));
         }
     }
 

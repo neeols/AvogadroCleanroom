@@ -1,7 +1,13 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.io.File;
+import java.nio.file.Path;
+import java.util.LinkedHashSet;
+import java.util.Set;
+
 import io.github.wurtzitane.avogadro.Avogadro;
 import io.github.wurtzitane.avogadro.molecule.MoleculeResources;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.resources.AbstractResourcePack;
 import net.minecraft.client.resources.IResourceManager;
@@ -9,14 +15,10 @@ import net.minecraft.client.resources.IResourceManagerReloadListener;
 import net.minecraft.client.resources.IResourcePack;
 import net.minecraftforge.fml.common.ObfuscationReflectionHelper;
 
-import java.io.File;
-import java.nio.file.Path;
-import java.util.LinkedHashSet;
-import java.util.Set;
-
 /**
  * Handles narrow file-based resource discovery for molecules and binding dictionaries.
- * <p>Narrow file-based resource discovery: molecules and their binding dictionaries only.
+ * <p>
+ * Narrow file-based resource discovery: molecules and their binding dictionaries only.
  */
 public final class MoleculeAssets implements IResourceManagerReloadListener {
 
@@ -43,7 +45,8 @@ public final class MoleculeAssets implements IResourceManagerReloadListener {
                     Avogadro.LOGGER.warn("Cannot enumerate molecule resources in pack {}", pack.getPackName(), e);
                 }
             } else {
-                Avogadro.LOGGER.warn("Molecule resource discovery requires a directory or ZIP pack; cannot enumerate {} ({})",
+                Avogadro.LOGGER.warn(
+                        "Molecule resource discovery requires a directory or ZIP pack; cannot enumerate {} ({})",
                         pack.getPackName(), pack.getClass().getName());
             }
         }

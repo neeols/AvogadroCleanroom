@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'com.cleanroommc.cleanroomgradle'
+    id 'com.diffplug.spotless' version '8.10.4'
 }
 
 group = 'io.github.wurtzitane.avogadro'
@@ -14,7 +15,128 @@ base {
 java {
     toolchain.languageVersion = JavaLanguageVersion.of(25)
     withSourcesJar()
+    withJavadocJar()
 }
+
+// Downloadable guide companions are documentation assets, never runtime classes.
+sourceSets.main.java.exclude('**/doc-files/**')
+
+// Every source theme is discoverable at runtime, including files added by pack authors.
+def themeIndexDirectory = layout.buildDirectory.dir('generated/theme-index')
+tasks.register('generateThemeIndex') {
+    def themes = fileTree('src/main/resources/assets/avogadro/themes') { include '*.json' }
+    inputs.files(themes).withPathSensitivity(PathSensitivity.RELATIVE)
+    def index = themeIndexDirectory.map { it.file('assets/avogadro/theme-index.json') }
+    outputs.file(index)
+    doLast {
+        def output = index.get().asFile
+        output.parentFile.mkdirs()
+        output.setText(groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(themes.files.collect { it.name }.sort())) + '\n', 'UTF-8')
+    }
+}
+sourceSets.main.resources.srcDir(themeIndexDirectory)
+tasks.named('processResources') { dependsOn 'generateThemeIndex' }
+tasks.named('sourcesJar') { dependsOn 'generateThemeIndex' }
+
+sourceSets {
+    themeCreator {
+        java.srcDirs = ['tools/theme-creator/src', 'src/main/java']
+        java.include 'io/github/wurtzitane/avogadro/theme/**', 'io/github/wurtzitane/avogadro/themecreator/**'
+        resources.srcDirs = ['tools/theme-creator/resources', 'src/main/resources', themeIndexDirectory]
+        resources.include 'previews/**', 'assets/avogadro/themes/**', 'assets/avogadro/theme-roles.json', 'assets/avogadro/theme-index.json'
+    }
+}
+dependencies { themeCreatorImplementation 'com.google.code.gson:gson:2.14.0' }
+tasks.named('processThemeCreatorResources') { dependsOn 'generateThemeIndex' }
+
+tasks.withType(org.gradle.language.jvm.tasks.ProcessResources).configureEach {
+    // Explicit writable directories avoid read-only resource folders blocking later Windows builds.
+    dirPermissions { unix('rwxr-xr-x') }
+}
+tasks.register('themeCreatorJar', Jar) {
+    description = 'Builds the standalone Theme Creator with native menu previews.'
+    group = 'distribution'
+    archiveBaseName = 'avogadro-theme-creator'
+    manifest { attributes 'Main-Class': 'io.github.wurtzitane.avogadro.themecreator.ThemeCreator' }
+    from sourceSets.themeCreator.output
+    from('LICENSE') { into 'META-INF'; rename { 'AVOGADRO-LICENSE' } }
+    from { configurations.themeCreatorRuntimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    exclude 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'module-info.class', 'META-INF/versions/**/module-info.class'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+tasks.named('processResources') {
+    dependsOn 'themeCreatorJar'
+    from(tasks.named('themeCreatorJar')) {
+        into 'assets/avogadro/tools'
+        rename { 'theme-creator.jar' }
+    }
+}
+
+spotless {
+    java {
+        target 'src/main/java/**/*.java'
+        target 'tools/theme-creator/src/**/*.java'
+        targetExclude 'src/main/java/**/doc-files/**'
+        importOrder('java', 'javax', 'com', 'io', 'net', 'org', '')
+        eclipse('4.37').configFile('gradle/eclipse-formatter.xml')
+        trimTrailingWhitespace()
+        endWithNewline()
+    }
+}
+
+tasks.withType(Javadoc).configureEach {
+    // Let the standard doclet find package doc-files as well as explicit source files.
+    options.addStringOption('sourcepath', file('src/main/java').absolutePath)
+    options.encoding = 'UTF-8'
+    options.docEncoding = 'UTF-8'
+    options.charSet = 'UTF-8'
+    options.addBooleanOption('Xdoclint:all,-missing', true)
+    options.addBooleanOption('Werror', true)
+    options.noTimestamp = true
+    // The standard JDK doclet copies these assets and links them on every page.
+    options.addStringOption('-add-stylesheet', file('src/main/javadoc/avogadro.css').absolutePath)
+    options.addStringOption('-add-script', file('src/main/javadoc/avogadro.js').absolutePath)
+    inputs.dir('src/main/javadoc')
+    inputs.files(fileTree('src/main/java') { include '**/doc-files/**' })
+            .withPathSensitivity(PathSensitivity.RELATIVE)
+}
+
+tasks.named('javadoc', Javadoc) {
+    dependsOn 'themeCreatorJavadoc'
+    classpath = sourceSets.main.compileClasspath
+    options.windowTitle = "Avogadro ${project.version} API"
+    options.docTitle = "Avogadro ${project.version} API"
+    options.overview = file('src/main/javadoc/overview.html').absolutePath
+    options.group('Common API', 'io.github.wurtzitane.avogadro.api')
+    options.group('Client API', 'io.github.wurtzitane.avogadro.api.client')
+    doLast {
+        copy {
+            from layout.buildDirectory.dir('docs/theme-creator')
+            into new File(destinationDir, 'theme-creator')
+        }
+    }
+}
+
+// Keep the desktop tool's implementation guide in the native doclet output too.
+tasks.register('themeCreatorJavadoc', Javadoc) {
+    source = sourceSets.themeCreator.allJava
+    classpath = sourceSets.themeCreator.compileClasspath
+    destinationDir = layout.buildDirectory.dir('docs/theme-creator').get().asFile
+    options.memberLevel = JavadocMemberLevel.PRIVATE
+    options.windowTitle = 'Avogadro Theme Creator'
+    options.docTitle = 'Theme Creator implementation reference'
+}
+
+tasks.register('validateJavadoc', Javadoc) {
+    description = 'Checks Javadoc syntax and references, including internal members.'
+    group = 'verification'
+    source = sourceSets.main.allJava
+    classpath = sourceSets.main.compileClasspath
+    destinationDir = layout.buildDirectory.dir('docs/javadoc-internal').get().asFile
+    options.memberLevel = JavadocMemberLevel.PRIVATE
+}
+
+tasks.named('check') { dependsOn 'validateJavadoc' }
 
 repositories {
     mavenCentral()
@@ -26,7 +148,13 @@ repositories {
     }
 }
 
+configurations { chemistry }
+configurations.implementation.extendsFrom(configurations.chemistry)
+
 dependencies {
+    // Bundled common-side chemistry. No optional GUI toolkit is loaded by this path.
+    chemistry('com.actelion.research:openchemlib:2026.10.3') { transitive = false }
+    chemistry('com.simolecule.centres:centres-core:1.5') { transitive = false }
     implementation cleanroom.userdev(providers.gradleProperty('cleanroomVersion').getOrElse('0.7.4-alpha'))
     compileOnly files('libs/OffscreenCleanroom-1.12.2-0.1.1-mcp.jar')
     // Cleanroom includes JOML at runtime.
@@ -109,6 +237,10 @@ tasks.matching { it.name in ['runClient', 'runServer'] }.configureEach {
 }
 
 jar {
+    from({ configurations.chemistry.collect { zipTree(it) } }) {
+        exclude 'META-INF/MANIFEST.MF', 'META-INF/*.SF', 'META-INF/*.RSA', 'META-INF/*.DSA', 'module-info.class'
+    }
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from('LICENSE')
     manifest.attributes('MixinConfigs': 'mixins.avogadro.client.json')
 }

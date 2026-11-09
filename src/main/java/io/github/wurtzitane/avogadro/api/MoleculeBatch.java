@@ -1,17 +1,22 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
-import io.github.wurtzitane.avogadro.molecule.MoleculeResources;
-import net.minecraft.util.ResourceLocation;
-
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
+import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
+import io.github.wurtzitane.avogadro.molecule.MoleculeResources;
+
+import net.minecraft.util.ResourceLocation;
+
 /**
- * Edits one owner's contribution.
- * <p>Removing an entry reveals the underlying source layer.
+ * Collects several registration changes so they can be applied together.
+ *
+ * <p>
+ * A batch changes only one owner's definitions. Removing that owner's entry can reveal a definition supplied by another
+ * source, rather than removing the molecule everywhere.
  */
 public final class MoleculeBatch {
 
@@ -30,7 +35,7 @@ public final class MoleculeBatch {
     public MoleculeBatch() {}
 
     /**
-     * Constructs a new {@link MoleculeBatch} initialized with existing resource data.
+     * Creates a {@link MoleculeBatch} initialized with existing resource data.
      *
      * @param initial the initial {@link MoleculeResources.Data} to populate this batch with
      */
@@ -64,7 +69,7 @@ public final class MoleculeBatch {
     /**
      * Registers a molecule definition using its string identifier and raw property fields map.
      *
-     * @param id     the string identifier of the molecule
+     * @param id the string identifier of the molecule
      * @param fields a map of property fields for the molecule definition
      * @return this batch instance for method chaining
      */
@@ -96,9 +101,9 @@ public final class MoleculeBatch {
     /**
      * Adds or updates an item tag entry in this batch.
      *
-     * @param id      the item tag identifier string
+     * @param id the item tag identifier string
      * @param replace whether this tag list replaces existing tags or appends to them
-     * @param values  an array of tag values or resource location strings
+     * @param values an array of tag values or resource location strings
      * @return this batch instance for method chaining
      */
     public MoleculeBatch itemTag(String id, boolean replace, String... values) {
@@ -108,9 +113,9 @@ public final class MoleculeBatch {
     /**
      * Adds or updates a fluid tag entry in this batch.
      *
-     * @param id      the fluid tag identifier string
+     * @param id the fluid tag identifier string
      * @param replace whether this tag list replaces existing tags or appends to them
-     * @param values  an array of tag values or resource location strings
+     * @param values an array of tag values or resource location strings
      * @return this batch instance for method chaining
      */
     public MoleculeBatch fluidTag(String id, boolean replace, String... values) {
@@ -154,7 +159,7 @@ public final class MoleculeBatch {
     /**
      * Exports the accumulated changes as an immutable {@link MoleculeResources.Data} structure.
      *
-     * @return a new {@link MoleculeResources.Data} instance representing this batch's contents
+     * @return a new {@link MoleculeResources.Data} representing this batch's contents
      */
     public MoleculeResources.Data data() {
         return new MoleculeResources.Data(definitions, itemTags, fluidTags);
@@ -163,10 +168,10 @@ public final class MoleculeBatch {
     /**
      * Helper method to construct and store a serialized JSON tag entry into the specified target map.
      *
-     * @param target  the target map (item tags or fluid tags)
-     * @param id      the tag identifier string
+     * @param target the target map (item tags or fluid tags)
+     * @param id the tag identifier string
      * @param replace whether the tag should replace previous entries
-     * @param values  the array of string values for the tag
+     * @param values the array of string values for the tag
      * @return this batch instance for method chaining
      */
     private MoleculeBatch tag(Map<ResourceLocation, String> target, String id, boolean replace, String[] values) {

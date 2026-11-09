@@ -1,16 +1,20 @@
 package io.github.wurtzitane.avogadro.api;
 
-import io.github.wurtzitane.avogadro.molecule.BondType;
-
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
+import io.github.wurtzitane.avogadro.molecule.BondType;
+
 /**
- * Builds a fragment or a unit-cell basis using explicit indexed connectivity.
+ * Builds a piece of a molecule from atom positions and bonds.
+ *
+ * <p>
+ * Atoms receive indices starting at zero, in the order you add them. Name important atoms with
+ * {@link #attachment(String, int)} so you can connect pieces without tracking indices.
  */
 public final class StructureBuilder {
 
@@ -36,23 +40,24 @@ public final class StructureBuilder {
     private final Map<Integer, Integer> capacities = new LinkedHashMap<>();
 
     /**
-     * Constructs a new, empty {@link StructureBuilder} instance.
+     * Constructs a new, empty {@link StructureBuilder}.
      */
     public StructureBuilder() {}
 
     /**
      * Adds an atom with the specified element symbol and 3D Cartesian coordinates.
      *
-     * @code element the element symbol string
-     * @param x       the x-axis coordinate in angstroms
-     * @param y       the y-axis coordinate in angstroms
-     * @param z       the z-axis coordinate in angstroms
-     * @return the zero-based integer index of the added atom
+     * @param element the element symbol, such as C or O
+     * @param x the x coordinate, in the structure's units
+     * @param y the y coordinate, in the structure's units
+     * @param z the z coordinate, in the structure's units
+     * @return the zero-based index of the added atom
      * @throws IllegalArgumentException if the fragment has reached the maximum atom limit
      */
     public int addAtom(String element, double x, double y, double z) {
         if (atoms.size() == StructureFragment.MAX_ATOMS) {
-            throw new IllegalArgumentException("A generated fragment may contain at most " + StructureFragment.MAX_ATOMS + " atoms.");
+            throw new IllegalArgumentException(
+                    "A generated fragment may contain at most " + StructureFragment.MAX_ATOMS + " atoms.");
         }
         atoms.add(new StructureFragment.Atom(element, x, y, z));
         return atoms.size() - 1;
@@ -61,11 +66,11 @@ public final class StructureBuilder {
     /**
      * Adds an atom with the specified element symbol and coordinates, returning this builder for method chaining.
      *
-     * @param element the element symbol string
-     * @param x       the x-axis coordinate in angstroms
-     * @param y       the y-axis coordinate in angstroms
-     * @param z       the z-axis coordinate in angstroms
-     * @return this {@link StructureBuilder} instance
+     * @param element the element symbol, such as C or O
+     * @param x the x coordinate, in the structure's units
+     * @param y the y coordinate, in the structure's units
+     * @param z the z coordinate, in the structure's units
+     * @return this {@link StructureBuilder}
      */
     public StructureBuilder atom(String element, double x, double y, double z) {
         addAtom(element, x, y, z);
@@ -73,11 +78,48 @@ public final class StructureBuilder {
     }
 
     /**
+     * Adds a labeled external group without pretending it is an element or a known mass.
+     * @param label visible R-group label, such as R1 or Ar
+     * @param x horizontal coordinate
+     * @param y vertical coordinate
+     * @param z depth coordinate
+     * @return zero-based placeholder index, usable with bonds and attachment points
+     */
+    public int addRGroup(String label, double x, double y, double z) {
+        var value = new io.github.wurtzitane.avogadro.molecule.AtomAnnotation(label, 0);
+        int index = addAtom("*", x, y, z);
+        annotation(index, value);
+        return index;
+    }
+
+    /**
+     * Records an explicit unpaired-electron count on a real atom. Does not change charge or bonds.
+     * @param index zero-based atom index
+     * @param electrons unpaired electrons, from zero through four
+     * @return this builder
+     */
+    public StructureBuilder radical(int index, int electrons) {
+        return annotation(index, new io.github.wurtzitane.avogadro.molecule.AtomAnnotation("", electrons));
+    }
+
+    /**
+     * Replaces atom-local authoring metadata, preserving its position and connectivity.
+     * @param index zero-based atom index
+     * @param annotation external-group or radical annotation
+     * @return this builder
+     */
+    public StructureBuilder annotation(int index, io.github.wurtzitane.avogadro.molecule.AtomAnnotation annotation) {
+        var atom = atoms.get(index);
+        atoms.set(index, new StructureFragment.Atom(atom.element(), atom.x(), atom.y(), atom.z(), annotation));
+        return this;
+    }
+
+    /**
      * Adds a single bond between two atoms specified by index.
      *
      * @param from the zero-based index of the source atom
-     * @param to   the zero-based index of the target atom
-     * @return this {@link StructureBuilder} instance
+     * @param to the zero-based index of the target atom
+     * @return this {@link StructureBuilder}
      */
     public StructureBuilder bond(int from, int to) {
         return bond(from, to, BondType.SINGLE);
@@ -87,8 +129,8 @@ public final class StructureBuilder {
      * Adds a single bond between two named attachment points.
      *
      * @param from the source attachment name string
-     * @param to   the target attachment name string
-     * @return this {@link StructureBuilder} instance
+     * @param to the target attachment name string
+     * @return this {@link StructureBuilder}
      */
     public StructureBuilder bond(String from, String to) {
         return bond(from, to, BondType.SINGLE);
@@ -97,10 +139,10 @@ public final class StructureBuilder {
     /**
      * Adds a bond of specified type between two named attachment points.
      *
-     * @param from     the source attachment name string
-     * @param to       the target attachment name string
+     * @param from the source attachment name string
+     * @param to the target attachment name string
      * @param bondType the {@link BondType} of the connection
-     * @return this {@link StructureBuilder} instance
+     * @return this {@link StructureBuilder}
      */
     public StructureBuilder bond(String from, String to, BondType bondType) {
         return bond(attachmentIndex(from), attachmentIndex(to), bondType);
@@ -110,9 +152,9 @@ public final class StructureBuilder {
      * Adds a bond of specified string type name between two named attachment points.
      *
      * @param from the source attachment name string
-     * @param to   the target attachment name string
+     * @param to the target attachment name string
      * @param type the string name representing the bond type
-     * @return this {@link StructureBuilder} instance
+     * @return this {@link StructureBuilder}
      */
     public StructureBuilder bond(String from, String to, String type) {
         return bond(from, to, bondType(type));
@@ -122,9 +164,9 @@ public final class StructureBuilder {
      * Adds a bond of specified string type name between two atoms specified by index.
      *
      * @param from the zero-based index of the source atom
-     * @param to   the zero-based index of the target atom
+     * @param to the zero-based index of the target atom
      * @param type the string name representing the bond type
-     * @return this {@link StructureBuilder} instance
+     * @return this {@link StructureBuilder}
      */
     public StructureBuilder bond(int from, int to, String type) {
         return bond(from, to, bondType(type));
@@ -134,9 +176,9 @@ public final class StructureBuilder {
      * Adds a bond of specified type between two atoms specified by index.
      *
      * @param from the zero-based index of the source atom
-     * @param to   the zero-based index of the target atom
+     * @param to the zero-based index of the target atom
      * @param type the {@link BondType} of the connection
-     * @return this {@link StructureBuilder} instance
+     * @return this {@link StructureBuilder}
      * @throws IllegalArgumentException if the fragment has reached the maximum bond limit
      */
     public StructureBuilder bond(int from, int to, BondType type) {
@@ -151,7 +193,7 @@ public final class StructureBuilder {
      * Configures the unit cell lattice vectors for periodic structures.
      *
      * @param vectors a 2D array of 1 to 3 lattice vectors, each containing 3 coordinates
-     * @return this {@link StructureBuilder} instance
+     * @return this {@link StructureBuilder}
      * @throws IllegalArgumentException if vectors are null or have invalid dimensions
      */
     public StructureBuilder cell(double[][] vectors) {
@@ -170,10 +212,10 @@ public final class StructureBuilder {
     /**
      * Adds a single periodic cell link between atoms across lattice offsets.
      *
-     * @param from   source atom index
-     * @param to     target atom index
+     * @param from source atom index
+     * @param to target atom index
      * @param offset integer offset array across lattice boundaries
-     * @return this {@link StructureBuilder} instance
+     * @return this {@link StructureBuilder}
      */
     public StructureBuilder link(int from, int to, int[] offset) {
         return link(from, to, offset, BondType.SINGLE);
@@ -182,11 +224,11 @@ public final class StructureBuilder {
     /**
      * Adds a periodic cell link with a specified string bond type name.
      *
-     * @param from   source atom index
-     * @param to     target atom index
+     * @param from source atom index
+     * @param to target atom index
      * @param offset integer offset array across lattice boundaries
-     * @param type   string name representing the bond type
-     * @return this {@link StructureBuilder} instance
+     * @param type string name representing the bond type
+     * @return this {@link StructureBuilder}
      */
     public StructureBuilder link(int from, int to, int[] offset, String type) {
         return link(from, to, offset, bondType(type));
@@ -195,11 +237,11 @@ public final class StructureBuilder {
     /**
      * Adds a periodic cell link with a specified bond type.
      *
-     * @param from   source atom index
-     * @param to     target atom index
+     * @param from source atom index
+     * @param to target atom index
      * @param offset integer offset array across lattice boundaries
-     * @param type   the {@link BondType} of the connection
-     * @return this {@link StructureBuilder} instance
+     * @param type the {@link BondType} of the connection
+     * @return this {@link StructureBuilder}
      * @throws IllegalArgumentException if the link limit is exceeded or offsets are invalid
      */
     public StructureBuilder link(int from, int to, int[] offset, BondType type) {
@@ -218,8 +260,9 @@ public final class StructureBuilder {
      *
      * @param name the attachment name string
      * @param atom the zero-based target atom index
-     * @return this {@link StructureBuilder} instance
-     * @throws IllegalArgumentException if the name is invalid, the atom index is negative, or a duplicate attachment exists
+     * @return this {@link StructureBuilder}
+     * @throws IllegalArgumentException if the name is invalid, the atom index is negative, or a duplicate attachment
+     *     exists
      */
     public StructureBuilder attachment(String name, int atom) {
         StructureFragment.attachmentName(name);
@@ -235,11 +278,11 @@ public final class StructureBuilder {
     /**
      * Associates a custom atomic configuration with a specific atom index.
      *
-     * @param atom          the zero-based atom index
+     * @param atom the zero-based atom index
      * @param configuration the {@link AtomicConfiguration} to apply
-     * @return this {@link StructureBuilder} instance
+     * @return this {@link StructureBuilder}
      * @throws IllegalArgumentException if the atom index is negative
-     * @throws NullPointerException     if the configuration is null
+     * @throws NullPointerException if the configuration is null
      */
     public StructureBuilder atomConfiguration(int atom, AtomicConfiguration configuration) {
         if (atom < 0) {
@@ -252,9 +295,9 @@ public final class StructureBuilder {
     /**
      * Sets the maximum random link capacity for a specific atom index.
      *
-     * @param atom     the zero-based atom index
+     * @param atom the zero-based atom index
      * @param capacity the maximum random link capacity
-     * @return this {@link StructureBuilder} instance
+     * @return this {@link StructureBuilder}
      * @throws IllegalArgumentException if index or capacity is invalid, or if conflicting capacities clash
      */
     public StructureBuilder randomLinkCapacity(int atom, int capacity) {
@@ -272,18 +315,18 @@ public final class StructureBuilder {
      * Sets the maximum random link capacity for a named attachment point.
      *
      * @param attachment the attachment name string
-     * @param capacity   the maximum random link capacity
-     * @return this {@link StructureBuilder} instance
+     * @param capacity the maximum random link capacity
+     * @return this {@link StructureBuilder}
      */
     public StructureBuilder randomLinkCapacity(String attachment, int capacity) {
         return randomLinkCapacity(attachmentIndex(attachment), capacity);
     }
 
     /**
-     * Builds and returns an immutable {@link StructureFragment} containing all accumulated atoms,
-     * bonds, cell links, attachments, configurations, and capacities.
+     * Builds and returns an immutable {@link StructureFragment} containing all accumulated atoms, bonds, cell links,
+     * attachments, configurations, and capacities.
      *
-     * @return a new {@link StructureFragment} instance
+     * @return a new {@link StructureFragment}
      */
     public StructureFragment build() {
         return new StructureFragment(atoms, bonds, vectors, links, attachments, configurations, capacities);

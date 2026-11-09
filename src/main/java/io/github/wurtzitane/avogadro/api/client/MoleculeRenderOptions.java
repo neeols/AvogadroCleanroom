@@ -1,12 +1,17 @@
 package io.github.wurtzitane.avogadro.api.client;
 
-import io.github.wurtzitane.avogadro.Config;
-import io.github.wurtzitane.avogadro.client.ElementPalette;
 import java.util.Map;
 
+import io.github.wurtzitane.avogadro.Config;
+import io.github.wurtzitane.avogadro.client.ElementPalette;
+
 /**
- * Immutable presentation snapshot.
- * <p>Coordinates use GUI pixels; angles use degrees.
+ * Settings for one draw: camera angles, zoom, background, colors, and atom/bond sizes.
+ *
+ * <p>
+ * These settings do not change the molecule's stored geometry or global preferences. Positions use GUI pixels and
+ * angles use degrees. Rotation speed defaults to zero, so the view stays still unless you choose a speed and pass
+ * elapsed time to the drawing call.
  */
 public final class MoleculeRenderOptions {
 
@@ -74,14 +79,14 @@ public final class MoleculeRenderOptions {
     /**
      * Creates a new builder for configuring molecule render options.
      *
-     * @return a new {@link Builder} instance
+     * @return a new {@link Builder}
      */
     public static Builder builder() {
         return new Builder();
     }
 
     /**
-     * Retrieves the yaw angle.
+     * Returns the yaw angle.
      *
      * @return the yaw in degrees
      */
@@ -90,7 +95,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the pitch angle.
+     * Returns the pitch angle.
      *
      * @return the pitch in degrees
      */
@@ -99,7 +104,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the roll angle.
+     * Returns the roll angle.
      *
      * @return the roll in degrees
      */
@@ -108,7 +113,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the horizontal pan offset.
+     * Returns the horizontal pan offset.
      *
      * @return the pan X coordinate in pixels
      */
@@ -117,7 +122,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the vertical pan offset.
+     * Returns the vertical pan offset.
      *
      * @return the pan Y coordinate in pixels
      */
@@ -126,7 +131,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the zoom factor.
+     * Returns the zoom factor.
      *
      * @return the zoom scale
      */
@@ -135,7 +140,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the atom scale factor.
+     * Returns the atom scale factor.
      *
      * @return the atom scale
      */
@@ -144,7 +149,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the bond scale factor.
+     * Returns the bond scale factor.
      *
      * @return the bond scale
      */
@@ -153,7 +158,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the rotation speed.
+     * Returns the rotation speed.
      *
      * @return the rotation speed in degrees per second
      */
@@ -162,7 +167,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the nullable ARGB background color.
+     * Returns the nullable ARGB background color.
      *
      * @return the ARGB background color integer, or {@code null} to preserve the existing background
      */
@@ -180,9 +185,9 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Retrieves the element palette snapshot used for coloring.
+     * Returns the element palette snapshot used for coloring.
      *
-     * @return the {@link ElementPalette.Snapshot} instance
+     * @return the {@link ElementPalette.Snapshot}
      */
     public ElementPalette.Snapshot palette() {
         return palette;
@@ -238,7 +243,7 @@ public final class MoleculeRenderOptions {
     }
 
     /**
-     * Builder class for constructing immutable {@link MoleculeRenderOptions} instances.
+     * Builds immutable {@link MoleculeRenderOptions} instances.
      */
     public static final class Builder {
 
@@ -257,17 +262,17 @@ public final class MoleculeRenderOptions {
         private Map<String, Integer> colors = Map.of();
 
         /**
-         * Constructs a new builder with default rendering values.
+         * Creates a builder with default rendering values.
          */
         private Builder() {}
 
         /**
          * Sets the camera orientation angles.
          *
-         * @param yaw   the yaw rotation in degrees
+         * @param yaw the yaw rotation in degrees
          * @param pitch the pitch rotation in degrees
-         * @param roll  the roll rotation in degrees
-         * @return this builder instance for chaining
+         * @param roll the roll rotation in degrees
+         * @return this builder
          */
         public Builder orientation(float yaw, float pitch, float roll) {
             this.yaw = yaw;
@@ -281,7 +286,7 @@ public final class MoleculeRenderOptions {
          *
          * @param x the horizontal pan in pixels
          * @param y the vertical pan in pixels
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder pan(float x, float y) {
             panX = x;
@@ -293,7 +298,7 @@ public final class MoleculeRenderOptions {
          * Sets the zoom level.
          *
          * @param value the zoom scale factor
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder zoom(float value) {
             zoom = value;
@@ -304,7 +309,7 @@ public final class MoleculeRenderOptions {
          * Sets the atom size scale.
          *
          * @param value the atom scale factor
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder atomScale(float value) {
             atomScale = value;
@@ -315,7 +320,7 @@ public final class MoleculeRenderOptions {
          * Sets the bond size scale.
          *
          * @param value the bond scale factor
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder bondScale(float value) {
             bondScale = value;
@@ -326,7 +331,7 @@ public final class MoleculeRenderOptions {
          * Configures whether atoms are rendered in a cubic style.
          *
          * @param value {@code true} for cubic atoms, {@code false} otherwise
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder cubic(boolean value) {
             cubic = value;
@@ -337,7 +342,7 @@ public final class MoleculeRenderOptions {
          * Sets a custom ARGB background color.
          *
          * @param argb the ARGB background color integer, or {@code null}
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder background(Integer argb) {
             background = argb;
@@ -348,7 +353,7 @@ public final class MoleculeRenderOptions {
          * Sets signed degrees per second. The default zero leaves the camera stationary.
          *
          * @param value the rotation speed in degrees per second
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder rotationSpeed(double value) {
             rotationSpeed = value;
@@ -358,8 +363,8 @@ public final class MoleculeRenderOptions {
         /**
          * Overrides specific RGB colors in this builder's captured palette without changing global preferences.
          *
-         * @,param value a map of color overrides
-         * @return this builder instance for chaining
+         * @param value a map of color overrides
+         * @return this builder
          */
         public Builder palette(Map<String, Integer> value) {
             colors = Map.copyOf(value);
@@ -369,7 +374,7 @@ public final class MoleculeRenderOptions {
         /**
          * Builds and validates the immutable {@link MoleculeRenderOptions} snapshot.
          *
-         * @return a new {@link MoleculeRenderOptions} instance
+         * @return a new {@link MoleculeRenderOptions}
          */
         public MoleculeRenderOptions build() {
             return new MoleculeRenderOptions(this);

@@ -1,7 +1,9 @@
 package io.github.wurtzitane.avogadro.item;
 
 import io.github.wurtzitane.avogadro.Avogadro;
+import io.github.wurtzitane.avogadro.Config;
 import io.github.wurtzitane.avogadro.entity.PeriodicTableEntity;
+
 import net.minecraft.creativetab.CreativeTabs;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.Item;
@@ -76,19 +78,20 @@ public final class PeriodicTableItem extends Item {
     }
 
     /**
-     * Retrieves the poster width from an item stack.
+     * Returns the poster width from an item stack.
      *
      * @param stack item stack instance
      * @return width integer value
      */
     public static int width(ItemStack stack) {
         if (stack == null || stack.isEmpty() || !stack.hasTagCompound()
-                || !stack.getTagCompound().hasKey(WIDTH_TAG, 99)) return DEFAULT_WIDTH;
+                || !stack.getTagCompound().hasKey(WIDTH_TAG, 99))
+            return DEFAULT_WIDTH;
         return boundedWidth(stack.getTagCompound().getInteger(WIDTH_TAG));
     }
 
     /**
-     * Retrieves the poster height in blocks from an item stack.
+     * Returns the poster height in blocks from an item stack.
      *
      * @param stack item stack instance
      * @return height integer value
@@ -104,7 +107,8 @@ public final class PeriodicTableItem extends Item {
      * @param width width integer value
      */
     public static void setWidth(ItemStack stack, int width) {
-        if (stack == null || stack.isEmpty() || stack.getItem() != INSTANCE) return;
+        if (stack == null || stack.isEmpty() || stack.getItem() != INSTANCE)
+            return;
         NBTTagCompound tag = stack.getTagCompound();
         if (tag == null) {
             tag = new NBTTagCompound();
@@ -137,22 +141,27 @@ public final class PeriodicTableItem extends Item {
     /**
      * Populates sub-items for creative inventory tabs.
      *
-     * @param tab   creative tab
+     * @param tab creative tab
      * @param items non-null item stack list
      */
     @Override
     public void getSubItems(CreativeTabs tab, NonNullList<ItemStack> items) {
+        if (!Config.PERIODIC_TABLE_CRAFTING.get())
+            return;
         CreativeTabs target = MoleculeItems.ELEMENTS_TAB == null ? MoleculeItems.TAB : MoleculeItems.ELEMENTS_TAB;
-        if (tab == CreativeTabs.SEARCH || tab == target) items.add(stack());
+        if (tab == CreativeTabs.SEARCH || tab == target)
+            items.add(stack());
     }
 
     /**
-     * Retrieves all creative tabs associated with this item.
+     * Returns all creative tabs associated with this item.
      *
      * @return array of creative tabs
      */
     @Override
     public CreativeTabs[] getCreativeTabs() {
+        if (!Config.PERIODIC_TABLE_CRAFTING.get())
+            return new CreativeTabs[0];
         return new CreativeTabs[]{MoleculeItems.ELEMENTS_TAB == null ? MoleculeItems.TAB : MoleculeItems.ELEMENTS_TAB};
     }
 
@@ -160,36 +169,39 @@ public final class PeriodicTableItem extends Item {
      * Handles initial item use interactions prior to block interaction, supporting sneak-clicks.
      *
      * @param player interacting player
-     * @param world  world instance
-     * @param pos    block position
-     * @param side   facing side
-     * @param hitX   hit X coordinate
-     * @param hitY   hit Y coordinate
-     * @param hitZ   hit Z coordinate
-     * @param hand   interaction hand
+     * @param world world instance
+     * @param pos block position
+     * @param side facing side
+     * @param hitX hit X coordinate
+     * @param hitY hit Y coordinate
+     * @param hitZ hit Z coordinate
+     * @param hand interaction hand
      * @return enum action result
      */
     @Override
-    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side,
-                                           float hitX, float hitY, float hitZ, EnumHand hand) {
+    public EnumActionResult onItemUseFirst(EntityPlayer player, World world, BlockPos pos, EnumFacing side, float hitX,
+            float hitY, float hitZ, EnumHand hand) {
         // Run before the target block so sneaking also works on chests and other interactive blocks.
-        if (!player.isSneaking()) return EnumActionResult.PASS;
-        if (world.isRemote) Avogadro.proxy.openPeriodicTable();
+        if (!player.isSneaking())
+            return EnumActionResult.PASS;
+        if (world.isRemote)
+            Avogadro.proxy.openPeriodicTable();
         return EnumActionResult.SUCCESS;
     }
 
     /**
      * Handles right-click air interaction for opening the reference table interface when sneaking.
      *
-     * @param world  world instance
+     * @param world world instance
      * @param player interacting player
-     * @param hand   interaction hand
+     * @param hand interaction hand
      * @return action result with item stack
      */
     @Override
     public ActionResult<ItemStack> onItemRightClick(World world, EntityPlayer player, EnumHand hand) {
         if (player.isSneaking()) {
-            if (world.isRemote) Avogadro.proxy.openPeriodicTable();
+            if (world.isRemote)
+                Avogadro.proxy.openPeriodicTable();
             return new ActionResult<>(EnumActionResult.SUCCESS, player.getHeldItem(hand));
         }
         return new ActionResult<>(EnumActionResult.PASS, player.getHeldItem(hand));
@@ -198,21 +210,22 @@ public final class PeriodicTableItem extends Item {
     /**
      * Handles block use interactions for placing periodic table posters or opening the viewer when sneaking.
      *
-     * @param player  interacting player
-     * @param world   world instance
-     * @param pos     block position
-     * @param hand    interaction hand
-     * @param facing  facing direction
-     * @param hitX    hit X coordinate
-     * @param hitY    hit Y coordinate
-     * @param hitZ    hit Z coordinate
+     * @param player interacting player
+     * @param world world instance
+     * @param pos block position
+     * @param hand interaction hand
+     * @param facing facing direction
+     * @param hitX hit X coordinate
+     * @param hitY hit Y coordinate
+     * @param hitZ hit Z coordinate
      * @return enum action result
      */
     @Override
-    public EnumActionResult onItemUse(EntityPlayer player, World world, BlockPos pos, EnumHand hand,
-                                      EnumFacing facing, float hitX, float hitY, float hitZ) {
+    public EnumActionResult onItemUse(EntityPlayer player, World world, BlockPos pos, EnumHand hand, EnumFacing facing,
+            float hitX, float hitY, float hitZ) {
         if (player.isSneaking()) {
-            if (world.isRemote) Avogadro.proxy.openPeriodicTable();
+            if (world.isRemote)
+                Avogadro.proxy.openPeriodicTable();
             return EnumActionResult.SUCCESS;
         }
         ItemStack held = player.getHeldItem(hand);
@@ -220,11 +233,14 @@ public final class PeriodicTableItem extends Item {
         if (!facing.getAxis().isHorizontal() || !player.canPlayerEdit(anchor, facing, held))
             return EnumActionResult.FAIL;
         PeriodicTableEntity poster = new PeriodicTableEntity(world, anchor, facing, width(held));
-        if (!poster.onValidSurface()) return EnumActionResult.FAIL;
+        if (!poster.onValidSurface())
+            return EnumActionResult.FAIL;
         if (!world.isRemote) {
-            if (!world.spawnEntity(poster)) return EnumActionResult.FAIL;
+            if (!world.spawnEntity(poster))
+                return EnumActionResult.FAIL;
             poster.playPlaceSound();
-            if (!player.capabilities.isCreativeMode) held.shrink(1);
+            if (!player.capabilities.isCreativeMode)
+                held.shrink(1);
         }
         return EnumActionResult.SUCCESS;
     }

@@ -2,38 +2,43 @@ package io.github.wurtzitane.avogadro.api;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
 import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+
 import org.joml.Vector3f;
 
 /**
- * Represents conventional crystal cell parameters: lengths in angstroms, angles in degrees,
- * and the Cartesian origin in the atom frame.
+ * The size and shape of one repeating block of a crystal.
  *
- * @param a       the length of lattice vector a in angstroms
- * @param b       the length of lattice vector b in angstroms
- * @param c       the length of lattice vector c in angstroms
- * @param alpha   the angle alpha in degrees
- * @param beta    the angle beta in degrees
- * @param gamma   the angle gamma in degrees
+ * <p>
+ * Lengths are in angstroms and angles are in degrees. The origin gives the block's position relative to the atom
+ * coordinates. Repeating this block creates the crystal preview.
+ *
+ * @param a the length of lattice vector a in angstroms
+ * @param b the length of lattice vector b in angstroms
+ * @param c the length of lattice vector c in angstroms
+ * @param alpha the angle alpha in degrees
+ * @param beta the angle beta in degrees
+ * @param gamma the angle gamma in degrees
  * @param originX the Cartesian x-coordinate of the origin
  * @param originY the Cartesian y-coordinate of the origin
  * @param originZ the Cartesian z-coordinate of the origin
  */
-public record CrystalCell(double a, double b, double c, double alpha, double beta, double gamma,
-                          double originX, double originY, double originZ) {
+public record CrystalCell(double a, double b, double c, double alpha, double beta, double gamma, double originX,
+        double originY, double originZ) {
 
     /** Metadata key used to store crystal cell information within molecule inspections. */
     public static final String METADATA_KEY = "crystal_cell";
 
     /**
-     * Constructs a new {@link CrystalCell} with the specified lengths and angles,
-     * defaulting the Cartesian origin to (0, 0, 0).
+     * Creates a {@link CrystalCell} with the specified lengths and angles, defaulting the Cartesian origin to (0, 0,
+     * 0).
      *
-     * @param a     the length of lattice vector a
-     * @param b     the length of lattice vector b
-     * @param c     the length of lattice vector c
+     * @param a the length of lattice vector a
+     * @param b the length of lattice vector b
+     * @param c the length of lattice vector c
      * @param alpha the angle alpha in degrees
-     * @param beta  the angle beta in degrees
+     * @param beta the angle beta in degrees
      * @param gamma the angle gamma in degrees
      */
     public CrystalCell(double a, double b, double c, double alpha, double beta, double gamma) {
@@ -41,20 +46,20 @@ public record CrystalCell(double a, double b, double c, double alpha, double bet
     }
 
     /**
-     * Compact constructor for {@link CrystalCell} that validates parameter finiteness,
-     * bounds, angle ranges, and positive unit cell volume.
+     * Compact constructor for {@link CrystalCell} that validates parameter finiteness, bounds, angle ranges, and
+     * positive unit cell volume.
      *
-     * @throws IllegalArgumentException if any parameter is non-finite, out of bounds,
-     *         has invalid lengths/angles, or results in a non-positive cell volume
+     * @throws IllegalArgumentException if any parameter is non-finite, out of bounds, has invalid lengths/angles, or
+     *     results in a non-positive cell volume
      */
     public CrystalCell {
-        for (double value : new double[] { a, b, c, alpha, beta, gamma, originX, originY, originZ }) {
+        for (double value : new double[]{a, b, c, alpha, beta, gamma, originX, originY, originZ}) {
             if (!Double.isFinite(value) || Math.abs(value) > 1_000_000) {
                 throw new IllegalArgumentException("Cell parameters must be finite and bounded");
             }
         }
-        if (a <= 0 || b <= 0 || c <= 0 || alpha <= 0 || alpha >= 180 || beta <= 0 || beta >= 180 || gamma <= 0 ||
-                gamma >= 180) {
+        if (a <= 0 || b <= 0 || c <= 0 || alpha <= 0 || alpha >= 180 || beta <= 0 || beta >= 180 || gamma <= 0
+                || gamma >= 180) {
             throw new IllegalArgumentException("Invalid cell lengths or angles");
         }
 
@@ -84,11 +89,8 @@ public record CrystalCell(double a, double b, double c, double alpha, double bet
         double cy = c * (ca - cb * cg) / sg;
         double cz = Math.sqrt(c * c - (c * cb) * (c * cb) - cy * cy);
 
-        return new Vector3f(
-                (float) (originX + i * a + j * b * cg + k * c * cb),
-                (float) (originY + j * b * sg + k * cy),
-                (float) (originZ + k * cz)
-        );
+        return new Vector3f((float) (originX + i * a + j * b * cg + k * c * cb),
+                (float) (originY + j * b * sg + k * cy), (float) (originZ + k * cz));
     }
 
     /**
@@ -98,8 +100,8 @@ public record CrystalCell(double a, double b, double c, double alpha, double bet
      */
     public JsonObject toJson() {
         JsonObject json = new JsonObject();
-        String[] keys = { "a", "b", "c", "alpha", "beta", "gamma", "origin_x", "origin_y", "origin_z" };
-        double[] values = { a, b, c, alpha, beta, gamma, originX, originY, originZ };
+        String[] keys = {"a", "b", "c", "alpha", "beta", "gamma", "origin_x", "origin_y", "origin_z"};
+        double[] values = {a, b, c, alpha, beta, gamma, originX, originY, originZ};
         for (int idx = 0; idx < keys.length; idx++) {
             json.addProperty(keys[idx], values[idx]);
         }
@@ -110,7 +112,7 @@ public record CrystalCell(double a, double b, double c, double alpha, double bet
      * Deserializes a crystal cell from a JSON object.
      *
      * @param json the {@link JsonObject} to parse
-     * @return a new {@link CrystalCell} instance
+     * @return a new {@link CrystalCell}
      * @throws IllegalArgumentException if required fields are missing or invalid
      */
     public static CrystalCell fromJson(JsonObject json) {
@@ -122,17 +124,11 @@ public record CrystalCell(double a, double b, double c, double alpha, double bet
                 throw new IllegalArgumentException("Crystal field '" + field + "' must be a number");
             }
         }
-        return new CrystalCell(
-                json.get("a").getAsDouble(),
-                json.get("b").getAsDouble(),
-                json.get("c").getAsDouble(),
-                json.get("alpha").getAsDouble(),
-                json.get("beta").getAsDouble(),
-                json.get("gamma").getAsDouble(),
+        return new CrystalCell(json.get("a").getAsDouble(), json.get("b").getAsDouble(), json.get("c").getAsDouble(),
+                json.get("alpha").getAsDouble(), json.get("beta").getAsDouble(), json.get("gamma").getAsDouble(),
                 json.has("origin_x") ? json.get("origin_x").getAsDouble() : 0,
                 json.has("origin_y") ? json.get("origin_y").getAsDouble() : 0,
-                json.has("origin_z") ? json.get("origin_z").getAsDouble() : 0
-        );
+                json.has("origin_z") ? json.get("origin_z").getAsDouble() : 0);
     }
 
     /**

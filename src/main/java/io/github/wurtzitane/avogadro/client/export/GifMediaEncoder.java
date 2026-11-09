@@ -1,6 +1,13 @@
 package io.github.wurtzitane.avogadro.client.export;
 
-import org.w3c.dom.Node;
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.awt.image.IndexColorModel;
+import java.awt.image.WritableRaster;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.util.Arrays;
+import java.util.Iterator;
 
 import javax.imageio.IIOImage;
 import javax.imageio.ImageIO;
@@ -10,14 +17,8 @@ import javax.imageio.metadata.IIOMetadata;
 import javax.imageio.metadata.IIOMetadataNode;
 import javax.imageio.stream.FileImageOutputStream;
 import javax.imageio.stream.ImageOutputStream;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBufferByte;
-import java.awt.image.IndexColorModel;
-import java.awt.image.WritableRaster;
-import java.io.IOException;
-import java.nio.file.Path;
-import java.util.Arrays;
-import java.util.Iterator;
+
+import org.w3c.dom.Node;
 
 /**
  * Java's GIF writer with bounded, frame-local palette construction.
@@ -61,11 +62,11 @@ public final class GifMediaEncoder implements MediaEncoder {
     private volatile boolean closed;
 
     /**
-     * Constructs a new {@link GifMediaEncoder} writing to a temporary file without protected colors.
+     * Creates a {@link GifMediaEncoder} writing to a temporary file without protected colors.
      *
      * @param temporaryOutput path to the temporary output file
-     * @param fps             frames per second
-     * @param transparent     {@code true} to enable transparency
+     * @param fps frames per second
+     * @param transparent {@code true} to enable transparency
      * @throws IOException if encoder initialization fails
      */
     public GifMediaEncoder(Path temporaryOutput, int fps, boolean transparent) throws IOException {
@@ -73,18 +74,20 @@ public final class GifMediaEncoder implements MediaEncoder {
     }
 
     /**
-     * Constructs a new {@link GifMediaEncoder} with optional protected UI colors.
-     * <p>Exact UI colors stay stable while the remaining palette follows each rendered model frame.
-     * RGB and ARGB inputs are treated as opaque; at most 192 distinct colors may be protected.
+     * Creates a {@link GifMediaEncoder} with optional protected UI colors.
+     * <p>
+     * Exact UI colors stay stable while the remaining palette follows each rendered model frame. RGB and ARGB inputs
+     * are treated as opaque; at most 192 distinct colors may be protected.
      *
-     * @param temporaryOutput   path to the temporary output file
-     * @param fps               frames per second (1–100)
-     * @param transparent       {@code true} to enable transparency
-     * @param protectedColors   array of RGB colors to protect from quantization shifting
-     * @throws IOException              if encoder initialization fails
+     * @param temporaryOutput path to the temporary output file
+     * @param fps frames per second (1–100)
+     * @param transparent {@code true} to enable transparency
+     * @param protectedColors array of RGB colors to protect from quantization shifting
+     * @throws IOException if encoder initialization fails
      * @throws IllegalArgumentException if frame rate is out of range or too many colors are protected
      */
-    public GifMediaEncoder(Path temporaryOutput, int fps, boolean transparent, int[] protectedColors) throws IOException {
+    public GifMediaEncoder(Path temporaryOutput, int fps, boolean transparent, int[] protectedColors)
+            throws IOException {
         if (fps < 1 || fps > 100) {
             throw new IllegalArgumentException("GIF frame rate must be 1–100");
         }
@@ -133,8 +136,8 @@ public final class GifMediaEncoder implements MediaEncoder {
     }
 
     /**
-     * Creates a new quantizer instance for background thread usage.
-     * Each leased quantizer owns its raster until its ordered write completes.
+     * Creates a new quantizer instance for background thread usage. Each leased quantizer owns its raster until its
+     * ordered write completes.
      */
     Quantizer quantizer() {
         return new Quantizer(transparent, protectedColors);
@@ -183,7 +186,7 @@ public final class GifMediaEncoder implements MediaEncoder {
         private final boolean transparent;
         private final int[] protectedColors;
 
-        /** Constructs a new {@link Quantizer}. */
+        /** Creates a {@link Quantizer}. */
         Quantizer(boolean transparent, int[] protectedColors) {
             this.transparent = transparent;
             this.protectedColors = protectedColors;
@@ -247,7 +250,8 @@ public final class GifMediaEncoder implements MediaEncoder {
     }
 
     /** Represents a pre-quantized static UI frame with its stable color palette. */
-    public record UiFrame(BufferedImage image, int[] colors) {}
+    public record UiFrame(BufferedImage image, int[] colors) {
+    }
 
     /**
      * {@inheritDoc}
@@ -284,7 +288,8 @@ public final class GifMediaEncoder implements MediaEncoder {
         writer.dispose();
         try {
             output.close();
-        } catch (IOException ignored) { }
+        } catch (IOException ignored) {
+        }
     }
 
     /** Helper to retrieve or create a child IIOMetadataNode. */
@@ -319,7 +324,8 @@ public final class GifMediaEncoder implements MediaEncoder {
         private WritableRaster raster;
 
         /** Quantizes a standard {@link BufferedImage}. */
-        BufferedImage quantize(BufferedImage image, boolean transparent, int[] protectedColors, int maximumColors) throws IOException {
+        BufferedImage quantize(BufferedImage image, boolean transparent, int[] protectedColors, int maximumColors)
+                throws IOException {
             int width = image.getWidth();
             int height = image.getHeight();
             int[] pixels;
@@ -334,13 +340,14 @@ public final class GifMediaEncoder implements MediaEncoder {
         }
 
         /** Quantizes raw {@link MediaPixels}. */
-        BufferedImage quantize(MediaPixels pixels, boolean transparent, int[] protectedColors, int maximumColors) throws IOException {
+        BufferedImage quantize(MediaPixels pixels, boolean transparent, int[] protectedColors, int maximumColors)
+                throws IOException {
             return quantize(null, pixels, pixels.width, pixels.height, transparent, protectedColors, maximumColors);
         }
 
         /** Internal core quantization routine. */
-        private BufferedImage quantize(int[] pixels, MediaPixels raw, int width, int height,
-                                       boolean transparent, int[] protectedColors, int maximumColors) throws IOException {
+        private BufferedImage quantize(int[] pixels, MediaPixels raw, int width, int height, boolean transparent,
+                int[] protectedColors, int maximumColors) throws IOException {
             long measured = ExportMetrics.start();
             int matte = raw == null ? pixels[0] : raw.argb((height - 1) * width * 4);
             int[] sourcePixels = pixels;
@@ -356,7 +363,8 @@ public final class GifMediaEncoder implements MediaEncoder {
                 occupiedBins[word] = 0;
                 while (remaining != 0) {
                     int bin = word * Long.SIZE + Long.numberOfTrailingZeros(remaining);
-                    counts[bin] = 0; red[bin] = green[bin] = blue[bin] = 0;
+                    counts[bin] = 0;
+                    red[bin] = green[bin] = blue[bin] = 0;
                     remaining &= remaining - 1;
                 }
             }
@@ -447,8 +455,8 @@ public final class GifMediaEncoder implements MediaEncoder {
                     g += green[bin];
                     b += blue[bin];
                 }
-                colors[next++] = 0xFF000000 | (int) (r / box.weight) << 16
-                        | (int) (g / box.weight) << 8 | (int) (b / box.weight);
+                colors[next++] = 0xFF000000 | (int) (r / box.weight) << 16 | (int) (g / box.weight) << 8
+                        | (int) (b / box.weight);
             }
             if (next == (transparent ? 1 : 0)) {
                 colors[next++] = 0xFF000000;

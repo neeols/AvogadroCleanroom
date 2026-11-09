@@ -1,18 +1,23 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
-import net.minecraft.util.ResourceLocation;
-
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
+
+import net.minecraft.util.ResourceLocation;
+
 /**
- * An immutable registration source.
- * <p>Copy references resolve after source layers are merged.
+ * A validated molecule definition ready to register.
+ *
+ * <p>
+ * This stores the definition's ID and JSON, rather than adding it to the game immediately. A definition that copies
+ * another molecule is resolved when the registrations are combined.
  */
 public final class MoleculeSpec {
 
@@ -25,7 +30,7 @@ public final class MoleculeSpec {
     /**
      * Private constructor to instantiate an immutable {@link MoleculeSpec}.
      *
-     * @param id   the {@link ResourceLocation} identifier
+     * @param id the {@link ResourceLocation} identifier
      * @param json the serialized JSON specification string
      */
     private MoleculeSpec(ResourceLocation id, String json) {
@@ -36,9 +41,9 @@ public final class MoleculeSpec {
     /**
      * Parses and validates a molecule specification from a string identifier and JSON content string.
      *
-     * @param id   the string identifier for the molecule
+     * @param id the string identifier for the molecule
      * @param json the raw JSON specification string
-     * @return a new validated {@link MoleculeSpec} instance
+     * @return a new validated {@link MoleculeSpec}
      * @throws IllegalArgumentException if syntax validation or dependency parsing fails
      */
     public static MoleculeSpec fromJson(String id, String json) {
@@ -47,9 +52,10 @@ public final class MoleculeSpec {
 
     /**
      * Asynchronously parses and validates a molecule specification from a string identifier and JSON string.
-     * <p>Completion callbacks run on the completing thread, not a Minecraft authority thread.
+     * <p>
+     * Completion callbacks run on the completing thread, not a Minecraft authority thread.
      *
-     * @param id   the string identifier for the molecule
+     * @param id the string identifier for the molecule
      * @param json the raw JSON specification string
      * @return a {@link java.util.concurrent.CompletableFuture} resolving to the {@link MoleculeSpec}
      */
@@ -59,9 +65,10 @@ public final class MoleculeSpec {
 
     /**
      * Asynchronously parses and validates a molecule specification from a resource location and JSON string.
-     * <p>Completion callbacks run on the completing thread, not a Minecraft authority thread.
+     * <p>
+     * Completion callbacks run on the completing thread, not a Minecraft authority thread.
      *
-     * @param id   the {@link ResourceLocation} identifier for the molecule
+     * @param id the {@link ResourceLocation} identifier for the molecule
      * @param json the raw JSON specification string
      * @return a {@link java.util.concurrent.CompletableFuture} resolving to the {@link MoleculeSpec}
      */
@@ -72,9 +79,9 @@ public final class MoleculeSpec {
     /**
      * Parses and validates a molecule specification from a resource location identifier and JSON content string.
      *
-     * @param id   the {@link ResourceLocation} identifier
+     * @param id the {@link ResourceLocation} identifier
      * @param json the raw JSON specification string
-     * @return a new validated {@link MoleculeSpec} instance
+     * @return a new validated {@link MoleculeSpec}
      * @throws IllegalArgumentException if syntax validation, copy reference checks, or parsing fails
      */
     public static MoleculeSpec fromJson(ResourceLocation id, String json) {
@@ -125,16 +132,16 @@ public final class MoleculeSpec {
     /**
      * Creates a molecule specification from an existing compiled molecule definition.
      *
-     * @param id     the string identifier for the specification
+     * @param id the string identifier for the specification
      * @param source the source {@link io.github.wurtzitane.avogadro.molecule.MoleculeDef} definition
-     * @return a new {@link MoleculeSpec} instance
+     * @return a new {@link MoleculeSpec}
      */
     public static MoleculeSpec fromDefinition(String id, io.github.wurtzitane.avogadro.molecule.MoleculeDef source) {
         return fromJson(id, MoleculeEdits.snapshot(source).toString());
     }
 
     /**
-     * Retrieves the resource location identifier of this specification.
+     * Returns the resource location identifier of this specification.
      *
      * @return the {@link ResourceLocation} identifier
      */
@@ -143,7 +150,7 @@ public final class MoleculeSpec {
     }
 
     /**
-     * Retrieves the serialized JSON string of this specification.
+     * Returns the serialized JSON string of this specification.
      *
      * @return the JSON string
      */
@@ -154,7 +161,7 @@ public final class MoleculeSpec {
     /**
      * Converts this specification into a mutable {@link MoleculeBuilder} for further editing.
      *
-     * @return a new {@link MoleculeBuilder} instance initialized with this spec's data
+     * @return a new {@link MoleculeBuilder} initialized with this spec's data
      */
     public MoleculeBuilder toBuilder() {
         return MoleculeBuilder.fromJson(id, json);

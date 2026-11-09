@@ -1,7 +1,5 @@
 package io.github.wurtzitane.avogadro.client.export;
 
-import io.github.wurtzitane.avogadro.Config;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -9,31 +7,33 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 
+import io.github.wurtzitane.avogadro.Config;
+
 /**
  * Validated, immutable settings for one export.
- * <p>Saved appearance settings are only read.
+ * <p>
+ * Saved appearance settings are only read.
  *
- * @param format              the export media format (GIF or MP4)
- * @param width               the canvas width in pixels
- * @param height              the canvas height in pixels
- * @param fps                 the target frames per second
- * @param secondsPerRotation  the duration of each complete rotation in seconds
- * @param rotations           the number of complete rotations
- * @param showName            {@code true} to display the molecule name label
- * @param showFormula         {@code true} to display the chemical formula label
- * @param background          optional RGB background color integer, or {@code null} for transparency
- * @param direction           the rotation direction (forward or reverse)
- * @param cubic               {@code true} for cubic atom rendering style, {@code false} for spherical
- * @param columns             the number of columns in a gallery export grid
- * @param filename            the validated output filename
- * @param encoder             optional path to an external FFmpeg encoder executable
- * @param moleculeCount       total number of molecules being exported
- * @param textScale           the scale factor applied to text labels
+ * @param format the export media format (GIF or MP4)
+ * @param width the canvas width in pixels
+ * @param height the canvas height in pixels
+ * @param fps the target frames per second
+ * @param secondsPerRotation the duration of each complete rotation in seconds
+ * @param rotations the number of complete rotations
+ * @param showName {@code true} to display the molecule name label
+ * @param showFormula {@code true} to display the chemical formula label
+ * @param background optional RGB background color integer, or {@code null} for transparency
+ * @param direction the rotation direction (forward or reverse)
+ * @param cubic {@code true} for cubic atom rendering style, {@code false} for spherical
+ * @param columns the number of columns in a gallery export grid
+ * @param filename the validated output filename
+ * @param encoder optional path to an external FFmpeg encoder executable
+ * @param moleculeCount total number of molecules being exported
+ * @param textScale the scale factor applied to text labels
  */
-public record ExportOptions(Format format, int width, int height, int fps, double secondsPerRotation,
-                            int rotations, boolean showName, boolean showFormula, Integer background,
-                            Config.RotationDirection direction, boolean cubic, int columns,
-                            String filename, String encoder, int moleculeCount, double textScale) {
+public record ExportOptions(Format format, int width, int height, int fps, double secondsPerRotation, int rotations,
+        boolean showName, boolean showFormula, Integer background, Config.RotationDirection direction, boolean cubic,
+        int columns, String filename, String encoder, int moleculeCount, double textScale) {
 
     /** Maximum allowed molecules in a single export gallery. */
     public static final int MAX_MOLECULES = 256;
@@ -45,39 +45,38 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
     public static final int MAX_FRAMES = 7200;
 
     /** Set of supported command-line option flag names. */
-    private static final Set<String> FLAGS = Set.of("format", "width", "height", "fps", "speed",
-            "rotations", "name", "formula", "background", "direction", "appearance", "columns",
-            "output", "encoder", "text-scale");
+    private static final Set<String> FLAGS = Set.of("format", "width", "height", "fps", "speed", "rotations", "name",
+            "formula", "background", "direction", "appearance", "columns", "output", "encoder", "text-scale");
 
     /**
-     * Constructs a new {@link ExportOptions} instance using the default text scale configuration.
+     * Creates a {@link ExportOptions} using the default text scale configuration.
      *
-     * @param format             export media format
-     * @param width              canvas width in pixels
-     * @param height             canvas height in pixels
-     * @param fps                frames per second
+     * @param format export media format
+     * @param width canvas width in pixels
+     * @param height canvas height in pixels
+     * @param fps frames per second
      * @param secondsPerRotation duration of each rotation in seconds
-     * @param rotations          number of complete rotations
-     * @param showName           {@code true} to display molecule name
-     * @param showFormula        {@code true} to display chemical formula
-     * @param background         optional RGB background color integer
-     * @param direction          {@link Config.RotationDirection}
-     * @param cubic              {@code true} for cubic atoms, {@code false} for spherical
-     * @param columns            gallery column count
-     * @param filename           output filename
-     * @param encoder            optional encoder executable path
-     * @param moleculeCount      total count of molecules being exported
+     * @param rotations number of complete rotations
+     * @param showName {@code true} to display molecule name
+     * @param showFormula {@code true} to display chemical formula
+     * @param background optional RGB background color integer
+     * @param direction {@link Config.RotationDirection}
+     * @param cubic {@code true} for cubic atoms, {@code false} for spherical
+     * @param columns gallery column count
+     * @param filename output filename
+     * @param encoder optional encoder executable path
+     * @param moleculeCount total count of molecules being exported
      */
-    public ExportOptions(Format format, int width, int height, int fps, double secondsPerRotation,
-                         int rotations, boolean showName, boolean showFormula, Integer background,
-                         Config.RotationDirection direction, boolean cubic, int columns,
-                         String filename, String encoder, int moleculeCount) {
-        this(format, width, height, fps, secondsPerRotation, rotations, showName, showFormula,
-                background, direction, cubic, columns, filename, encoder, moleculeCount, Config.TEXT_SCALE.get());
+    public ExportOptions(Format format, int width, int height, int fps, double secondsPerRotation, int rotations,
+            boolean showName, boolean showFormula, Integer background, Config.RotationDirection direction,
+            boolean cubic, int columns, String filename, String encoder, int moleculeCount) {
+        this(format, width, height, fps, secondsPerRotation, rotations, showName, showFormula, background, direction,
+                cubic, columns, filename, encoder, moleculeCount, Config.TEXT_SCALE.get());
     }
 
     /**
-     * Compact constructor for {@link ExportOptions} validating canvas sizes, galleries, frame rates, durations, and formats.
+     * Compact constructor for {@link ExportOptions} validating canvas sizes, galleries, frame rates, durations, and
+     * formats.
      *
      * @throws IllegalArgumentException if any validation rule or export limit is violated
      */
@@ -98,7 +97,8 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
         if (moleculeCount > 1 && (width / columns < 96 || height / rows < 96)) {
             throw invalid("Gallery cells require at least 96 pixels per dimension.");
         }
-        if (fps < 1 || (format == Format.GIF && fps > 60) || !Double.isFinite(secondsPerRotation) || secondsPerRotation < .1 || secondsPerRotation > 600 || rotations < 1 || rotations > 100) {
+        if (fps < 1 || (format == Format.GIF && fps > 60) || !Double.isFinite(secondsPerRotation)
+                || secondsPerRotation < .1 || secondsPerRotation > 600 || rotations < 1 || rotations > 100) {
             throw invalid("Invalid frame rate, duration, or rotation count.");
         }
         if (format == Format.GIF) {
@@ -128,7 +128,7 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
      * Creates a new builder initialized with default export options for a specified molecule count.
      *
      * @param moleculeCount the number of molecules
-     * @return a new {@link Builder} instance
+     * @return a new {@link Builder}
      */
     public static Builder builder(int moleculeCount) {
         return new Builder(parse(new String[0], moleculeCount));
@@ -137,7 +137,7 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
     /**
      * Creates a builder pre-populated with values from this export options instance.
      *
-     * @return a new {@link Builder} instance
+     * @return a new {@link Builder}
      */
     public Builder toBuilder() {
         return new Builder(this);
@@ -180,54 +180,98 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
         }
 
         /** Sets the export media format. */
-        public Builder format(Format value) { format = value; return this; }
+        public Builder format(Format value) {
+            format = value;
+            return this;
+        }
 
         /** Sets the canvas width and height in pixels. */
-        public Builder size(int width, int height) { this.width = width; this.height = height; return this; }
+        public Builder size(int width, int height) {
+            this.width = width;
+            this.height = height;
+            return this;
+        }
 
         /** Sets the target frames per second. */
-        public Builder fps(int value) { fps = value; return this; }
+        public Builder fps(int value) {
+            fps = value;
+            return this;
+        }
 
         /** Sets the seconds per rotation duration. */
-        public Builder secondsPerRotation(double value) { speed = value; return this; }
+        public Builder secondsPerRotation(double value) {
+            speed = value;
+            return this;
+        }
 
         /** Sets the number of complete rotations. */
-        public Builder rotations(int value) { rotations = value; return this; }
+        public Builder rotations(int value) {
+            rotations = value;
+            return this;
+        }
 
         /** Sets whether to show the molecule name. */
-        public Builder showName(boolean value) { showName = value; return this; }
+        public Builder showName(boolean value) {
+            showName = value;
+            return this;
+        }
 
         /** Sets whether to show the chemical formula. */
-        public Builder showFormula(boolean value) { showFormula = value; return this; }
+        public Builder showFormula(boolean value) {
+            showFormula = value;
+            return this;
+        }
 
         /** Sets the RGB background color integer. */
-        public Builder background(Integer rgb) { background = rgb; return this; }
+        public Builder background(Integer rgb) {
+            background = rgb;
+            return this;
+        }
 
         /** Sets the rotation direction. */
-        public Builder direction(Config.RotationDirection value) { direction = value; return this; }
+        public Builder direction(Config.RotationDirection value) {
+            direction = value;
+            return this;
+        }
 
         /** Sets whether atoms are rendered in cubic style. */
-        public Builder cubic(boolean value) { cubic = value; return this; }
+        public Builder cubic(boolean value) {
+            cubic = value;
+            return this;
+        }
 
         /** Sets the gallery column count. */
-        public Builder columns(int value) { columns = value; return this; }
+        public Builder columns(int value) {
+            columns = value;
+            return this;
+        }
 
         /** Sets the output filename. */
-        public Builder filename(String value) { filename = value; return this; }
+        public Builder filename(String value) {
+            filename = value;
+            return this;
+        }
 
         /** Sets the FFmpeg encoder executable path. */
-        public Builder encoder(String value) { encoder = value; return this; }
+        public Builder encoder(String value) {
+            encoder = value;
+            return this;
+        }
 
         /** Sets the text scale factor. */
-        public Builder textScale(double value) { textScale = value; return this; }
+        public Builder textScale(double value) {
+            textScale = value;
+            return this;
+        }
 
         /**
-         * Builds and returns the immutable {@link ExportOptions} instance.
+         * Builds and returns the immutable {@link ExportOptions}.
          *
-         * @return a new {@link ExportOptions} instance
+         * @return a new {@link ExportOptions}
          */
         public ExportOptions build() {
-            return new ExportOptions(format, width, height, fps, speed, rotations, showName, showFormula, background, direction, cubic, columns, filename, encoder, count, textScale);
+            return new ExportOptions(format, width, height, fps, speed, rotations, showName, showFormula, background,
+                    direction, cubic, columns, filename, encoder, count, textScale);
         }
     }
 
@@ -235,8 +279,7 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
      * Supported export media formats.
      */
     public enum Format {
-        GIF("gif"),
-        MP4("mp4");
+        GIF("gif"), MP4("mp4");
 
         private final String extension;
 
@@ -245,7 +288,7 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
         }
 
         /**
-         * Retrieves the file extension string for this format.
+         * Returns the file extension string for this format.
          *
          * @return the file extension
          */
@@ -311,7 +354,8 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
 
     /**
      * Calculates the rotation yaw angle at a given frame.
-     * <p>The endpoint is deliberately omitted: the next frame after the last is the first again.
+     * <p>
+     * The endpoint is deliberately omitted: the next frame after the last is the first again.
      *
      * @param frame the zero-based frame index
      * @return yaw angle in degrees
@@ -325,11 +369,11 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
     }
 
     /**
-     * Parses command-line arguments and flags to produce a validated {@link ExportOptions} instance.
+     * Parses command-line arguments and flags to produce a validated {@link ExportOptions}.
      *
-     * @param arguments     array of argument strings and flags
+     * @param arguments array of argument strings and flags
      * @param moleculeCount total count of molecules in the export
-     * @return a new validated {@link ExportOptions} instance
+     * @return a new validated {@link ExportOptions}
      * @throws IllegalArgumentException if parsing fails or option rules are violated
      */
     public static ExportOptions parse(String[] arguments, int moleculeCount) {
@@ -385,7 +429,8 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
             throw invalid("Each rotation needs at least two frames. Use a slower --speed or higher --fps.");
         }
         if (frames > MAX_FRAMES) {
-            throw invalid("An export may contain at most 7,200 frames. Reduce --fps, --speed (seconds per turn), or --rotations.");
+            throw invalid(
+                    "An export may contain at most 7,200 frames. Reduce --fps, --speed (seconds per turn), or --rotations.");
         }
         Integer background = background(flags.getOrDefault("background", "#DED8C4"));
         if (format == Format.MP4 && background == null) {
@@ -409,9 +454,8 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
         if (encoder != null && format != Format.MP4) {
             throw invalid("--encoder is only used for MP4 exports.");
         }
-        return new ExportOptions(format, width, height, fps, seconds, rotations,
-                bool(flags, "name", true), bool(flags, "formula", true), background,
-                direction, cubic, columns, filename, encoder, moleculeCount,
+        return new ExportOptions(format, width, height, fps, seconds, rotations, bool(flags, "name", true),
+                bool(flags, "formula", true), background, direction, cubic, columns, filename, encoder, moleculeCount,
                 decimal(flags, "text-scale", Config.TEXT_SCALE.get(), .5, 3.0));
     }
 
@@ -428,7 +472,7 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
     /**
      * Parses command-line argument strings into a map of flags with additional allowed option names.
      *
-     * @param arguments  array of argument strings
+     * @param arguments array of argument strings
      * @param additional set of additional allowed flag names
      * @return map of flag names to values
      */
@@ -503,12 +547,14 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
             if (parsed >= minimum && parsed <= maximum) {
                 return parsed;
             }
-        } catch (NumberFormatException ignored) { }
+        } catch (NumberFormatException ignored) {
+        }
         throw invalid("--" + name + " must be a whole number from " + minimum + " to " + maximum + ".");
     }
 
     /** Parses and validates a decimal flag value within specified bounds. */
-    private static double decimal(Map<String, String> flags, String name, double fallback, double minimum, double maximum) {
+    private static double decimal(Map<String, String> flags, String name, double fallback, double minimum,
+            double maximum) {
         String value = flags.get(name);
         if (value == null) {
             return fallback;
@@ -518,7 +564,8 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
             if (Double.isFinite(parsed) && parsed >= minimum && parsed <= maximum) {
                 return parsed;
             }
-        } catch (NumberFormatException ignored) { }
+        } catch (NumberFormatException ignored) {
+        }
         throw invalid("--" + name + " must be a finite number from " + minimum + " to " + maximum
                 + (name.equals("speed") ? " seconds per rotation." : "."));
     }
@@ -539,8 +586,8 @@ public record ExportOptions(Format format, int width, int height, int fps, doubl
     }
 
     /** Parses and validates an enumeration flag value. */
-    private static <E extends Enum<E>> E enumeration(Map<String, String> flags, String name, E fallback,
-                                                     Class<E> type, String choices) {
+    private static <E extends Enum<E>> E enumeration(Map<String, String> flags, String name, E fallback, Class<E> type,
+            String choices) {
         String value = flags.get(name);
         if (value == null) {
             return fallback;

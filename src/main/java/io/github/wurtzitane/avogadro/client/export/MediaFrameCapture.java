@@ -1,18 +1,5 @@
 package io.github.wurtzitane.avogadro.client.export;
 
-import io.github.wurtzitane.avogadro.client.PixelFont;
-
-import io.github.wurtzitane.avogadro.client.*;
-import io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions;
-import io.github.wurtzitane.avogadro.molecule.*;
-import net.minecraft.client.Minecraft;
-import net.minecraft.client.gui.FontRenderer;
-import net.minecraft.client.renderer.GlStateManager;
-import net.minecraft.client.renderer.OpenGlHelper;
-import net.minecraft.client.resources.I18n;
-import net.minecraft.util.text.TextFormatting;
-import org.lwjgl.opengl.*;
-import org.lwjgl.system.MemoryUtil;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -22,9 +9,26 @@ import java.util.Queue;
 import java.util.concurrent.*;
 import java.util.function.Function;
 
+import io.github.wurtzitane.avogadro.api.client.MoleculeRenderOptions;
+import io.github.wurtzitane.avogadro.client.*;
+import io.github.wurtzitane.avogadro.client.PixelFont;
+import io.github.wurtzitane.avogadro.molecule.*;
+
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.FontRenderer;
+import net.minecraft.client.renderer.GlStateManager;
+import net.minecraft.client.renderer.OpenGlHelper;
+import net.minecraft.client.renderer.RenderHelper;
+import net.minecraft.client.resources.I18n;
+import net.minecraft.util.text.TextFormatting;
+
+import org.lwjgl.opengl.*;
+import org.lwjgl.system.MemoryUtil;
+
 /**
  * Incremental offscreen capture controller for media exports.
- * <p>Only complete, owned frames cross into encoder workers.
+ * <p>
+ * Only complete, owned frames cross into encoder workers.
  */
 final class MediaFrameCapture implements AutoCloseable {
 
@@ -34,11 +38,11 @@ final class MediaFrameCapture implements AutoCloseable {
     /** Background thread pool executor for media preparation and static UI encoding. */
     private static final ThreadPoolExecutor PREPARATION = new ThreadPoolExecutor(1, 1, 30, TimeUnit.SECONDS,
             new ArrayBlockingQueue<>(2), action -> {
-        var thread = new Thread(action, "Avogadro media preparation");
-        thread.setDaemon(true);
-        thread.setPriority(Thread.NORM_PRIORITY - 1);
-        return thread;
-    });
+                var thread = new Thread(action, "Avogadro media preparation");
+                thread.setDaemon(true);
+                thread.setPriority(Thread.NORM_PRIORITY - 1);
+                return thread;
+            });
 
     static {
         PREPARATION.allowCoreThreadTimeOut(true);
@@ -136,12 +140,13 @@ final class MediaFrameCapture implements AutoCloseable {
     private boolean asynchronous;
 
     /** Record representing pre-rendered static UI bytes and colors. */
-    private record StaticUi(byte[] rgba, int[] colors) {}
+    private record StaticUi(byte[] rgba, int[] colors) {
+    }
 
     /**
-     * Constructs a new {@link MediaFrameCapture} for standard molecule definitions.
+     * Creates a {@link MediaFrameCapture} for standard molecule definitions.
      *
-     * @param options     export configuration options
+     * @param options export configuration options
      * @param definitions list of molecule definitions
      * @throws IOException if framebuffer support is missing or limits are exceeded
      */
@@ -150,51 +155,52 @@ final class MediaFrameCapture implements AutoCloseable {
     }
 
     /**
-     * Constructs a new {@link MediaFrameCapture} supporting item cards and artwork.
+     * Creates a {@link MediaFrameCapture} supporting item cards and artwork.
      *
-     * @param options     export configuration options
+     * @param options export configuration options
      * @param definitions list of molecule definitions
-     * @param item        optional item export options
-     * @param artwork     optional card artwork image
-     * @param palette     element palette snapshot
+     * @param item optional item export options
+     * @param artwork optional card artwork image
+     * @param palette element palette snapshot
      * @throws IOException if framebuffer support is missing or limits are exceeded
      */
     MediaFrameCapture(ExportOptions options, List<MoleculeDef> definitions, ItemExportOptions item,
-                      TooltipCardArtwork.Image artwork, ElementPalette.Snapshot palette) throws IOException {
+            TooltipCardArtwork.Image artwork, ElementPalette.Snapshot palette) throws IOException {
         this(options, definitions, item, artwork, palette, null);
     }
 
     /**
-     * Constructs a new {@link MediaFrameCapture} supporting atom exports.
+     * Creates a {@link MediaFrameCapture} supporting atom exports.
      *
-     * @param options     export configuration options
+     * @param options export configuration options
      * @param definitions list of molecule definitions
-     * @param item        optional item export options
-     * @param artwork     optional card artwork image
-     * @param palette     element palette snapshot
-     * @param atom        optional atom export options
+     * @param item optional item export options
+     * @param artwork optional card artwork image
+     * @param palette element palette snapshot
+     * @param atom optional atom export options
      * @throws IOException if framebuffer support is missing or limits are exceeded
      */
     MediaFrameCapture(ExportOptions options, List<MoleculeDef> definitions, ItemExportOptions item,
-                      TooltipCardArtwork.Image artwork, ElementPalette.Snapshot palette, AtomExportOptions atom) throws IOException {
+            TooltipCardArtwork.Image artwork, ElementPalette.Snapshot palette, AtomExportOptions atom)
+            throws IOException {
         this(options, definitions, item, artwork, palette, atom, null);
     }
 
     /**
-     * Constructs a fully specified {@link MediaFrameCapture} instance.
+     * Constructs a fully specified {@link MediaFrameCapture}.
      *
-     * @param options     export configuration options
+     * @param options export configuration options
      * @param definitions list of molecule definitions
-     * @param item        optional item export options
-     * @param artwork     optional card artwork image
-     * @param palette     element palette snapshot
-     * @param atom        optional atom export options
-     * @param rendering   optional molecule render options
+     * @param item optional item export options
+     * @param artwork optional card artwork image
+     * @param palette element palette snapshot
+     * @param atom optional atom export options
+     * @param rendering optional molecule render options
      * @throws IOException if framebuffer support is missing or limits are exceeded
      */
     MediaFrameCapture(ExportOptions options, List<MoleculeDef> definitions, ItemExportOptions item,
-                      TooltipCardArtwork.Image artwork, ElementPalette.Snapshot palette, AtomExportOptions atom,
-                      MoleculeRenderOptions rendering) throws IOException {
+            TooltipCardArtwork.Image artwork, ElementPalette.Snapshot palette, AtomExportOptions atom,
+            MoleculeRenderOptions rendering) throws IOException {
         this.options = options;
         this.item = item;
         this.artwork = artwork;
@@ -202,7 +208,9 @@ final class MediaFrameCapture implements AutoCloseable {
         this.atom = atom;
         this.rendering = rendering;
         atomRenderer = atom == null ? null : new AtomicInspectionRenderer(atom.definition(), palette);
-        atomCamera = atom == null ? null : new MoleculeCamera(atom.details() ? options.width() * 3 / 5 : options.width(), options.height());
+        atomCamera = atom == null
+                ? null
+                : new MoleculeCamera(atom.details() ? options.width() * 3 / 5 : options.width(), options.height());
         pixelPool = new MediaPixelPool(options.width(), options.height(), options.background() == null);
         totalBytes = Math.multiplyExact(Math.multiplyExact(options.width(), options.height()), 4);
         rowBytes = options.width() * 4;
@@ -214,9 +222,13 @@ final class MediaFrameCapture implements AutoCloseable {
         if (Math.max(options.width(), options.height()) > limits.textureSize()) {
             throw new IOException("Export dimensions exceed this graphics device's texture limit.");
         }
-        asynchronous = !Boolean.getBoolean("avogadro.export.forceSynchronous") && MediaGraphicsLimits.asynchronous(GL.getCapabilities());
+        asynchronous = !Boolean.getBoolean("avogadro.export.forceSynchronous")
+                && MediaGraphicsLimits.asynchronous(GL.getCapabilities());
         FontRenderer font = PixelFont.renderer();
-        cells = item == null && atom == null ? MediaLayout.create(options, definitions, MediaFrameCapture::name, font::getStringWidth, font.FONT_HEIGHT) : List.of();
+        cells = item == null && atom == null
+                ? MediaLayout.create(options, definitions, MediaFrameCapture::name, font::getStringWidth,
+                        font.FONT_HEIGHT)
+                : List.of();
     }
 
     /**
@@ -238,8 +250,8 @@ final class MediaFrameCapture implements AutoCloseable {
     }
 
     /**
-     * Advances the capture sequence and returns raw media pixels.
-     * At most one complete frame is returned; all partial preparation/draw/read state remains private.
+     * Advances the capture sequence and returns raw media pixels. At most one complete frame is returned; all partial
+     * preparation/draw/read state remains private.
      *
      * @param frame the zero-based frame index
      * @return the completed {@link MediaPixels}, or {@code null} if still processing
@@ -326,8 +338,11 @@ final class MediaFrameCapture implements AutoCloseable {
                 try {
                     if (atom != null) {
                         if (atomCursor == null) {
-                            atomCursor = atomRenderer.beginExport(atom.details() ? options.width() * 3 / 5 : options.width(), options.height(), atomCamera, atom.atom(),
-                                    (long) (options.frameTimeSeconds(captureFrame) * 1_000_000_000L), options.yawAtFrame(captureFrame), options.durationSeconds());
+                            atomCursor = atomRenderer.beginExport(
+                                    atom.details() ? options.width() * 3 / 5 : options.width(), options.height(),
+                                    atomCamera, atom.atom(),
+                                    (long) (options.frameTimeSeconds(captureFrame) * 1_000_000_000L),
+                                    options.yawAtFrame(captureFrame), options.durationSeconds());
                         }
                         finished = atomCursor.advance();
                         if (finished) {
@@ -339,11 +354,14 @@ final class MediaFrameCapture implements AutoCloseable {
                             if (item != null) {
                                 ItemCardLayout layout = item.layout();
                                 int scale = item.scale();
-                                modelCursor = model(item.selection().definition().structure(), layout.modelLeft() * scale, layout.modelTop() * scale,
-                                        layout.modelWidth() * scale, layout.modelHeight() * scale, layout.imageSize() * scale, captureFrame);
+                                modelCursor = model(item.selection().definition().structure(),
+                                        layout.modelLeft() * scale, layout.modelTop() * scale,
+                                        layout.modelWidth() * scale, layout.modelHeight() * scale,
+                                        layout.imageSize() * scale, captureFrame);
                             } else {
                                 MediaLayout.Cell cell = cells.get(nextCell);
-                                modelCursor = model(cell.definition().structure(), cell.modelLeft(), cell.modelTop(), cell.modelWidth(), cell.modelHeight(), cell.imageSize(), captureFrame);
+                                modelCursor = model(cell.definition().structure(), cell.modelLeft(), cell.modelTop(),
+                                        cell.modelWidth(), cell.modelHeight(), cell.imageSize(), captureFrame);
                             }
                             if (modelCursor == null) {
                                 return null;
@@ -372,10 +390,14 @@ final class MediaFrameCapture implements AutoCloseable {
     }
 
     /** Creates a model export cursor for rendering a molecule structure. */
-    private MoleculeRenderer.ExportCursor model(MoleculeStructure structure, int x, int y, int width, int height, int size, int frame) {
+    private MoleculeRenderer.ExportCursor model(MoleculeStructure structure, int x, int y, int width, int height,
+            int size, int frame) {
         GL11.glDisable(GL11.GL_SCISSOR_TEST);
-        return rendering == null ? MoleculeRenderer.beginExport(structure, x, y, width, height, size, options.yawAtFrame(frame), options.cubic(), palette)
-                : MoleculeRenderer.beginExport(structure, x, y, width, height, size, rendering.yawAt(options.frameTimeSeconds(frame)), rendering);
+        return rendering == null
+                ? MoleculeRenderer.beginExport(structure, x, y, width, height, size, options.yawAtFrame(frame),
+                        options.cubic(), palette)
+                : MoleculeRenderer.beginExport(structure, x, y, width, height, size,
+                        rendering.yawAt(options.frameTimeSeconds(frame)), rendering);
     }
 
     /** Each stage contains one allocation, label/card, bounded transfer, or worker handoff. */
@@ -391,13 +413,18 @@ final class MediaFrameCapture implements AutoCloseable {
                 GlStateManager.bindTexture(colorTexture);
                 GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
                 GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
-                GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, options.width(), options.height(), 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
+                GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, options.width(), options.height(), 0,
+                        GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
                 OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, framebuffer);
-                OpenGlHelper.glFramebufferTexture2D(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, colorTexture, 0);
+                OpenGlHelper.glFramebufferTexture2D(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_COLOR_ATTACHMENT0,
+                        GL11.GL_TEXTURE_2D, colorTexture, 0);
                 OpenGlHelper.glBindRenderbuffer(OpenGlHelper.GL_RENDERBUFFER, depthBuffer);
-                OpenGlHelper.glRenderbufferStorage(OpenGlHelper.GL_RENDERBUFFER, GL14.GL_DEPTH_COMPONENT24, options.width(), options.height());
-                OpenGlHelper.glFramebufferRenderbuffer(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_DEPTH_ATTACHMENT, OpenGlHelper.GL_RENDERBUFFER, depthBuffer);
-                if (OpenGlHelper.glCheckFramebufferStatus(OpenGlHelper.GL_FRAMEBUFFER) != OpenGlHelper.GL_FRAMEBUFFER_COMPLETE) {
+                OpenGlHelper.glRenderbufferStorage(OpenGlHelper.GL_RENDERBUFFER, GL14.GL_DEPTH_COMPONENT24,
+                        options.width(), options.height());
+                OpenGlHelper.glFramebufferRenderbuffer(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_DEPTH_ATTACHMENT,
+                        OpenGlHelper.GL_RENDERBUFFER, depthBuffer);
+                if (OpenGlHelper.glCheckFramebufferStatus(
+                        OpenGlHelper.GL_FRAMEBUFFER) != OpenGlHelper.GL_FRAMEBUFFER_COMPLETE) {
                     throw new IllegalStateException("Could not allocate export framebuffer");
                 }
                 pixels = MemoryUtil.memAlloc(Math.min(totalBytes, sliceRows * rowBytes));
@@ -428,7 +455,8 @@ final class MediaFrameCapture implements AutoCloseable {
                         if (image == null) {
                             return false;
                         }
-                        preparation = submit(() -> new StaticUi(rgba(image.pixels(), options.width(), options.height()), image.protectedColors()));
+                        preparation = submit(() -> new StaticUi(rgba(image.pixels(), options.width(), options.height()),
+                                image.protectedColors()));
                         if (preparation == null) {
                             return false;
                         }
@@ -459,6 +487,7 @@ final class MediaFrameCapture implements AutoCloseable {
                     if (prepIndex < item.layout().labels().size()) {
                         drawItemLabel(item.layout().labels().get(prepIndex++));
                     } else {
+                        drawItemArtwork();
                         phase = 6;
                     }
                 } else if (atom != null) {
@@ -500,8 +529,11 @@ final class MediaFrameCapture implements AutoCloseable {
             case 8 -> {
                 if (preparation == null) {
                     MediaPixels raw = staticPixels;
-                    int[] colors = item != null ? protectedArtworkColors() : new int[]{options.background() | 0xFF000000, 0xFF243B3A, 0xFF62716D, ElementCard.PAPER, 0xFF24618A, 0xFFE1E3DA,
-                            ElementCard.color(atom.definition().structure().atoms().get(atom.atom()).element().symbol())};
+                    int[] colors = item != null
+                            ? protectedArtworkColors()
+                            : new int[]{options.background() | 0xFF000000, 0xFF243B3A, 0xFF62716D, ElementCard.paperColor(),
+                                    0xFF24618A, 0xFFE1E3DA, ElementCard.color(
+                                            atom.definition().structure().atoms().get(atom.atom()).element().symbol())};
                     processingPixels = raw;
                     processingClaim = new java.util.concurrent.atomic.AtomicBoolean();
                     preparation = submit(() -> {
@@ -513,7 +545,8 @@ final class MediaFrameCapture implements AutoCloseable {
                             BufferedImage image = raw.image(null);
                             ExportMetrics.elapsed(ExportMetrics.Stage.PIXEL_CONVERSION, started);
                             GifMediaEncoder.UiFrame ui = GifMediaEncoder.prepareStaticUi(image, colors);
-                            return new StaticUi(rgba(ui.image().getRGB(0, 0, options.width(), options.height(), null, 0, options.width()), options.width(), options.height()), ui.colors());
+                            return new StaticUi(rgba(ui.image().getRGB(0, 0, options.width(), options.height(), null, 0,
+                                    options.width()), options.width(), options.height()), ui.colors());
                         } finally {
                             pixelPool.release(raw);
                         }
@@ -547,7 +580,7 @@ final class MediaFrameCapture implements AutoCloseable {
         return true;
     }
 
-    /** Retrieves the protected artwork colors. */
+    /** Returns the protected artwork colors. */
     private int[] protectedArtworkColors() {
         return protectedColors;
     }
@@ -562,7 +595,8 @@ final class MediaFrameCapture implements AutoCloseable {
     /** Clears the target framebuffer with background or transparent color. */
     private void clearTarget() {
         int background = options.background() == null ? 0 : options.background();
-        GL11.glClearColor((background >> 16 & 255) / 255f, (background >> 8 & 255) / 255f, (background & 255) / 255f, options.background() == null ? 0 : 1);
+        GL11.glClearColor((background >> 16 & 255) / 255f, (background >> 8 & 255) / 255f, (background & 255) / 255f,
+                options.background() == null ? 0 : 1);
         GL11.glClearDepth(1);
         GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
     }
@@ -574,7 +608,8 @@ final class MediaFrameCapture implements AutoCloseable {
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MIN_FILTER, GL11.GL_NEAREST);
         GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_MAG_FILTER, GL11.GL_NEAREST);
         GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, 0);
-        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, options.width(), options.height(), 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
+        GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, options.width(), options.height(), 0, GL11.GL_RGBA,
+                GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
     }
 
     /** Uploads a pixel slice buffer to the static texture. */
@@ -589,7 +624,8 @@ final class MediaFrameCapture implements AutoCloseable {
         GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, 0);
         GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, 0);
         GL11.glPixelStorei(GL11.GL_UNPACK_SWAP_BYTES, GL11.GL_FALSE);
-        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, uploadRow, options.width(), rows, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, pixels);
+        GL11.glTexSubImage2D(GL11.GL_TEXTURE_2D, 0, 0, uploadRow, options.width(), rows, GL11.GL_RGBA,
+                GL11.GL_UNSIGNED_BYTE, pixels);
         uploadRow += rows;
         protectedColors = upload.colors();
         return uploadRow == options.height();
@@ -616,7 +652,8 @@ final class MediaFrameCapture implements AutoCloseable {
         GlStateManager.pushMatrix();
         try {
             GlStateManager.translate(options.width() * 3 / 5, 0, 0);
-            ElementCard.draw(atom.definition(), atom.atom(), options.width() - options.width() * 3 / 5, options.height(), (float) options.textScale());
+            ElementCard.draw(atom.definition(), atom.atom(), options.width() - options.width() * 3 / 5,
+                    options.height(), (float) options.textScale());
         } finally {
             GlStateManager.popMatrix();
         }
@@ -624,21 +661,54 @@ final class MediaFrameCapture implements AutoCloseable {
 
     /** Draws an individual item card text label. */
     private void drawItemLabel(ItemCardLayout.Label label) {
+        GL11.glDisable(GL11.GL_DEPTH_TEST);
+        GlStateManager.disableDepth();
+        GL11.glDisable(GL11.GL_LIGHTING);
+        GlStateManager.disableLighting();
         GL11.glEnable(GL11.GL_BLEND);
-        OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE,
+                GL11.GL_ONE_MINUS_SRC_ALPHA);
         GlStateManager.enableTexture2D();
         GlStateManager.enableAlpha();
         FontRenderer font = PixelFont.wrap(item.selection().font());
-        for (var glyph : label.line().glyphs()) {
-            float scale = item.scale() * label.textScale();
-            GL11.glPushMatrix();
-            try {
-                GL11.glTranslatef((label.left() + glyph.left() * label.textScale()) * item.scale(), (label.top() + glyph.top() * label.textScale()) * item.scale(), 0);
-                GL11.glScalef(scale * glyph.scale(), scale * glyph.scale(), 1);
-                font.drawStringWithShadow(glyph.text(), 0, 0, 0xFFFFFFFF);
-            } finally {
-                GL11.glPopMatrix();
-            }
+        label.line().draw(font, label.left() * item.scale(), label.top() * item.scale(),
+                item.scale() * label.textScale(), textColor());
+    }
+
+    /** Paints the selected stack with the game's actual item renderer into the static card header. */
+    private void drawItemArtwork() {
+        var renderer = Minecraft.getMinecraft().getRenderItem();
+        float previousZ = renderer.zLevel;
+        GlStateManager.pushMatrix();
+        try {
+            // Preparation spans frames. Establish both native GL and Minecraft's cached state here.
+            GL11.glDepthMask(true);
+            GL11.glClearDepth(1);
+            GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+            GL11.glDepthFunc(GL11.GL_LEQUAL);
+            GlStateManager.disableDepth();
+            GlStateManager.disableLighting();
+            GlStateManager.disableTexture2D();
+            GlStateManager.enableTexture2D();
+            GlStateManager.disableAlpha();
+            GlStateManager.enableAlpha();
+            GL11.glAlphaFunc(GL11.GL_GREATER, .1f);
+            GlStateManager.color(0, 0, 0, 0);
+            GlStateManager.color(1, 1, 1, 1);
+            GlStateManager.translate(6 * item.scale(), 4 * item.scale(), 0);
+            float size = item.layout().iconSize() * item.scale() / 16f;
+            GlStateManager.scale(size, size, 1);
+            GlStateManager.enableRescaleNormal();
+            GlStateManager.enableDepth();
+            RenderHelper.enableGUIStandardItemLighting();
+            renderer.zLevel = 0;
+            renderer.renderItemAndEffectIntoGUI(item.selection().stack(), 0, 0);
+        } finally {
+            renderer.zLevel = previousZ;
+            RenderHelper.disableStandardItemLighting();
+            GlStateManager.disableRescaleNormal();
+            GlStateManager.disableDepth();
+            GlStateManager.popMatrix();
         }
     }
 
@@ -671,7 +741,7 @@ final class MediaFrameCapture implements AutoCloseable {
         }
     }
 
-    /** Retrieves the completed result from a preparation future task. */
+    /** Returns the completed result from a preparation future task. */
     private static StaticUi completed(Future<StaticUi> task) {
         try {
             return task.get();
@@ -683,7 +753,7 @@ final class MediaFrameCapture implements AutoCloseable {
         }
     }
 
-    /** Retrieves protected colors array. */
+    /** Returns protected colors array. */
     int[] protectedColors() {
         return protectedColors;
     }
@@ -750,8 +820,10 @@ final class MediaFrameCapture implements AutoCloseable {
         }
         GL15.glBindBuffer(GL21.GL_PIXEL_PACK_BUFFER, readBuffers[readHead]);
         int length = Math.min(sliceRows * rowBytes, totalBytes - copyOffset);
-        ByteBuffer mapped = GL.getCapabilities().OpenGL30 ? GL30.glMapBufferRange(GL21.GL_PIXEL_PACK_BUFFER, copyOffset, length, GL30.GL_MAP_READ_BIT)
-                : ARBMapBufferRange.glMapBufferRange(GL21.GL_PIXEL_PACK_BUFFER, copyOffset, length, GL30.GL_MAP_READ_BIT);
+        ByteBuffer mapped = GL.getCapabilities().OpenGL30
+                ? GL30.glMapBufferRange(GL21.GL_PIXEL_PACK_BUFFER, copyOffset, length, GL30.GL_MAP_READ_BIT)
+                : ARBMapBufferRange.glMapBufferRange(GL21.GL_PIXEL_PACK_BUFFER, copyOffset, length,
+                        GL30.GL_MAP_READ_BIT);
         if (mapped == null) {
             throw new IllegalStateException("Could not map export pixels");
         }
@@ -904,30 +976,34 @@ final class MediaFrameCapture implements AutoCloseable {
         GL11.glDisable(GL11.GL_DEPTH_TEST);
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glEnable(GL11.GL_BLEND);
-        OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        OpenGlHelper.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE,
+                GL11.GL_ONE_MINUS_SRC_ALPHA);
         GlStateManager.enableTexture2D();
         GlStateManager.enableAlpha();
         int primary = textColor();
         for (MediaLayout.Label label : cell.labels()) {
-            float cursor = cell.left() + (cell.width() - label.width() * label.scale()) / 2;
-            label.line().draw(font, cursor, label.top(), label.scale(), primary);
+            float scale = MoleculeText.pixelAlignedScale(label.scale());
+            float cursor = cell.left() + (cell.width() - label.width() * scale) / 2;
+            label.line().draw(font, cursor, label.top(), scale, primary);
         }
     }
 
     /** Determines text color contrast based on background luminance. */
     private int textColor() {
         if (options.background() == null) {
-            return 0xFF37372F;
+            return UiThemes.color("export.text.dark", 0xFF37372F);
         }
         int color = options.background();
         return (.2126 * (color >> 16 & 255) + .7152 * (color >> 8 & 255) + .0722 * (color & 255)) < 115
-                ? 0xFFF1EDE2 : 0xFF37372F;
+                ? UiThemes.color("export.text.light", 0xFFF1EDE2)
+                : UiThemes.color("export.text.dark", 0xFF37372F);
     }
 
     /** Resolves the display name for a molecule definition. */
     private static String name(MoleculeDef definition) {
         if (definition.name() != null) {
-            return TextFormatting.getTextWithoutFormattingCodes(io.github.wurtzitane.avogadro.item.MoleculeItems.displayName(definition));
+            return TextFormatting.getTextWithoutFormattingCodes(
+                    io.github.wurtzitane.avogadro.item.MoleculeItems.displayName(definition));
         }
         String key = "molecule." + definition.id().getNamespace() + "." + definition.id().getPath().replace('/', '.');
         if (I18n.hasKey(key)) {
@@ -1016,13 +1092,15 @@ final class MediaFrameCapture implements AutoCloseable {
 
     /** Creates an OpenGL sync fence object. */
     private static long fence() {
-        return GL.getCapabilities().OpenGL32 ? GL32.glFenceSync(GL32.GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
+        return GL.getCapabilities().OpenGL32
+                ? GL32.glFenceSync(GL32.GL_SYNC_GPU_COMMANDS_COMPLETE, 0)
                 : ARBSync.glFenceSync(GL32.GL_SYNC_GPU_COMMANDS_COMPLETE, 0);
     }
 
     /** Waits for an OpenGL sync fence client-side. */
     private static int waitFence(long fence) {
-        return GL.getCapabilities().OpenGL32 ? GL32.glClientWaitSync(fence, 0, 0)
+        return GL.getCapabilities().OpenGL32
+                ? GL32.glClientWaitSync(fence, 0, 0)
                 : ARBSync.glClientWaitSync(fence, 0, 0);
     }
 
@@ -1038,9 +1116,12 @@ final class MediaFrameCapture implements AutoCloseable {
     /** Raw GL and the small subset of cached state changed by FontRenderer are restored together. */
     private static final class GraphicsScope implements AutoCloseable {
         private final int matrixMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
-        private final boolean separateFramebuffers = GL.getCapabilities().OpenGL30 || GL.getCapabilities().GL_ARB_framebuffer_object;
+        private final boolean separateFramebuffers = GL.getCapabilities().OpenGL30
+                || GL.getCapabilities().GL_ARB_framebuffer_object;
         private final int drawFramebuffer = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
-        private final int readFramebuffer = separateFramebuffers ? GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING) : drawFramebuffer;
+        private final int readFramebuffer = separateFramebuffers
+                ? GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING)
+                : drawFramebuffer;
         private final int renderbuffer = GL11.glGetInteger(GL30.GL_RENDERBUFFER_BINDING);
         private final int program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
         private final int packBuffer = GL11.glGetInteger(GL21.GL_PIXEL_PACK_BUFFER_BINDING);
@@ -1053,7 +1134,7 @@ final class MediaFrameCapture implements AutoCloseable {
         private final boolean textureEnabled;
         private final MoleculeRenderer.StateScope renderScope;
 
-        /** Constructs a new {@link GraphicsScope} capturing current OpenGL states. */
+        /** Creates a {@link GraphicsScope} capturing current OpenGL states. */
         GraphicsScope() {
             GL11.glGetFloatv(GL11.GL_CURRENT_COLOR, color);
             GlStateManager.setActiveTexture(GL13.GL_TEXTURE0);

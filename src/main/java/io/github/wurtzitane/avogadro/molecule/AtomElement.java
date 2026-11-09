@@ -46,13 +46,14 @@ public record AtomElement(String symbol, int color, float radius) {
     public static final AtomElement XENON = new AtomElement("Xe", 0xFF429EB0, 0.44f);
 
     /**
-     * Retrieves an atom element instance matching the specified chemical symbol.
+     * Returns an atom element instance matching the specified chemical symbol.
      *
      * @param s element symbol string
-     * @return matching {@link AtomElement} instance, or a dynamically created fallback element
+     * @return matching {@link AtomElement}, or a dynamically created fallback element
      */
     public static AtomElement bySymbol(String s) {
         return switch (s) {
+            case "*" -> new AtomElement("*", 0xFFB8B8C8, 0.40f);
             case "H" -> HYDROGEN;
             case "C" -> CARBON;
             case "N" -> NITROGEN;

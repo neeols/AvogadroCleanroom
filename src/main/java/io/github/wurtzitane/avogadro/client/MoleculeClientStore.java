@@ -1,23 +1,25 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
 import io.github.wurtzitane.avogadro.Avogadro;
 import io.github.wurtzitane.avogadro.api.MoleculesChangedEvent;
 import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
 import io.github.wurtzitane.avogadro.molecule.MoleculeRegistrations;
 import io.github.wurtzitane.avogadro.molecule.MoleculeResources;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStore;
+
 import net.minecraft.client.Minecraft;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 
-import java.util.concurrent.Callable;
-import java.util.concurrent.CancellationException;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.Future;
-
 /**
  * Manages client-side merged molecule definition stores, background loading tasks, and resource layering.
- * <p>Client-only merged view. Server loads never mutate these static client indexes.
+ * <p>
+ * Client-only merged view. Server loads never mutate these static client indexes.
  */
 public final class MoleculeClientStore {
 
@@ -58,19 +60,21 @@ public final class MoleculeClientStore {
      * Holds local layer resource data structures.
      *
      * @param defaults default resource data
-     * @param assets   asset resource data
-     * @param local    local override resource data
+     * @param assets asset resource data
+     * @param local local override resource data
      */
-    record LocalLayers(MoleculeResources.Data defaults, MoleculeResources.Data assets, MoleculeResources.Data local) {}
+    record LocalLayers(MoleculeResources.Data defaults, MoleculeResources.Data assets, MoleculeResources.Data local) {
+    }
 
     /** Holds requested source generation and layer data. */
     private record Sources(long generation, MoleculeResources.Data common, MoleculeResources.Data assets,
-                           MoleculeResources.Data local) {}
+            MoleculeResources.Data local) {
+    }
 
     /** Holds prepared generation and compiled definition snapshots. */
-    private record Prepared(long generation, MoleculeStore.CompiledSnapshot snapshot) {}
+    private record Prepared(long generation, MoleculeStore.CompiledSnapshot snapshot) {
+    }
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeClientStore() {}
 
     /**
@@ -87,11 +91,12 @@ public final class MoleculeClientStore {
     /**
      * Applies local resource layers and triggers a rebuild.
      *
-     * @param defaults  default resource data
+     * @param defaults default resource data
      * @param resources asset resource data
      * @param overrides local override resource data
      */
-    public static void applyLocal(MoleculeResources.Data defaults, MoleculeResources.Data resources, MoleculeResources.Data overrides) {
+    public static void applyLocal(MoleculeResources.Data defaults, MoleculeResources.Data resources,
+            MoleculeResources.Data overrides) {
         listen();
         if (localReload != null) {
             localReload.cancel(true);
@@ -174,7 +179,8 @@ public final class MoleculeClientStore {
 
     /**
      * Pumps background reloads and definition preparation tasks.
-     * <p>Client-thread publication only; unfinished reloads keep the previous usable snapshot.
+     * <p>
+     * Client-thread publication only; unfinished reloads keep the previous usable snapshot.
      */
     static void pump() {
         if (localReload == null && requestedLocalReload != null) {
@@ -191,7 +197,8 @@ public final class MoleculeClientStore {
                 Thread.currentThread().interrupt();
             } catch (CancellationException ignored) {
             } catch (ExecutionException failure) {
-                Avogadro.LOGGER.error("Cannot reload client molecule resources; keeping the previous definitions", failure.getCause());
+                Avogadro.LOGGER.error("Cannot reload client molecule resources; keeping the previous definitions",
+                        failure.getCause());
             }
         }
         submitDefinitions();
@@ -210,13 +217,15 @@ public final class MoleculeClientStore {
             CrystalPreviewCache.retainDefinitions(prepared.snapshot.all());
             MoleculeStore.replaceAll(prepared.snapshot);
             Avogadro.LOGGER.info("Loaded {} client molecule definitions", prepared.snapshot.all().size());
-            MoleculeRegistrations.notifyChanged(new MoleculesChangedEvent(MoleculesChangedEvent.Scope.CLIENT, MoleculeStore.view(), ""));
+            MoleculeRegistrations.notifyChanged(
+                    new MoleculesChangedEvent(MoleculesChangedEvent.Scope.CLIENT, MoleculeStore.view(), ""));
         } catch (InterruptedException interrupted) {
             Thread.currentThread().interrupt();
         } catch (CancellationException ignored) {
         } catch (ExecutionException failure) {
             requested = null;
-            Avogadro.LOGGER.error("Cannot prepare client molecule definitions; keeping the previous definitions", failure.getCause());
+            Avogadro.LOGGER.error("Cannot prepare client molecule definitions; keeping the previous definitions",
+                    failure.getCause());
         }
     }
 

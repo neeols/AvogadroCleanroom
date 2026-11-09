@@ -1,20 +1,23 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.io.InputStreamReader;
+import java.io.Reader;
+import java.nio.charset.StandardCharsets;
+
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+
 import io.github.wurtzitane.avogadro.Avogadro;
+
 import net.minecraft.client.resources.IResource;
 import net.minecraft.client.resources.IResourceManager;
 import net.minecraft.client.resources.IResourceManagerReloadListener;
 import net.minecraft.util.ResourceLocation;
 
-import java.io.InputStreamReader;
-import java.io.Reader;
-import java.nio.charset.StandardCharsets;
-
 /**
  * Manages molecule category color styles, font themes, and resource reloading hooks.
- * <p>Recipe textures, fonts and text colors follow the selected resource packs.
+ * <p>
+ * Recipe textures, fonts and text colors follow the selected resource packs.
  */
 public final class MoleculeCategoryStyle implements IResourceManagerReloadListener {
 
@@ -36,12 +39,12 @@ public final class MoleculeCategoryStyle implements IResourceManagerReloadListen
     /** Reload revision counter tracking style updates. */
     private static volatile long reloadRevision;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeCategoryStyle() {}
 
     /** Returns the current palette configuration. */
     public static Palette palette() {
-        return palette;
+        return new Palette(UiThemes.color("recipe.text.primary", palette.primary()) & 0xFFFFFF,
+                UiThemes.color("recipe.text.secondary", palette.secondary()) & 0xFFFFFF);
     }
 
     /** Returns the current reload revision timestamp or identifier. */
@@ -59,7 +62,7 @@ public final class MoleculeCategoryStyle implements IResourceManagerReloadListen
         MoleculeCamera.resetAll();
         palette = DEFAULT;
         try (IResource resource = manager.getResource(COLORS);
-             Reader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
+                Reader reader = new InputStreamReader(resource.getInputStream(), StandardCharsets.UTF_8)) {
             palette = parse(JsonParser.parseReader(reader).getAsJsonObject());
         } catch (Exception e) {
             Avogadro.LOGGER.warn("Cannot load molecule category colors from {}; using defaults", COLORS, e);
@@ -92,8 +95,9 @@ public final class MoleculeCategoryStyle implements IResourceManagerReloadListen
     /**
      * Represents a primary and secondary color palette.
      *
-     * @param primary   primary text color
+     * @param primary primary text color
      * @param secondary secondary text color
      */
-    public record Palette(int primary, int secondary) {}
+    public record Palette(int primary, int secondary) {
+    }
 }

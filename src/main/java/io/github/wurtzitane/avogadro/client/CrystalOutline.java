@@ -1,6 +1,10 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.nio.FloatBuffer;
+import java.util.Arrays;
+
 import io.github.wurtzitane.avogadro.api.CrystalCell;
+
 import org.joml.Matrix4fc;
 import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
@@ -11,12 +15,10 @@ import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
 import org.lwjgl.opengl.GLCapabilities;
 
-import java.nio.FloatBuffer;
-import java.util.Arrays;
-
 /**
  * Caches and renders crystal lattice outline edges.
- * <p>Cached cell edges share the atom renderer's camera, clipping and GL-state scope.
+ * <p>
+ * Cached cell edges share the atom renderer's camera, clipping and GL-state scope.
  */
 final class CrystalOutline {
 
@@ -42,9 +44,9 @@ final class CrystalOutline {
     private final float[] vertices;
 
     /**
-     * Constructs a new {@link CrystalOutline} for the specified crystal cell and count.
+     * Creates a {@link CrystalOutline} for the specified crystal cell and count.
      *
-     * @param cell  crystal cell configuration
+     * @param cell crystal cell configuration
      * @param count repetition count per axis
      */
     CrystalOutline(CrystalCell cell, int count) {
@@ -112,7 +114,7 @@ final class CrystalOutline {
         }
     }
 
-    /** Retrieves or loads the outline entry into the GPU cache. */
+    /** Returns or loads the outline entry into the GPU cache. */
     private Entry resident() {
         int slot = 0;
         for (int i = 0; i < CACHE.length; i++) {
@@ -210,7 +212,7 @@ final class CrystalOutline {
         int buffer, vao;
         long used;
 
-        /** Constructs a new cache entry. */
+        /** Creates a cache entry. */
         Entry(CrystalOutline outline) {
             this.outline = outline;
         }

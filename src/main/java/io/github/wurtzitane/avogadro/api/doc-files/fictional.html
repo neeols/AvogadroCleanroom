@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Two fictional atom examples</title></head><body>
+<div class="av-guide">
+<nav class="av-breadcrumb" aria-label="Guide navigation"><a href="../../../../../../index.html">Avogadro API</a><a href="examples.html">All examples</a><a href="../package-summary.html">Common reference</a><a href="../client/package-summary.html">Client reference</a></nav>
+<p class="av-kicker">Avogadro guide · Minecraft 1.12.2 / Cleanroom</p>
+<h1>Two fictional atom examples</h1><p class="av-lead">An optional appendix for authored game elements. These examples illustrate the display API, not predictions of real chemistry or nuclear stability.</p>
+<div class="av-language"><span class="av-language-controls">Example language</span><noscript>Java, Groovy, and JSON variants are all shown below. Enable JavaScript to choose one.</noscript><span class="av-step"> Your choice applies across the guides.</span></div>
+<details><summary>Imports and complete companion files</summary><p>Examples are methods inside the downloadable companion classes. Copy the methods you need into your own class and keep the imports at the top. <code>GuideModels</code> contains the reusable chemical recipes; <code>GuideTasks</code> contains the operations. These files are documentation examples, not built-in library content.</p><p><a href="GuideModels.java">Java model recipes</a> · <a href="GuideTasks.java">Java operations</a> · <a href="ModelRecipes.groovy">Complete Groovy model script</a> · <a href="ClientRecipes.groovy.txt">Groovy client helpers</a></p><p>The complete Groovy model script can be saved as <code>groovy/postInit/avogadro_examples.groovy</code>. It includes the reusable <code>GuideModels</code> class and registers all ten chemical examples through the reloadable script registry. The separate client helper download is a reference for client integrations: keep it out of common postInit scripts and dedicated-server entry points. Java users should likewise copy common operations into their common class and keep screen/export operations in a client class.</p><pre><code class="language-java">import io.github.wurtzitane.avogadro.api.*;
+import io.github.wurtzitane.avogadro.molecule.*;
+// Client code only:
+import io.github.wurtzitane.avogadro.api.client.*;
+import io.github.wurtzitane.avogadro.client.export.*;
+import java.util.List;
+import java.util.Map;</code></pre></details><h2 id="fictional-neutral">Naquadah: an invented neutral atom</h2><div class="av-example" data-example="fictional"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static MoleculeSpec fictionalNaquadah() {
+    // Fictional nucleus and chosen shell layout, not a prediction of a real element.
+    return AvogadroApi.builder(&quot;guide:naquadah&quot;).name(&quot;Naquadah (fictional)&quot;)
+            .atom(&quot;Nq&quot;, 0, 0, 0).noBonds()
+            .element(&quot;Nq&quot;, 174, 352, 2, 8, 18, 32, 50, 32, 18, 14).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static MoleculeSpec fictionalNaquadah() {
+    // Fictional nucleus and chosen shell layout, not a prediction of a real element.
+    return AvogadroApi.builder(&quot;guide:naquadah&quot;).name(&quot;Naquadah (fictional)&quot;)
+            .atom(&quot;Nq&quot;, 0, 0, 0).noBonds()
+            .element(&quot;Nq&quot;, 174, 352, 2, 8, 18, 32, 50, 32, 18, 14).build();
+}</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Naquadah (fictional)&quot;,
+  &quot;atoms&quot;: [
+    {
+      &quot;e&quot;: &quot;Nq&quot;,
+      &quot;x&quot;: 0,
+      &quot;y&quot;: 0,
+      &quot;z&quot;: 0
+    }
+  ],
+  &quot;bonds&quot;: [],
+  &quot;elements&quot;: {
+    &quot;Nq&quot;: {
+      &quot;atomic_number&quot;: 174,
+      &quot;neutrons&quot;: 352,
+      &quot;electron_shells&quot;: [
+        2,
+        8,
+        18,
+        32,
+        50,
+        32,
+        18,
+        14
+      ]
+    }
+  }
+}</code></pre></div></div><p>The chosen shell counts sum to 174 and satisfy the API’s count limits. That validates the data format, not whether such an atom could exist. There is no standard atomic weight for Nq; do not advertise a standard-weight molecular mass.</p><h2 id="fictional-bare">The same fictional nucleus with every electron removed</h2><div class="av-example" data-example="fictional-ion"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static MoleculeSpec fictionalStrippedIon() {
+    // Same fictional nucleus with no electrons: an illustration of explicit ion data.
+    return AvogadroApi.builder(&quot;guide:naquadah_nucleus&quot;).name(&quot;Bare naquadah nucleus (fictional)&quot;)
+            .atom(&quot;Nq&quot;, 0, 0, 0).noBonds().atomConfiguration(0, 174, 352, 174).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static MoleculeSpec fictionalStrippedIon() {
+    // Same fictional nucleus with no electrons: an illustration of explicit ion data.
+    return AvogadroApi.builder(&quot;guide:naquadah_nucleus&quot;).name(&quot;Bare naquadah nucleus (fictional)&quot;)
+            .atom(&quot;Nq&quot;, 0, 0, 0).noBonds().atomConfiguration(0, 174, 352, 174).build();
+}</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Bare naquadah nucleus (fictional)&quot;,
+  &quot;atoms&quot;: [
+    {
+      &quot;e&quot;: &quot;Nq&quot;,
+      &quot;x&quot;: 0,
+      &quot;y&quot;: 0,
+      &quot;z&quot;: 0
+    }
+  ],
+  &quot;bonds&quot;: [],
+  &quot;atom_configurations&quot;: {
+    &quot;0&quot;: {
+      &quot;atomic_number&quot;: 174,
+      &quot;neutrons&quot;: 352,
+      &quot;charge&quot;: 174,
+      &quot;electron_shells&quot;: []
+    }
+  }
+}</code></pre></div></div><p>A charge of +174 and no shell entries explicitly gives zero electrons. This demonstrates a nucleus-only inspection case. Stability, energy, radiation, and material properties are outside this rendering API.</p><nav class="av-pager" aria-label="Guide pages"><a href="build.html">← Build and integrate</a></nav>
+</div></body></html>

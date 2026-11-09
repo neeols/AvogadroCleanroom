@@ -1,13 +1,5 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import io.github.wurtzitane.avogadro.molecule.AtomElement;
-import io.github.wurtzitane.avogadro.molecule.BondType;
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -18,9 +10,22 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import io.github.wurtzitane.avogadro.molecule.AtomElement;
+import io.github.wurtzitane.avogadro.molecule.AtomAnnotation;
+import io.github.wurtzitane.avogadro.molecule.BondType;
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
+
 /**
- * Immutable indexed geometry.
- * <p>Operations retain explicit connectivity and never infer bonds.
+ * A reusable piece of a molecule: atoms, their positions, bonds, and optional named connection points.
+ *
+ * <p>
+ * Fragments cannot be changed in place. Moving, rotating, or combining them returns a new fragment. These operations
+ * use the bonds you supply; they do not guess which atoms should be connected.
  */
 public final class StructureFragment {
 
@@ -43,11 +48,22 @@ public final class StructureFragment {
      * Represents an individual atom within a structure fragment with its element symbol and 3D coordinates.
      *
      * @param element the element symbol (e.g. "C", "Cl")
-     * @param x       the x-axis coordinate in angstroms
-     * @param y       the y-axis coordinate in angstroms
-     * @param z       the z-axis coordinate in angstroms
+     * @param x the x coordinate, in the structure's units
+     * @param y the y coordinate, in the structure's units
+     * @param z the z coordinate, in the structure's units
      */
-    public record Atom(String element, double x, double y, double z) {
+    public record Atom(String element, double x, double y, double z, AtomAnnotation annotation) {
+
+        /**
+         * Creates an unannotated real atom or a default R wildcard, preserving the original API.
+         * @param element element symbol or {@code *}
+         * @param x horizontal coordinate
+         * @param y vertical coordinate
+         * @param z depth coordinate
+         */
+        public Atom(String element, double x, double y, double z) {
+            this(element, x, y, z, AtomAnnotation.NONE);
+        }
 
         /**
          * Compact constructor for {@link Atom} that validates element symbol format and coordinate finiteness.
@@ -55,12 +71,13 @@ public final class StructureFragment {
          * @throws IllegalArgumentException if the element symbol is invalid or coordinates are non-finite
          */
         public Atom {
-            if (element == null || !ELEMENT_SYMBOL.matcher(element).matches()) {
+            if (element == null || !element.equals("*") && !ELEMENT_SYMBOL.matcher(element).matches()) {
                 throw invalid("An atom requires an element symbol such as C or Cl.");
             }
             coordinate(x);
             coordinate(y);
             coordinate(z);
+            annotation = Objects.requireNonNull(annotation, "annotation").forElement(element);
         }
     }
 
@@ -68,7 +85,7 @@ public final class StructureFragment {
      * Represents a chemical bond connecting two atoms by their indices.
      *
      * @param from the zero-based index of the source atom
-     * @param to   the zero-based index of the target atom
+     * @param to the zero-based index of the target atom
      * @param type the {@link BondType} of the connection
      */
     public record Bond(int from, int to, BondType type) {
@@ -91,10 +108,10 @@ public final class StructureFragment {
     /**
      * Represents a periodic unit-cell link connecting atoms across lattice boundaries.
      *
-     * @param from   source atom index
-     * @param to     target atom index
+     * @param from source atom index
+     * @param to target atom index
      * @param offset integer offset list across unit cell axes
-     * @param type   the {@link BondType}
+     * @param type the {@link BondType}
      */
     public record CellLink(int from, int to, List<Integer> offset, BondType type) {
 
@@ -183,9 +200,10 @@ public final class StructureFragment {
      * Internal unit cell representation containing lattice vectors and periodic links.
      *
      * @param vectors list of lattice vectors
-     * @param links   list of periodic cell links
+     * @param links list of periodic cell links
      */
-    private record Cell(List<Vector> vectors, List<CellLink> links) {}
+    private record Cell(List<Vector> vectors, List<CellLink> links) {
+    }
 
     /** List of atoms in this fragment. */
     private final List<Atom> atoms;
@@ -206,45 +224,46 @@ public final class StructureFragment {
     private final Map<Integer, Integer> randomLinkCapacities;
 
     /**
-     * Constructs a new {@link StructureFragment} without unit cell vectors or metadata.
+     * Creates a {@link StructureFragment} without unit cell vectors or metadata.
      *
-     * @param atoms   list of atoms
-     * @param bonds   list of bonds
+     * @param atoms list of atoms
+     * @param bonds list of bonds
      * @param vectors lattice vectors array (can be null)
-     * @param links   list of cell links
+     * @param links list of cell links
      */
     public StructureFragment(List<Atom> atoms, List<Bond> bonds, double[][] vectors, List<CellLink> links) {
         this(atoms, bonds, vectors, links, Map.of(), Map.of(), Map.of());
     }
 
     /**
-     * Constructs a new {@link StructureFragment} with attachments, configurations, and capacities.
+     * Creates a {@link StructureFragment} with attachments, configurations, and capacities.
      *
-     * @param atoms          list of atoms
-     * @param bonds          list of bonds
-     * @param attachments    map of named attachments
+     * @param atoms list of atoms
+     * @param bonds list of bonds
+     * @param attachments map of named attachments
      * @param configurations map of atomic configurations
-     * @param capacities     map of random link capacities
+     * @param capacities map of random link capacities
      */
     public StructureFragment(List<Atom> atoms, List<Bond> bonds, Map<String, Integer> attachments,
-                             Map<Integer, AtomicConfiguration> configurations, Map<Integer, Integer> capacities) {
+            Map<Integer, AtomicConfiguration> configurations, Map<Integer, Integer> capacities) {
         this(atoms, bonds, null, List.of(), attachments, configurations, capacities);
     }
 
     /**
-     * Constructs a fully specified {@link StructureFragment} with all atoms, bonds, lattice vectors, links, and metadata.
+     * Constructs a fully specified {@link StructureFragment} with all atoms, bonds, lattice vectors, links, and
+     * metadata.
      *
-     * @param atoms          list of atoms
-     * @param bonds          list of bonds
-     * @param vectors        lattice vectors array
-     * @param links          list of cell links
-     * @param attachments    map of named attachments
+     * @param atoms list of atoms
+     * @param bonds list of bonds
+     * @param vectors lattice vectors array
+     * @param links list of cell links
+     * @param attachments map of named attachments
      * @param configurations map of atomic configurations
-     * @param capacities     map of random link capacities
+     * @param capacities map of random link capacities
      */
     public StructureFragment(List<Atom> atoms, List<Bond> bonds, double[][] vectors, List<CellLink> links,
-                             Map<String, Integer> attachments, Map<Integer, AtomicConfiguration> configurations,
-                             Map<Integer, Integer> capacities) {
+            Map<String, Integer> attachments, Map<Integer, AtomicConfiguration> configurations,
+            Map<Integer, Integer> capacities) {
         checkSize(atoms.size(), bonds.size());
         this.atoms = List.copyOf(atoms);
         this.bonds = List.copyOf(bonds);
@@ -309,7 +328,7 @@ public final class StructureFragment {
     }
 
     /**
-     * Retrieves the unmodifiable list of atoms in this fragment.
+     * Returns the unmodifiable list of atoms in this fragment.
      *
      * @return list of {@link Atom} instances
      */
@@ -318,7 +337,7 @@ public final class StructureFragment {
     }
 
     /**
-     * Retrieves the unmodifiable list of bonds in this fragment.
+     * Returns the unmodifiable list of bonds in this fragment.
      *
      * @return list of {@link Bond} instances
      */
@@ -336,7 +355,7 @@ public final class StructureFragment {
     }
 
     /**
-     * Retrieves the map of named attachment point names to atom indices.
+     * Returns the map of named attachment point names to atom indices.
      *
      * @return unmodifiable map of attachment names and indices
      */
@@ -345,7 +364,7 @@ public final class StructureFragment {
     }
 
     /**
-     * Retrieves the map of atom indices to custom atomic configurations.
+     * Returns the map of atom indices to custom atomic configurations.
      *
      * @return map of configurations
      */
@@ -354,7 +373,7 @@ public final class StructureFragment {
     }
 
     /**
-     * Retrieves the map of atom indices to maximum random link capacities.
+     * Returns the map of atom indices to maximum random link capacities.
      *
      * @return map of capacities
      */
@@ -397,14 +416,16 @@ public final class StructureFragment {
      */
     public static StructureFragment from(MoleculeStructure structure) {
         Objects.requireNonNull(structure, "structure");
-        return new StructureFragment(structure.atoms().stream().map(atom -> new Atom(atom.element().symbol(),
-                atom.x(), atom.y(), atom.z())).toList(), structure.bonds().stream()
-                .map(bond -> new Bond(bond.from(), bond.to(), bond.type())).toList(), null, List.of());
+        return new StructureFragment(
+                structure.atoms().stream().map(atom -> new Atom(atom.element().symbol(), atom.x(), atom.y(), atom.z(), atom.annotation()))
+                        .toList(),
+                structure.bonds().stream().map(bond -> new Bond(bond.from(), bond.to(), bond.type())).toList(), null,
+                List.of());
     }
 
     /**
-     * Imports geometry and explicit per-atom authoring metadata from a molecule definition.
-     * Definition-wide defaults remain on the definition.
+     * Imports geometry and explicit per-atom authoring metadata from a molecule definition. Definition-wide defaults
+     * remain on the definition.
      *
      * @param definition the {@link MoleculeDef}
      * @return a new {@link StructureFragment}
@@ -422,10 +443,11 @@ public final class StructureFragment {
         }
         String encodedCapacities = definition.inspection().metadata().get(CAPACITIES_METADATA_KEY);
         if (encodedCapacities != null) {
-            JsonParser.parseString(encodedCapacities).getAsJsonObject().entrySet()
-                    .forEach(entry -> capacities.put(Integer.parseInt(entry.getKey()), metadataInteger(entry.getValue())));
+            JsonParser.parseString(encodedCapacities).getAsJsonObject().entrySet().forEach(
+                    entry -> capacities.put(Integer.parseInt(entry.getKey()), metadataInteger(entry.getValue())));
         }
-        return new StructureFragment(geometry.atoms, geometry.bonds, names, definition.inspection().atoms(), capacities);
+        return new StructureFragment(geometry.atoms, geometry.bonds, names, definition.inspection().atoms(),
+                capacities);
     }
 
     /**
@@ -439,8 +461,10 @@ public final class StructureFragment {
         attachmentName(prefix);
         var names = new LinkedHashMap<String, Integer>();
         attachments.forEach((name, index) -> names.put(prefix + "/" + name, index));
-        double[][] vectors = cell == null ? null : cell.vectors().stream()
-                                                   .map(vector -> new double[]{vector.x(), vector.y(), vector.z()}).toArray(double[][]::new);
+        double[][] vectors = cell == null
+                ? null
+                : cell.vectors().stream().map(vector -> new double[]{vector.x(), vector.y(), vector.z()})
+                        .toArray(double[][]::new);
         return new StructureFragment(atoms, bonds, vectors, cell == null ? List.of() : cell.links(), names,
                 configurations, randomLinkCapacities);
     }
@@ -482,9 +506,9 @@ public final class StructureFragment {
     /**
      * Rotates this fragment around a specified rotation axis by an angle in degrees.
      *
-     * @param axisX   x component of rotation axis
-     * @param axisY   y component of rotation axis
-     * @param axisZ   z component of rotation axis
+     * @param axisX x component of rotation axis
+     * @param axisY y component of rotation axis
+     * @param axisZ z component of rotation axis
      * @param degrees angle of rotation in degrees
      * @return a new rotated {@link StructureFragment}
      * @throws IllegalArgumentException if degrees are non-finite or axis is zero
@@ -496,15 +520,15 @@ public final class StructureFragment {
         Vector axis = new Vector(axisX, axisY, axisZ).unit();
         double angle = Math.toRadians(degrees % 360), cosine = Math.cos(angle), sine = Math.sin(angle), t = 1 - cosine;
         double x = axis.x(), y = axis.y(), z = axis.z();
-        return affine(new double[][]{
-                {t * x * x + cosine, t * x * y - sine * z, t * x * z + sine * y, 0},
+        return affine(new double[][]{{t * x * x + cosine, t * x * y - sine * z, t * x * z + sine * y, 0},
                 {t * x * y + sine * z, t * y * y + cosine, t * y * z - sine * x, 0},
                 {t * x * z - sine * y, t * y * z + sine * x, t * z * z + cosine, 0}});
     }
 
     /**
      * Transforms this fragment using a 3x4 affine transformation matrix.
-     * <p>Three rows of four coefficients, applied to column vectors [x, y, z, 1].
+     * <p>
+     * Three rows of four coefficients, applied to column vectors [x, y, z, 1].
      *
      * @param matrix the 3x4 transformation matrix array
      * @return a new transformed {@link StructureFragment}
@@ -522,13 +546,13 @@ public final class StructureFragment {
             for (int index = 0; index < vectors.length; index++) {
                 Vector vector = cell.vectors().get(index);
                 for (int axis = 0; axis < 3; axis++) {
-                    vectors[index][axis] = transform[axis][0] * vector.x()
-                            + transform[axis][1] * vector.y() + transform[axis][2] * vector.z();
+                    vectors[index][axis] = transform[axis][0] * vector.x() + transform[axis][1] * vector.y()
+                            + transform[axis][2] * vector.z();
                 }
             }
         }
-        return new StructureFragment(transformed, bonds, vectors, cell == null ? List.of() : cell.links(),
-                attachments, configurations, randomLinkCapacities);
+        return new StructureFragment(transformed, bonds, vectors, cell == null ? List.of() : cell.links(), attachments,
+                configurations, randomLinkCapacities);
     }
 
     /**
@@ -536,7 +560,7 @@ public final class StructureFragment {
      *
      * @param other the other {@link StructureFragment} to append
      * @return a new combined {@link StructureFragment}
-     * @throws NullPointerException     if other is null
+     * @throws NullPointerException if other is null
      * @throws IllegalArgumentException if limits are exceeded or duplicate attachment names collide
      */
     public StructureFragment append(StructureFragment other) {
@@ -568,7 +592,7 @@ public final class StructureFragment {
      * Appends a qualified instance of another fragment.
      *
      * @param instance the instance qualifier prefix
-     * @param other    the other {@link StructureFragment}
+     * @param other the other {@link StructureFragment}
      * @return a new combined {@link StructureFragment}
      */
     public StructureFragment append(String instance, StructureFragment other) {
@@ -577,7 +601,8 @@ public final class StructureFragment {
 
     /**
      * Generates disjoint transformed copies of this fragment.
-     * <p>This does not invent connections between instances.
+     * <p>
+     * This does not invent connections between instances.
      *
      * @param transforms list of 3x4 affine transform matrices
      * @return a new multi-instance {@link StructureFragment}
@@ -589,7 +614,7 @@ public final class StructureFragment {
     /**
      * Generates multiple transformed instances with a specified prefix.
      *
-     * @param prefix     the naming prefix for instances
+     * @param prefix the naming prefix for instances
      * @param transforms list of 3x4 affine transform matrices
      * @return a new multi-instance {@link StructureFragment}
      * @throws IllegalArgumentException if transforms list is null or empty
@@ -623,10 +648,11 @@ public final class StructureFragment {
 
     /**
      * Repeats this unit cell across lattice vectors according to specified counts and wrapping flags.
-     * <p>Open boundaries omit outward links; wrapped boundaries resolve destination cells modulo their counts.
+     * <p>
+     * Open boundaries omit outward links; wrapped boundaries resolve destination cells modulo their counts.
      *
      * @param counts array of repetition counts per lattice vector
-     * @param wrap   array of boolean wrap flags per lattice vector
+     * @param wrap array of boolean wrap flags per lattice vector
      * @return a new expanded repetition {@link StructureFragment}
      * @throws IllegalArgumentException if the fragment is not a unit cell or parameters are invalid
      */
@@ -652,7 +678,8 @@ public final class StructureFragment {
         for (CellLink link : cell.links()) {
             long available = 1;
             for (int axis = 0; axis < dimensions; axis++) {
-                available *= wrap[axis] ? counts[axis]
+                available *= wrap[axis]
+                        ? counts[axis]
                         : Math.max(0L, counts[axis] - Math.abs((long) link.offset().get(axis)));
             }
             bondCount += available;
@@ -680,7 +707,7 @@ public final class StructureFragment {
                     .collect(java.util.stream.Collectors.joining(","));
             copyMetadata("cell[" + coordinateName + "]", base, names, nuclear, capacities);
             for (Atom atom : atoms) {
-                resultAtoms.add(new Atom(atom.element(), atom.x() + x, atom.y() + y, atom.z() + z));
+                resultAtoms.add(new Atom(atom.element(), atom.x() + x, atom.y() + y, atom.z() + z, atom.annotation()));
             }
             for (Bond bond : bonds) {
                 resultBonds.add(new Bond(base + bond.from(), base + bond.to(), bond.type()));
@@ -699,7 +726,8 @@ public final class StructureFragment {
                     }
                 }
                 if (present) {
-                    resultBonds.add(new Bond(base + link.from(), cellIndex(destination, counts) * atoms.size() + link.to(), link.type()));
+                    resultBonds.add(new Bond(base + link.from(),
+                            cellIndex(destination, counts) * atoms.size() + link.to(), link.type()));
                 }
             }
         }
@@ -708,16 +736,18 @@ public final class StructureFragment {
 
     /**
      * Wraps this structure fragment into a cylinder of specified dimensions.
-     * <p>Cylindrical coordinates preserve every indexed bond, including seams explicitly created by repeat.
+     * <p>
+     * Cylindrical coordinates preserve every indexed bond, including seams explicitly created by repeat.
      *
-     * @param origin             origin point array [x, y, z]
-     * @param circumferenceAxis  circumference axis vector array
-     * @param axialAxis          axial direction axis vector array
-     * @param circumference      total cylinder circumference value
+     * @param origin origin point array [x, y, z]
+     * @param circumferenceAxis circumference axis vector array
+     * @param axialAxis axial direction axis vector array
+     * @param circumference total cylinder circumference value
      * @return a new wrapped cylindrical {@link StructureFragment}
      * @throws IllegalArgumentException if dimensions or axes are invalid
      */
-    public StructureFragment wrapCylinder(double[] origin, double[] circumferenceAxis, double[] axialAxis, double circumference) {
+    public StructureFragment wrapCylinder(double[] origin, double[] circumferenceAxis, double[] axialAxis,
+            double circumference) {
         requireExpanded();
         if (!Double.isFinite(circumference) || circumference <= 0) {
             throw invalid("Cylinder circumference must be finite and positive.");
@@ -737,9 +767,10 @@ public final class StructureFragment {
                 throw invalid("Cylinder wrapping places an atom at or beyond the cylinder axis.");
             }
             double cosine = Math.cos(angle) * radial, sine = Math.sin(angle) * radial;
-            wrapped.add(new Atom(atom.element(), center.x() + along.x() * axial + around.x() * cosine + normal.x() * sine,
-                    center.y() + along.y() * axial + around.y() * cosine + normal.y() * sine,
-                    center.z() + along.z() * axial + around.z() * cosine + normal.z() * sine));
+            wrapped.add(
+                    new Atom(atom.element(), center.x() + along.x() * axial + around.x() * cosine + normal.x() * sine,
+                            center.y() + along.y() * axial + around.y() * cosine + normal.y() * sine,
+                            center.z() + along.z() * axial + around.z() * cosine + normal.z() * sine, atom.annotation()));
         }
         return new StructureFragment(wrapped, bonds, attachments, configurations, randomLinkCapacities);
     }
@@ -760,6 +791,7 @@ public final class StructureFragment {
             value.addProperty("x", atom.x());
             value.addProperty("y", atom.y());
             value.addProperty("z", atom.z());
+            atom.annotation().write(value);
             if (configurations.containsKey(index)) {
                 value.add("nuclear", configurations.get(index).toJson());
             }
@@ -782,7 +814,8 @@ public final class StructureFragment {
         }
         if (!randomLinkCapacities.isEmpty()) {
             JsonObject capacities = new JsonObject();
-            new java.util.TreeMap<>(randomLinkCapacities).forEach((index, value) -> capacities.addProperty(index.toString(), value));
+            new java.util.TreeMap<>(randomLinkCapacities)
+                    .forEach((index, value) -> capacities.addProperty(index.toString(), value));
             result.add("random_link_capacities", capacities);
         }
         return result;
@@ -804,7 +837,7 @@ public final class StructureFragment {
     private static MoleculeStructure compile(String id, List<Atom> atoms, List<Bond> bonds) {
         MoleculeStructure.Builder result = MoleculeStructure.builder(id, "");
         for (Atom atom : atoms) {
-            result.addAtom(AtomElement.bySymbol(atom.element()), (float) atom.x(), (float) atom.y(), (float) atom.z());
+            result.addAtom(AtomElement.bySymbol(atom.element()), (float) atom.x(), (float) atom.y(), (float) atom.z(), atom.annotation());
         }
         for (Bond bond : bonds) {
             result.bond(bond.from(), bond.to(), bond.type());
@@ -826,7 +859,8 @@ public final class StructureFragment {
 
     /** Transforms an atom position with an affine matrix row. */
     private static Atom transform(Atom atom, double[][] matrix) {
-        return new Atom(atom.element(), component(atom, matrix[0]), component(atom, matrix[1]), component(atom, matrix[2]));
+        return new Atom(atom.element(), component(atom, matrix[0]), component(atom, matrix[1]),
+                component(atom, matrix[2]), atom.annotation());
     }
 
     /** Computes a single coordinate component using an affine matrix row. */
@@ -869,7 +903,8 @@ public final class StructureFragment {
         if (normalized.size() >= 2 && normalized.get(0).cross(normalized.get(1)).length() < 1e-10) {
             throw invalid("Lattice vectors must be linearly independent.");
         }
-        if (normalized.size() == 3 && Math.abs(normalized.get(0).cross(normalized.get(1)).dot(normalized.get(2))) < 1e-10) {
+        if (normalized.size() == 3
+                && Math.abs(normalized.get(0).cross(normalized.get(1)).dot(normalized.get(2))) < 1e-10) {
             throw invalid("Lattice vectors must be linearly independent.");
         }
     }
@@ -903,7 +938,8 @@ public final class StructureFragment {
         long key = (long) Math.min(from, to) << 32 | Math.max(from, to) & 0xFFFFFFFFL;
         BondType previous = seen.putIfAbsent(key, type);
         if (previous != null) {
-            throw invalid(previous == type ? "Duplicate undirected bond." : "Conflicting bond types for the same atom pair.");
+            throw invalid(
+                    previous == type ? "Duplicate undirected bond." : "Conflicting bond types for the same atom pair.");
         }
     }
 
@@ -936,7 +972,7 @@ public final class StructureFragment {
 
     /** Copies metadata entries (attachments, configurations, capacities) with an index offset. */
     private void copyMetadata(String prefix, int offset, Map<String, Integer> names,
-                              Map<Integer, AtomicConfiguration> nuclear, Map<Integer, Integer> capacities) {
+            Map<Integer, AtomicConfiguration> nuclear, Map<Integer, Integer> capacities) {
         attachments.forEach((name, index) -> names.put(prefix + "/" + name, index + offset));
         configurations.forEach((index, value) -> nuclear.put(index + offset, value));
         randomLinkCapacities.forEach((index, value) -> capacities.put(index + offset, value));
@@ -944,7 +980,8 @@ public final class StructureFragment {
 
     /** Validates attachment name syntax and path segments. */
     static void attachmentName(String name) {
-        if (name == null || name.length() > 1024 || !name.matches("[A-Za-z0-9_.-]+(?:\\[[0-9]+(?:,[0-9]+)*\\])?(?:/[A-Za-z0-9_.-]+(?:\\[[0-9]+(?:,[0-9]+)*\\])?)*")) {
+        if (name == null || name.length() > 1024 || !name.matches(
+                "[A-Za-z0-9_.-]+(?:\\[[0-9]+(?:,[0-9]+)*\\])?(?:/[A-Za-z0-9_.-]+(?:\\[[0-9]+(?:,[0-9]+)*\\])?)*")) {
             throw invalid("Attachment names require nonempty path segments without wildcards.");
         }
         for (String part : name.split("/")) {

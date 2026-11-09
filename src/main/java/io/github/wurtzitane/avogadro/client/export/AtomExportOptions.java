@@ -1,19 +1,19 @@
 package io.github.wurtzitane.avogadro.client.export;
 
-import io.github.wurtzitane.avogadro.Config;
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import io.github.wurtzitane.avogadro.Config;
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+
 /**
  * Configuration options for exporting atom-specific details and media visualizations.
  *
  * @param definition the {@link MoleculeDef} being exported
- * @param atom       the zero-based index of the target atom
- * @param details    {@code true} if detailed inspection attributes are included, {@code false} otherwise
+ * @param atom the zero-based index of the target atom
+ * @param details {@code true} if detailed inspection attributes are included, {@code false} otherwise
  */
 public record AtomExportOptions(MoleculeDef definition, int atom, boolean details) {
 
@@ -27,7 +27,8 @@ public record AtomExportOptions(MoleculeDef definition, int atom, boolean detail
             throw new IllegalArgumentException("Atom index outside molecule.");
         }
         if (definition.inspection().atom(definition.structure(), atom) == null) {
-            throw new IllegalArgumentException("This atom has no supplied nuclear/electron data. Add elements or atom_configurations first.");
+            throw new IllegalArgumentException(
+                    "This atom has no supplied nuclear/electron data. Add elements or atom_configurations first.");
         }
     }
 
@@ -35,7 +36,7 @@ public record AtomExportOptions(MoleculeDef definition, int atom, boolean detail
      * Parses command-line arguments and flags to produce a {@link Parsed} export configuration.
      *
      * @param definition the {@link MoleculeDef} being exported
-     * @param arguments  array of string arguments and flags
+     * @param arguments array of string arguments and flags
      * @return a new {@link Parsed} containing media export options and atom options
      * @throws IllegalArgumentException if argument parsing fails or validation rules are violated
      */
@@ -70,7 +71,8 @@ public record AtomExportOptions(MoleculeDef definition, int atom, boolean detail
         });
         ExportOptions media = ExportOptions.parse(normal.toArray(String[]::new), 1);
         if (details && media.background() == null) {
-            throw new IllegalArgumentException("Atom details require a solid background; use --details false for transparent GIFs.");
+            throw new IllegalArgumentException(
+                    "Atom details require a solid background; use --details false for transparent GIFs.");
         }
         return new Parsed(media, new AtomExportOptions(definition, index, details));
     }
@@ -79,7 +81,8 @@ public record AtomExportOptions(MoleculeDef definition, int atom, boolean detail
      * Container record holding parsed general media export options and atom-specific export options.
      *
      * @param media the general {@link ExportOptions}
-     * @param atom  the atom-specific {@link AtomExportOptions}
+     * @param atom the atom-specific {@link AtomExportOptions}
      */
-    public record Parsed(ExportOptions media, AtomExportOptions atom) {}
+    public record Parsed(ExportOptions media, AtomExportOptions atom) {
+    }
 }

@@ -1,14 +1,28 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.*;
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.*;
 
+import com.google.gson.*;
+
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+
 /**
- * A bounded family of authored networks.
- * <p>Default preview is one realization, not a bulk formula.
+ * A recipe for polymer chains connected by branches or crosslinks.
+ *
+ * <p>
+ * A crosslink is a bond joining different chains or different parts of a chain. For example, several long chains joined
+ * by occasional crosslinks form a network.
+ *
+ * <p>
+ * The recipe can expose settings such as chain length and the chance of adding each branch or crosslink. Call
+ * {@link #preview(NetworkPreviewRequest)} to build one model with chosen settings and a seed. The same recipe,
+ * settings, and seed produce the same model.
+ *
+ * <p>
+ * Each model has its own atom counts and formula. The recipe does not have one formula or mass that applies to every
+ * setting. Coordinates and chemical details remain the author's responsibility.
  */
 public final class PolymerNetworkDefinition {
 
@@ -16,41 +30,45 @@ public final class PolymerNetworkDefinition {
     public static final String METADATA_KEY = "polymer_network";
 
     /** Synchronized cache map tracking parsed network definitions with a maximum capacity of 32 entries. */
-    private static final Map<String, PolymerNetworkDefinition> PARSED = Collections.synchronizedMap(
-            new LinkedHashMap<>(16, .75f, true) {
+    private static final Map<String, PolymerNetworkDefinition> PARSED = Collections
+            .synchronizedMap(new LinkedHashMap<>(16, .75f, true) {
                 @Override
                 protected boolean removeEldestEntry(Map.Entry<String, PolymerNetworkDefinition> entry) {
                     return size() > 32;
                 }
-            }
-    );
+            });
 
     /**
      * Represents a configurable parameter for a polymer network definition.
      *
-     * @param name         the unique identifier name of the parameter
-     * @param label        the display label of the parameter
-     * @param kind         the parameter type ("count" or "probability")
-     * @param min          the minimum allowable value
-     * @param max          the maximum allowable value
+     * @param name the unique identifier name of the parameter
+     * @param label display text or a language key. The client translates known keys; other labels appear as written.
+     *     When label equals name, the viewer also checks {@code avogadro.network.parameter.<name>}.
+     * @param kind the parameter type ("count" or "probability")
+     * @param min the minimum allowable value
+     * @param max the maximum allowable value
      * @param defaultValue the default parameter value
      */
     public record Parameter(String name, String label, String kind, double min, double max, double defaultValue) {
 
         /**
-         * Compact constructor for {@link Parameter} that validates name format, label length,
-         * parameter kind, numerical bounds, and type-specific constraints.
+         * Compact constructor for {@link Parameter} that validates name format, label length, parameter kind, numerical
+         * bounds, and type-specific constraints.
          *
          * @throws IllegalArgumentException if parameter names, labels, kinds, or bounds are invalid
          */
         public Parameter {
-            if (name == null || !name.matches("[A-Za-z_][A-Za-z0-9_]*") || label == null || label.isBlank() || label.length() > 128) {
+            if (name == null || !name.matches("[A-Za-z_][A-Za-z0-9_]*") || label == null || label.isBlank()
+                    || label.length() > 128) {
                 throw new IllegalArgumentException("Invalid network parameter name or label");
             }
-            if (kind == null || !Set.of("count", "probability").contains(kind) || !Double.isFinite(min) || !Double.isFinite(max) || !Double.isFinite(defaultValue) || min > max || defaultValue < min || defaultValue > max) {
+            if (kind == null || !Set.of("count", "probability").contains(kind) || !Double.isFinite(min)
+                    || !Double.isFinite(max) || !Double.isFinite(defaultValue) || min > max || defaultValue < min
+                    || defaultValue > max) {
                 throw new IllegalArgumentException("Invalid network parameter bounds");
             }
-            if (kind.equals("count") && (min < 1 || max > 64 || min != Math.rint(min) || max != Math.rint(max) || defaultValue != Math.rint(defaultValue))) {
+            if (kind.equals("count") && (min < 1 || max > 64 || min != Math.rint(min) || max != Math.rint(max)
+                    || defaultValue != Math.rint(defaultValue))) {
                 throw new IllegalArgumentException("Count parameters require integers in 1..64");
             }
             if (kind.equals("probability") && (min < 0 || max > 1)) {
@@ -61,9 +79,9 @@ public final class PolymerNetworkDefinition {
         /**
          * Creates a new count parameter with specified bounds and default value.
          *
-         * @param name  the parameter name
-         * @param min   the minimum count integer
-         * @param max   the maximum count integer
+         * @param name the parameter name
+         * @param min the minimum count integer
+         * @param max the maximum count integer
          * @param value the default count integer
          * @return a new count {@link Parameter}
          */
@@ -74,7 +92,7 @@ public final class PolymerNetworkDefinition {
         /**
          * Creates a new probability parameter with standard bounds [0, 1] and a default value.
          *
-         * @param name  the parameter name
+         * @param name the parameter name
          * @param value the default probability value
          * @return a new probability {@link Parameter}
          */
@@ -96,11 +114,11 @@ public final class PolymerNetworkDefinition {
     private final String fingerprint;
 
     /**
-     * Constructs a new {@link PolymerNetworkDefinition} with parameters, assembly, and seed.
+     * Creates a {@link PolymerNetworkDefinition} with parameters, assembly, and seed.
      *
      * @param parameters list of network parameters
-     * @param assembly   the {@link StructureAssembly} rules
-     * @param seed       the random seed
+     * @param assembly the {@link StructureAssembly} rules
+     * @param seed the random seed
      * @throws IllegalArgumentException if parameter count exceeds limits, names clash, or parameters mismatch assembly
      */
     public PolymerNetworkDefinition(List<Parameter> parameters, StructureAssembly assembly, long seed) {
@@ -125,7 +143,7 @@ public final class PolymerNetworkDefinition {
     }
 
     /**
-     * Retrieves the list of configurable parameters.
+     * Returns the list of configurable parameters.
      *
      * @return an immutable list of parameters
      */
@@ -134,16 +152,16 @@ public final class PolymerNetworkDefinition {
     }
 
     /**
-     * Retrieves the structure assembly rules.
+     * Returns the structure assembly rules.
      *
-     * @return the {@link StructureAssembly} instance
+     * @return the {@link StructureAssembly}
      */
     public StructureAssembly assembly() {
         return assembly;
     }
 
     /**
-     * Retrieves the SHA-256 fingerprint hash of this definition.
+     * Returns a stable identifier for this recipe. Use it to detect whether the recipe changed.
      *
      * @return the fingerprint string
      */
@@ -152,9 +170,9 @@ public final class PolymerNetworkDefinition {
     }
 
     /**
-     * Generates a default network preview request populated with parameter default values and seed.
+     * Returns this recipe's starting settings and seed.
      *
-     * @return a new {@link NetworkPreviewRequest} instance
+     * @return a new {@link NetworkPreviewRequest}
      */
     public NetworkPreviewRequest defaults() {
         Map<String, Integer> counts = new LinkedHashMap<>();
@@ -170,10 +188,10 @@ public final class PolymerNetworkDefinition {
     }
 
     /**
-     * Generates a single finite polymer network realization preview based on the given request.
+     * Builds one model using the requested counts, chances, and seed. Omitted settings use this recipe's defaults.
      *
      * @param request the {@link NetworkPreviewRequest} containing counts, probabilities, and seed
-     * @return a {@link PolymerPreview} instance containing the generated fragment and reproduction data
+     * @return a {@link PolymerPreview} containing the generated fragment and reproduction data
      * @throws IllegalArgumentException if parameter keys are unknown or values fall outside bounds
      */
     public PolymerPreview preview(NetworkPreviewRequest request) {
@@ -268,7 +286,7 @@ public final class PolymerNetworkDefinition {
      * Parses a polymer network definition from a JSON object.
      *
      * @param json the {@link JsonObject} to parse
-     * @return a new parsed {@link PolymerNetworkDefinition} instance
+     * @return a new parsed {@link PolymerNetworkDefinition}
      * @throws IllegalArgumentException if version, seed, parameters, or assembly data are invalid
      */
     public static PolymerNetworkDefinition fromJson(JsonObject json) {
@@ -292,25 +310,21 @@ public final class PolymerNetworkDefinition {
         for (JsonElement e : json.getAsJsonArray("parameters")) {
             JsonObject p = e.getAsJsonObject();
             StructureAssembly.fields(p, "name", "label", "kind", "min", "max", "default");
-            parameters.add(new Parameter(
-                    StructureAssembly.string(p, "name"),
-                    StructureAssembly.string(p, "label"),
-                    StructureAssembly.string(p, "kind"),
-                    StructureAssembly.number(p.get("min")),
-                    StructureAssembly.number(p.get("max")),
-                    StructureAssembly.number(p.get("default"))
-            ));
+            parameters.add(new Parameter(StructureAssembly.string(p, "name"), StructureAssembly.string(p, "label"),
+                    StructureAssembly.string(p, "kind"), StructureAssembly.number(p.get("min")),
+                    StructureAssembly.number(p.get("max")), StructureAssembly.number(p.get("default"))));
         }
 
         if (!json.has("assembly") || !json.get("assembly").isJsonObject()) {
             throw new IllegalArgumentException("Network assembly must be an object");
         }
 
-        return new PolymerNetworkDefinition(parameters, StructureAssembly.fromJson(json.getAsJsonObject("assembly")), seed);
+        return new PolymerNetworkDefinition(parameters, StructureAssembly.fromJson(json.getAsJsonObject("assembly")),
+                seed);
     }
 
     /**
-     * Retrieves and caches the polymer network definition from a molecule definition's metadata if present.
+     * Returns and caches the polymer network definition from a molecule definition's metadata if present.
      *
      * @param definition the {@link MoleculeDef} to inspect
      * @return the {@link PolymerNetworkDefinition}, or {@code null} if not present
@@ -338,7 +352,8 @@ public final class PolymerNetworkDefinition {
      */
     private static String hash(String value) {
         try {
-            return HexFormat.of().formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
+            return HexFormat.of()
+                    .formatHex(MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8)));
         } catch (NoSuchAlgorithmException impossible) {
             throw new IllegalStateException(impossible);
         }

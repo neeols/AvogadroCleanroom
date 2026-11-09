@@ -1,12 +1,13 @@
 package io.github.wurtzitane.avogadro.api;
 
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-
 import java.util.Locale;
+
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
 
 /**
  * Presentation grouping for molecules.
- * <p>Elemental structures may contain arbitrarily many atoms of that element.
+ * <p>
+ * Elemental structures may contain arbitrarily many atoms of that element.
  */
 public enum MoleculeClassification {
 
@@ -32,8 +33,7 @@ public enum MoleculeClassification {
     public static final String METADATA_KEY = "classification";
 
     /**
-     * Determines the classification of a given molecule definition based on its metadata,
-     * structure, and composition.
+     * Determines the classification of a given molecule definition based on its metadata, structure, and composition.
      *
      * @param definition the {@link MoleculeDef} to inspect
      * @return the resolved {@link MoleculeClassification}
@@ -56,7 +56,8 @@ public enum MoleculeClassification {
                 if (value != AUTO) {
                     return value;
                 }
-            } catch (IllegalArgumentException ignored) {}
+            } catch (IllegalArgumentException ignored) {
+            }
         }
 
         String first = null;

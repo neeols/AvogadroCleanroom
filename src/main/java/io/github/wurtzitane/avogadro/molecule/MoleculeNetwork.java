@@ -1,7 +1,12 @@
 package io.github.wurtzitane.avogadro.molecule;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.util.concurrent.atomic.AtomicLong;
+
 import io.github.wurtzitane.avogadro.Avogadro;
 import io.netty.buffer.ByteBuf;
+
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraftforge.fml.common.network.NetworkRegistry;
 import net.minecraftforge.fml.common.network.handshake.NetworkDispatcher;
@@ -11,11 +16,9 @@ import net.minecraftforge.fml.common.network.simpleimpl.MessageContext;
 import net.minecraftforge.fml.common.network.simpleimpl.SimpleNetworkWrapper;
 import net.minecraftforge.fml.relauncher.Side;
 
-import java.io.ByteArrayOutputStream;
-import java.io.IOException;
-import java.util.concurrent.atomic.AtomicLong;
-
-/** Handles network synchronization and chunked packet assembly for molecule resource data across clients and servers. */
+/**
+ * Handles network synchronization and chunked packet assembly for molecule resource data across clients and servers.
+ */
 public final class MoleculeNetwork {
 
     /** Maximum payload byte size per chunk transmission (24 KB). */
@@ -36,7 +39,6 @@ public final class MoleculeNetwork {
     /** Thread-safe assembler instance for incoming client packet chunks. */
     private static final Assembler ASSEMBLER = new Assembler();
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeNetwork() {}
 
     /** Registers network message handlers and packet channels on the client side. */
@@ -55,10 +57,11 @@ public final class MoleculeNetwork {
      * Sends encoded molecule resource data to a specific player if they have the client mod installed.
      *
      * @param player target player entity
-     * @param data   molecule resource data instance
+     * @param data molecule resource data instance
      */
     public static void sendTo(EntityPlayerMP player, MoleculeResources.Data data) {
-        if (!hasClientMod(player)) return;
+        if (!hasClientMod(player))
+            return;
         try {
             sendChunks(player, MoleculeSync.encode(data));
         } catch (IOException e) {
@@ -69,7 +72,7 @@ public final class MoleculeNetwork {
     /**
      * Sends a raw byte payload to a specific player if they have the client mod installed.
      *
-     * @param player  target player entity
+     * @param player target player entity
      * @param payload encoded byte array payload
      */
     static void sendTo(EntityPlayerMP player, byte[] payload) {
@@ -92,7 +95,7 @@ public final class MoleculeNetwork {
     /**
      * Splits a byte payload into indexed chunks and sends them to the target player.
      *
-     * @param player  target player entity
+     * @param player target player entity
      * @param payload byte array payload to chunk
      */
     private static void sendChunks(EntityPlayerMP player, byte[] payload) {
@@ -133,9 +136,9 @@ public final class MoleculeNetwork {
          * Constructs a chunk spanning an entire payload array.
          *
          * @param revision transfer revision ID
-         * @param index    chunk index
-         * @param count    total chunk count
-         * @param payload  payload byte array
+         * @param index chunk index
+         * @param count total chunk count
+         * @param payload payload byte array
          */
         Chunk(long revision, int index, int count, byte[] payload) {
             this(revision, index, count, payload, 0, payload.length);
@@ -145,11 +148,11 @@ public final class MoleculeNetwork {
          * Outbound snapshot storage is immutable for the lifetime of queued messages.
          *
          * @param revision transfer revision ID
-         * @param index    chunk index
-         * @param count    total chunk count
-         * @param payload  payload byte array
-         * @param offset   array offset
-         * @param length   chunk length
+         * @param index chunk index
+         * @param count total chunk count
+         * @param payload payload byte array
+         * @param offset array offset
+         * @param length chunk length
          */
         Chunk(long revision, int index, int count, byte[] payload, int offset, int length) {
             this.revision = revision;
@@ -189,8 +192,8 @@ public final class MoleculeNetwork {
             index = buffer.readInt();
             count = buffer.readInt();
             int length = buffer.readInt();
-            if (count < 1 || count > MAX_CHUNKS || index < 0 || index >= count
-                    || length < 1 || length > CHUNK_BYTES || buffer.readableBytes() != length) {
+            if (count < 1 || count > MAX_CHUNKS || index < 0 || index >= count || length < 1 || length > CHUNK_BYTES
+                    || buffer.readableBytes() != length) {
                 throw new IllegalArgumentException("Invalid Avogadro packet bounds");
             }
             payload = new byte[length];
@@ -273,7 +276,8 @@ public final class MoleculeNetwork {
             }
             buffer.write(chunk.payload);
             next++;
-            if (next != count) return null;
+            if (next != count)
+                return null;
 
             byte[] complete = buffer.toByteArray();
             reset();

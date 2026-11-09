@@ -1,16 +1,20 @@
 package io.github.wurtzitane.avogadro.api.client;
 
-import com.google.gson.JsonObject;
-import io.github.wurtzitane.avogadro.client.export.*;
-import io.github.wurtzitane.avogadro.molecule.*;
-import net.minecraft.util.ResourceLocation;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Objects;
 
+import com.google.gson.JsonObject;
+
+import io.github.wurtzitane.avogadro.client.export.*;
+import io.github.wurtzitane.avogadro.molecule.*;
+
+import net.minecraft.util.ResourceLocation;
+
 /**
  * Immutable export selection for media generation.
- * <p>Arbitrary finite geometry need not be registered.
+ * <p>
+ * Arbitrary finite geometry need not be registered.
  */
 public final class MediaExportRequest {
 
@@ -33,11 +37,11 @@ public final class MediaExportRequest {
     private final JsonObject reproduction;
 
     /**
-     * Constructs a new media export request from the given builder, validating all constraints.
+     * Creates a media export request from the given builder, validating all constraints.
      *
      * @param b the builder containing configuration values
-     * @throws IllegalArgumentException if validation checks fail (e.g., mismatched counts,
-     *         missing background, invalid options, or reproduction metadata exceeding 1 MiB)
+     * @throws IllegalArgumentException if validation checks fail (e.g., mismatched counts, missing background, invalid
+     *     options, or reproduction metadata exceeding 1 MiB)
      */
     private MediaExportRequest(Builder b) {
         definitions = List.copyOf(b.definitions);
@@ -58,7 +62,8 @@ public final class MediaExportRequest {
             throw new IllegalArgumentException("Atom details require a solid background");
         }
         if (atom != null && rendering != null) {
-            throw new IllegalArgumentException("Molecule rendering options are not supported by atomic inspection exports");
+            throw new IllegalArgumentException(
+                    "Molecule rendering options are not supported by atomic inspection exports");
         }
 
         reproduction = b.reproduction == null ? null : b.reproduction.deepCopy();
@@ -71,7 +76,7 @@ public final class MediaExportRequest {
      * Creates a builder for exporting a list of molecule definitions.
      *
      * @param definitions the list of molecule definitions
-     * @return a new {@link Builder} instance
+     * @return a new {@link Builder}
      */
     public static Builder molecules(List<MoleculeDef> definitions) {
         return new Builder(definitions);
@@ -81,7 +86,7 @@ public final class MediaExportRequest {
      * Creates a builder for exporting a single molecule definition.
      *
      * @param definition the molecule definition
-     * @return a new {@link Builder} instance
+     * @return a new {@link Builder}
      */
     public static Builder molecule(MoleculeDef definition) {
         return molecules(List.of(definition));
@@ -91,8 +96,8 @@ public final class MediaExportRequest {
      * Exports an exact successful realization and saves its reproduction metadata beside the media.
      *
      * @param preview the polymer preview containing structure, formula, and reproduction data
-     * @param name    the name of the export
-     * @return a configured {@link Builder} instance
+     * @param name the name of the export
+     * @return a configured {@link Builder}
      */
     public static Builder polymer(io.github.wurtzitane.avogadro.api.PolymerPreview preview, String name) {
         Objects.requireNonNull(preview, "preview");
@@ -102,20 +107,16 @@ public final class MediaExportRequest {
     /**
      * Creates a builder for a specific molecule structure with custom formatting metadata.
      *
-     * @param structure    the molecule structure to render
-     * @param name         the export name
-     * @param formula      the molecular formula
+     * @param structure the molecule structure to render
+     * @param name the export name
+     * @param formula the molecular formula
      * @param reproduction optional reproduction metadata object
-     * @return a configured {@link Builder} instance
+     * @return a configured {@link Builder}
      */
     public static Builder structure(MoleculeStructure structure, String name, String formula, JsonObject reproduction) {
-        MoleculeDef definition = new MoleculeDef(
-                new ResourceLocation("avogadro", "export_preview"),
-                Objects.requireNonNull(structure),
-                Objects.requireNonNull(formula),
-                List.of(), List.of(), List.of(), List.of(), List.of(),
-                false, name, false
-        );
+        MoleculeDef definition = new MoleculeDef(new ResourceLocation("avogadro", "export_preview"),
+                Objects.requireNonNull(structure), Objects.requireNonNull(formula), List.of(), List.of(), List.of(),
+                List.of(), List.of(), false, name, false);
         Builder builder = molecule(definition);
         builder.reproduction = reproduction == null ? null : reproduction.deepCopy();
         return builder;
@@ -125,7 +126,7 @@ public final class MediaExportRequest {
      * Creates a builder configured for an item export.
      *
      * @param item the item export options
-     * @return a configured {@link Builder} instance
+     * @return a configured {@link Builder}
      */
     public static Builder item(ItemExportOptions item) {
         Builder b = molecule(item.selection().definition());
@@ -138,7 +139,7 @@ public final class MediaExportRequest {
      * Creates a builder configured for an atomic inspection export.
      *
      * @param atom the atom export options
-     * @return a configured {@link Builder} instance
+     * @return a configured {@link Builder}
      */
     public static Builder atom(AtomExportOptions atom) {
         Builder b = molecule(atom.definition());
@@ -147,7 +148,7 @@ public final class MediaExportRequest {
     }
 
     /**
-     * Retrieves the immutable list of molecule definitions included in this request.
+     * Returns the immutable list of molecule definitions included in this request.
      *
      * @return the list of {@link MoleculeDef} instances
      */
@@ -156,16 +157,16 @@ public final class MediaExportRequest {
     }
 
     /**
-     * Retrieves the general export options.
+     * Returns the general export options.
      *
-     * @return the {@link ExportOptions} instance
+     * @return the {@link ExportOptions}
      */
     public ExportOptions options() {
         return options;
     }
 
     /**
-     * Retrieves the item export options, if applicable.
+     * Returns the item export options, if applicable.
      *
      * @return the {@link ItemExportOptions}, or {@code null} if not an item export
      */
@@ -174,7 +175,7 @@ public final class MediaExportRequest {
     }
 
     /**
-     * Retrieves the atom export options, if applicable.
+     * Returns the atom export options, if applicable.
      *
      * @return the {@link AtomExportOptions}, or {@code null} if not an atom export
      */
@@ -183,7 +184,7 @@ public final class MediaExportRequest {
     }
 
     /**
-     * Retrieves custom molecule rendering options, if specified.
+     * Returns custom molecule rendering options, if specified.
      *
      * @return the {@link MoleculeRenderOptions}, or {@code null} if using defaults
      */
@@ -192,7 +193,7 @@ public final class MediaExportRequest {
     }
 
     /**
-     * Retrieves a deep copy of the reproduction metadata associated with this request.
+     * Returns a deep copy of the reproduction metadata associated with this request.
      *
      * @return a cloned {@link JsonObject} of the metadata, or {@code null} if none is set
      */
@@ -201,7 +202,7 @@ public final class MediaExportRequest {
     }
 
     /**
-     * Builder class for constructing immutable {@link MediaExportRequest} instances.
+     * Builds immutable {@link MediaExportRequest} instances.
      */
     public static final class Builder {
 
@@ -224,7 +225,7 @@ public final class MediaExportRequest {
         private JsonObject reproduction;
 
         /**
-         * Constructs a new builder with the specified molecule definitions.
+         * Creates a builder with the specified molecule definitions.
          *
          * @param definitions the molecule definitions to include
          */
@@ -237,7 +238,7 @@ public final class MediaExportRequest {
          * Sets the export options for this request.
          *
          * @param value the {@link ExportOptions} to apply
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder options(ExportOptions value) {
             options = Objects.requireNonNull(value);
@@ -248,7 +249,7 @@ public final class MediaExportRequest {
          * Sets custom molecule rendering options for this request.
          *
          * @param value the {@link MoleculeRenderOptions} to apply
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder renderOptions(MoleculeRenderOptions value) {
             rendering = Objects.requireNonNull(value);
@@ -258,7 +259,7 @@ public final class MediaExportRequest {
         /**
          * Builds, validates, and returns an immutable {@link MediaExportRequest}.
          *
-         * @return a new {@link MediaExportRequest} instance
+         * @return a new {@link MediaExportRequest}
          */
         public MediaExportRequest build() {
             return new MediaExportRequest(this);

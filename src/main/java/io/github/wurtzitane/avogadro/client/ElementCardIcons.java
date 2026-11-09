@@ -16,16 +16,15 @@ public final class ElementCardIcons {
     /** Current stroke thickness value. */
     private static float stroke = STROKE;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private ElementCardIcons() {}
 
     /**
      * Draws an oxide character icon code within the specified bounds.
      *
-     * @param code  oxide property code
-     * @param x     x coordinate position
-     * @param y     y coordinate position
-     * @param size  icon square dimension size
+     * @param code oxide property code
+     * @param x x coordinate position
+     * @param y y coordinate position
+     * @param size icon square dimension size
      * @param color ARGB color integer
      */
     public static void drawOxide(String code, float x, float y, float size, int color) {
@@ -47,7 +46,8 @@ public final class ElementCardIcons {
                     arc(0.5f, 0.5f, 0.36f, 0, Math.PI * 2);
                     line(0.25f, 0.75f, 0.75f, 0.25f);
                 }
-                default -> { }
+                default -> {
+                }
             }
         } finally {
             end();
@@ -57,10 +57,10 @@ public final class ElementCardIcons {
     /**
      * Draws a crystal structure icon code within the specified bounds.
      *
-     * @param code  crystal structure code
-     * @param x     x coordinate position
-     * @param y     y coordinate position
-     * @param size  icon square dimension size
+     * @param code crystal structure code
+     * @param x x coordinate position
+     * @param y y coordinate position
+     * @param size icon square dimension size
      * @param color ARGB color integer
      */
     public static void drawCrystal(String code, float x, float y, float size, int color) {
@@ -68,10 +68,8 @@ public final class ElementCardIcons {
         try {
             switch (code) {
                 case "hex", "hcp", "rhomb" -> {
-                    float[][] vertices = {
-                            {0.5f, 0.05f}, {0.89f, 0.275f}, {0.89f, 0.725f},
-                            {0.5f, 0.95f}, {0.11f, 0.725f}, {0.11f, 0.275f}
-                    };
+                    float[][] vertices = {{0.5f, 0.05f}, {0.89f, 0.275f}, {0.89f, 0.725f}, {0.5f, 0.95f},
+                            {0.11f, 0.725f}, {0.11f, 0.275f}};
                     polygon(vertices);
                     if (!code.equals("rhomb")) {
                         // Three diagonals meet at the centre, giving six radial spokes.
@@ -85,18 +83,14 @@ public final class ElementCardIcons {
                     }
                 }
                 case "diamond" -> {
-                    float[][] vertices = {
-                            {0.10f, 0.08f}, {0.83f, 0.26f}, {0.96f, 0.95f}, {0.23f, 0.80f}
-                    };
+                    float[][] vertices = {{0.10f, 0.08f}, {0.83f, 0.26f}, {0.96f, 0.95f}, {0.23f, 0.80f}};
                     polygon(vertices);
                     for (float[] vertex : vertices) {
                         line(vertex[0], vertex[1], 0.58f, 0.68f);
                     }
                 }
-                case "mono" -> polygon(new float[][] {
-                        {0.34f, 0.06f}, {0.66f, 0.06f}, {0.82f, 0.5f},
-                        {0.66f, 0.94f}, {0.34f, 0.94f}, {0.18f, 0.5f}
-                });
+                case "mono" -> polygon(new float[][]{{0.34f, 0.06f}, {0.66f, 0.06f}, {0.82f, 0.5f}, {0.66f, 0.94f},
+                        {0.34f, 0.94f}, {0.18f, 0.5f}});
                 case "bcc", "neutron-cluster" -> bodyCentredCube();
                 case "fcc" -> {
                     visibleCube(0.07f, 0.07f, 0.23f, 0.23f, 0.70f, 0.70f);
@@ -105,7 +99,8 @@ public final class ElementCardIcons {
                 case "cubic" -> visibleCube(0.25f, 0.06f, 0.07f, 0.24f, 0.70f, 0.70f);
                 case "ortho" -> visibleCube(0.27f, 0.04f, 0.08f, 0.23f, 0.59f, 0.72f);
                 case "tetr" -> visibleCube(0.46f, 0.04f, 0.27f, 0.23f, 0.31f, 0.72f);
-                default -> { }
+                default -> {
+                }
             }
         } finally {
             end();
@@ -115,10 +110,10 @@ public final class ElementCardIcons {
     /**
      * Draws a reference state icon code within the specified bounds.
      *
-     * @param code  reference state code
-     * @param x     x coordinate position
-     * @param y     y coordinate position
-     * @param size  icon square dimension size
+     * @param code reference state code
+     * @param x x coordinate position
+     * @param y y coordinate position
+     * @param size icon square dimension size
      * @param color ARGB color integer
      */
     public static void drawState(String code, float x, float y, float size, int color) {
@@ -143,7 +138,8 @@ public final class ElementCardIcons {
                         line(left, wave(i / 64.0), right, wave((i + 1) / 64.0));
                     }
                 }
-                default -> { }
+                default -> {
+                }
             }
         } finally {
             end();
@@ -156,12 +152,9 @@ public final class ElementCardIcons {
     }
 
     /** Draws a 3D wireframe visible cube structure. */
-    private static void visibleCube(float backX, float backY, float frontX, float frontY,
-                                    float width, float height) {
-        polygon(new float[][] {
-                {frontX, frontY}, {frontX + width, frontY},
-                {frontX + width, frontY + height}, {frontX, frontY + height}
-        });
+    private static void visibleCube(float backX, float backY, float frontX, float frontY, float width, float height) {
+        polygon(new float[][]{{frontX, frontY}, {frontX + width, frontY}, {frontX + width, frontY + height},
+                {frontX, frontY + height}});
         line(frontX, frontY, backX, backY);
         line(backX, backY, backX + width, backY);
         line(backX + width, backY, frontX + width, frontY);
@@ -257,8 +250,8 @@ public final class ElementCardIcons {
         for (int i = 0; i < 64; i++) {
             double a = start + (finish - start) * i / 64;
             double b = start + (finish - start) * (i + 1) / 64;
-            line(x + (float) Math.cos(a) * radius, y + (float) Math.sin(a) * radius,
-                    x + (float) Math.cos(b) * radius, y + (float) Math.sin(b) * radius);
+            line(x + (float) Math.cos(a) * radius, y + (float) Math.sin(a) * radius, x + (float) Math.cos(b) * radius,
+                    y + (float) Math.sin(b) * radius);
         }
     }
 
@@ -276,8 +269,7 @@ public final class ElementCardIcons {
         GL11.glDisable(GL11.GL_ALPHA_TEST);
         GL11.glDisable(GL11.GL_LIGHTING);
         GL11.glDisable(GL11.GL_POLYGON_SMOOTH);
-        GL11.glColor4f(((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f,
-                (color & 255) / 255f, 1);
+        GL11.glColor4f(((color >> 16) & 255) / 255f, ((color >> 8) & 255) / 255f, (color & 255) / 255f, 1);
         GL11.glPushMatrix();
         GL11.glTranslatef(x, y, 0);
         GL11.glScalef(size, size, 1);

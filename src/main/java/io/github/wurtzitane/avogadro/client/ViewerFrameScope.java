@@ -14,10 +14,11 @@ final class ViewerFrameScope {
     /**
      * Record holding previous frame states for camera and rotation scopes.
      *
-     * @param cameras   previous camera frame state
+     * @param cameras previous camera frame state
      * @param rotations previous rotation frame state
      */
-    private record Previous(MoleculeCamera.FrameState cameras, MoleculeRotation.FrameState rotations) {}
+    private record Previous(MoleculeCamera.FrameState cameras, MoleculeRotation.FrameState rotations) {
+    }
 
     /** Deque storing stacked previous frame states. */
     private final ArrayDeque<Previous> previous = new ArrayDeque<>();
@@ -31,7 +32,8 @@ final class ViewerFrameScope {
 
     /** Restores the previous frame states from the stack. */
     void restore() {
-        if (previous.isEmpty()) return;
+        if (previous.isEmpty())
+            return;
         Previous saved = previous.pop();
         MoleculeCamera.frame = saved.cameras();
         MoleculeRotation.frame = saved.rotations();

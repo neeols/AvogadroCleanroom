@@ -1,7 +1,17 @@
 package io.github.wurtzitane.avogadro.client.export;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Locale;
+
+import javax.annotation.Nullable;
+
 import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStore;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
@@ -13,14 +23,6 @@ import net.minecraft.util.math.BlockPos;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.client.IClientCommand;
 
-import javax.annotation.Nullable;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Locale;
-
 /**
  * Handles exports locally, while forwarding the existing server command unchanged.
  */
@@ -28,11 +30,11 @@ public final class ExportCommand extends CommandBase implements IClientCommand {
 
     /** List of supported command-line option flags for export customization. */
     private static final List<String> OPTIONS = List.of("--format", "--width", "--height", "--fps", "--speed",
-            "--rotations", "--name", "--formula", "--background", "--direction", "--appearance",
-            "--columns", "--output", "--encoder", "--text-scale");
+            "--rotations", "--name", "--formula", "--background", "--direction", "--appearance", "--columns",
+            "--output", "--encoder", "--text-scale");
 
     /**
-     * Constructs a new {@link ExportCommand} instance.
+     * Creates a {@link ExportCommand}.
      */
     public ExportCommand() {}
 
@@ -78,7 +80,8 @@ public final class ExportCommand extends CommandBase implements IClientCommand {
             if (Minecraft.getMinecraft().player == null) {
                 throw new CommandException("Join a world to use /avogadro.");
             }
-            Minecraft.getMinecraft().player.sendChatMessage("/avogadro" + (args.length == 0 ? "" : " " + String.join(" ", args)));
+            Minecraft.getMinecraft().player
+                    .sendChatMessage("/avogadro" + (args.length == 0 ? "" : " " + String.join(" ", args)));
             return;
         }
         if (args.length == 1 || args[1].equalsIgnoreCase("help")) {
@@ -101,7 +104,8 @@ public final class ExportCommand extends CommandBase implements IClientCommand {
         try {
             if (args[1].equalsIgnoreCase("3d")) {
                 if (args.length < 3 || args[2].equalsIgnoreCase("all")) {
-                    throw new IllegalArgumentException("Choose one molecule: /avogadro export 3d namespace:molecule --atom 1");
+                    throw new IllegalArgumentException(
+                            "Choose one molecule: /avogadro export 3d namespace:molecule --atom 1");
                 }
                 var selected = select(args[2], MoleculeStore.view().all()).getFirst();
                 var parsed = AtomExportOptions.parse(selected, Arrays.copyOfRange(args, 3, args.length));
@@ -112,9 +116,11 @@ public final class ExportCommand extends CommandBase implements IClientCommand {
                 int firstFlag = args.length > 2 && !args[2].startsWith("--") ? 3 : 2;
                 String target = firstFlag == 3 ? args[2] : "held";
                 String[] flags = Arrays.copyOfRange(args, firstFlag, args.length);
-                ItemStack held = Minecraft.getMinecraft().player == null ? ItemStack.EMPTY
+                ItemStack held = Minecraft.getMinecraft().player == null
+                        ? ItemStack.EMPTY
                         : Minecraft.getMinecraft().player.getHeldItemMainhand();
-                ItemExportSelection selection = ItemExportSelection.select(target, ItemExportOptions.metadata(flags), held);
+                ItemExportSelection selection = ItemExportSelection.select(target, ItemExportOptions.metadata(flags),
+                        held);
                 MoleculeMediaExport.startItem(ItemExportOptions.parse(selection, flags));
                 return;
             }
@@ -129,8 +135,9 @@ public final class ExportCommand extends CommandBase implements IClientCommand {
     /**
      * Selects and validates molecule definitions matching the requested query string.
      *
-     * @     requested the requested molecule name or ID string
-     * @param loaded    list of all loaded {@link MoleculeDef} instances
+     * @param requested the requested molecule name or ID string
+     *
+     * @param loaded list of all loaded {@link MoleculeDef} instances
      * @return list of matching molecule definitions
      * @throws IllegalArgumentException if no molecules match or multiple matches are ambiguous
      */
@@ -139,13 +146,18 @@ public final class ExportCommand extends CommandBase implements IClientCommand {
         if (requested.equalsIgnoreCase("all")) {
             return ordered;
         }
-        List<MoleculeDef> matches = ordered.stream().filter(def -> requested.indexOf(':') < 0
-                ? def.id().getPath().equals(requested) : def.id().toString().equals(requested)).toList();
+        List<MoleculeDef> matches = ordered.stream()
+                .filter(def -> requested.indexOf(':') < 0
+                        ? def.id().getPath().equals(requested)
+                        : def.id().toString().equals(requested))
+                .toList();
         if (matches.isEmpty()) {
-            throw new IllegalArgumentException("Unknown molecule " + requested + ". Use Tab to list loaded molecule IDs.");
+            throw new IllegalArgumentException(
+                    "Unknown molecule " + requested + ". Use Tab to list loaded molecule IDs.");
         }
         if (matches.size() > 1) {
-            throw new IllegalArgumentException("More than one molecule is named " + requested + "; use its full namespace:id.");
+            throw new IllegalArgumentException(
+                    "More than one molecule is named " + requested + "; use its full namespace:id.");
         }
         return matches;
     }
@@ -155,7 +167,7 @@ public final class ExportCommand extends CommandBase implements IClientCommand {
      */
     @Override
     public List<String> getTabCompletions(MinecraftServer server, ICommandSender sender, String[] args,
-                                          @Nullable BlockPos targetPos) {
+            @Nullable BlockPos targetPos) {
         if (args.length == 1) {
             return getListOfStringsMatchingLastWord(args, "export", "reload");
         }
@@ -184,7 +196,8 @@ public final class ExportCommand extends CommandBase implements IClientCommand {
             case "--details", "--name", "--formula" -> List.of("true", "false");
             case "--direction" -> List.of("forward", "reverse");
             case "--appearance" -> List.of("sphere", "cube");
-            case "--background" -> item ? List.of("#100010", "#DED8C4", "#FFFFFF", "#000000")
+            case "--background" -> item
+                    ? List.of("#100010", "#DED8C4", "#FFFFFF", "#000000")
                     : List.of("none", "#DED8C4", "#FFFFFF", "#000000");
             case "--fps" -> List.of("20", "25", "30", "50", "60", "120", "240", "360", "1000", "2000");
             case "--speed", "--seconds-per-rotation" -> List.of("6", "3", "12");

@@ -1,38 +1,44 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import io.github.wurtzitane.avogadro.molecule.BondType;
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-import io.github.wurtzitane.avogadro.molecule.StructureRecipe;
-
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.TreeMap;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import io.github.wurtzitane.avogadro.molecule.BondType;
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+import io.github.wurtzitane.avogadro.molecule.StructureRecipe;
+
 /**
- * An authored linear repeat unit and explicit terminal groups, not a molecular-weight distribution.
+ * A recipe for a single polymer chain: a repeating piece and optional groups at its ends.
  *
- * @param repeatUnit   the structure fragment representing the repeating unit
- * @param head         the zero-based index of the head atom in the repeat unit
- * @param tail         the zero-based index of the tail atom in the repeat unit
- * @param translation  the Cartesian displacement vector between successive units
- * @param linkType     the bond type used to link repeat units together
- * @param headCap      the terminal cap structure at the head of the chain
- * @param tailCap      the terminal cap structure at the tail of the chain
+ * <p>
+ * The chain preview uses a chosen repeat count. This recipe describes that authored model, rather than the range of
+ * chain lengths found in a real polymer sample. Use {@link PolymerNetworkDefinition} for branches, crosslinks, or
+ * adjustable network recipes.
+ *
+ * @param repeatUnit the structure fragment representing the repeating unit
+ * @param head the zero-based index of the head atom in the repeat unit
+ * @param tail the zero-based index of the tail atom in the repeat unit
+ * @param translation the Cartesian displacement vector between successive units
+ * @param linkType the bond type used to link repeat units together
+ * @param headCap the terminal cap structure at the head of the chain
+ * @param tailCap the terminal cap structure at the tail of the chain
  * @param previewUnits the number of units rendered in previews
  */
-public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail, Vector translation,
-                                BondType linkType, Cap headCap, Cap tailCap, int previewUnits) {
+public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail, Vector translation, BondType linkType,
+        Cap headCap, Cap tailCap, int previewUnits) {
 
     /** Metadata key used to store or retrieve polymer chain definitions. */
     public static final String METADATA_KEY = "polymer_chain";
 
     /**
-     * Cartesian displacement between successive units, in the same angstrom frame as their atoms.
+     * The x, y, and z distances from one repeat unit to the next, in the same units as the atoms.
      *
      * @param x the x-axis displacement component
      * @param y the y-axis displacement component
@@ -41,13 +47,13 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     public record Vector(double x, double y, double z) {
 
         /**
-         * Compact constructor for {@link Vector} that validates coordinate finiteness,
-         * coordinate bounds, and ensures the translation vector is non-zero.
+         * Compact constructor for {@link Vector} that validates coordinate finiteness, coordinate bounds, and ensures
+         * the translation vector is non-zero.
          *
          * @throws IllegalArgumentException if coordinates are non-finite, out of bounds, or all zero
          */
         public Vector {
-            for (double value : new double[] { x, y, z }) {
+            for (double value : new double[]{x, y, z}) {
                 if (!Double.isFinite(value) || Math.abs(value) > 1_000_000) {
                     throw new IllegalArgumentException("Polymer translation must be finite and bounded");
                 }
@@ -61,9 +67,9 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     /**
      * Coordinates are relative to the first or last repeat unit; attachment identifies the cap atom.
      *
-     * @param structure  the structure fragment of the cap
+     * @param structure the structure fragment of the cap
      * @param attachment the zero-based index of the attachment atom within the cap structure
-     * @param bondType   the bond type connecting the cap to the chain
+     * @param bondType the bond type connecting the cap to the chain
      */
     public record Cap(StructureFragment structure, int attachment, BondType bondType) {
 
@@ -83,10 +89,10 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
         /**
          * Resolves an authored attachment name without changing the cap's coordinates.
          *
-         * @param structure  the structure fragment of the cap
+         * @param structure the structure fragment of the cap
          * @param attachment the attachment name string
-         * @param bondType   the bond type connecting the cap
-         * @return a new {@link Cap} instance
+         * @param bondType the bond type connecting the cap
+         * @return a new {@link Cap}
          */
         public static Cap usingAttachment(StructureFragment structure, String attachment, BondType bondType) {
             Objects.requireNonNull(structure, "cap structure");
@@ -106,8 +112,8 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
         Objects.requireNonNull(linkType, "link type");
         Objects.requireNonNull(headCap, "head cap");
         Objects.requireNonNull(tailCap, "tail cap");
-        if (repeatUnit.isUnitCell() || head < 0 || head >= repeatUnit.atoms().size() || tail < 0 ||
-                tail >= repeatUnit.atoms().size()) {
+        if (repeatUnit.isUnitCell() || head < 0 || head >= repeatUnit.atoms().size() || tail < 0
+                || tail >= repeatUnit.atoms().size()) {
             throw new IllegalArgumentException("A polymer requires expanded repeat geometry and valid head/tail atoms");
         }
         PolymerGeometry.validateSize(repeatUnit, headCap, tailCap, previewUnits);
@@ -116,22 +122,21 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     /**
      * Resolves repeat-unit attachment names; the existing index-based record remains unchanged.
      *
-     * @param repeatUnit   the repeat unit structure fragment
-     * @param head         the head attachment name string
-     * @param tail         the tail attachment name string
-     * @param translation  the displacement vector
-     * @param linkType     the link bond type
-     * @param headCap      the head cap
-     * @param tailCap      the tail cap
+     * @param repeatUnit the repeat unit structure fragment
+     * @param head the head attachment name string
+     * @param tail the tail attachment name string
+     * @param translation the displacement vector
+     * @param linkType the link bond type
+     * @param headCap the head cap
+     * @param tailCap the tail cap
      * @param previewUnits the preview unit count
-     * @return a new {@link PolymerDefinition} instance
+     * @return a new {@link PolymerDefinition}
      */
     public static PolymerDefinition usingAttachments(StructureFragment repeatUnit, String head, String tail,
-                                                     Vector translation, BondType linkType, Cap headCap,
-                                                     Cap tailCap, int previewUnits) {
+            Vector translation, BondType linkType, Cap headCap, Cap tailCap, int previewUnits) {
         Objects.requireNonNull(repeatUnit, "repeat unit");
-        return new PolymerDefinition(repeatUnit, repeatUnit.attachment(head), repeatUnit.attachment(tail),
-                translation, linkType, headCap, tailCap, previewUnits);
+        return new PolymerDefinition(repeatUnit, repeatUnit.attachment(head), repeatUnit.attachment(tail), translation,
+                linkType, headCap, tailCap, previewUnits);
     }
 
     /**
@@ -153,8 +158,7 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     }
 
     /**
-     * Computes the specific chemical formula for a polymer chain of a given unit length,
-     * including terminal caps.
+     * Computes the specific chemical formula for a polymer chain of a given unit length, including terminal caps.
      *
      * @param units the number of units in the chain
      * @return chain formula string
@@ -194,7 +198,7 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
      * Parses a polymer definition from a JSON object.
      *
      * @param json the {@link JsonObject} to parse
-     * @return a new parsed {@link PolymerDefinition} instance
+     * @return a new parsed {@link PolymerDefinition}
      * @throws IllegalArgumentException if fields are missing, invalid, or malformed
      */
     public static PolymerDefinition fromJson(JsonObject json) {
@@ -205,20 +209,15 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
             throw new IllegalArgumentException("Polymer translation requires exactly three coordinates");
         }
         JsonArray vector = vectorValue.getAsJsonArray();
-        return new PolymerDefinition(
-                StructureRecipe.parse(required(json, "repeat_unit").getAsJsonObject()),
-                integer(json, "head"),
-                integer(json, "tail"),
+        return new PolymerDefinition(StructureRecipe.parse(required(json, "repeat_unit").getAsJsonObject()),
+                integer(json, "head"), integer(json, "tail"),
                 new Vector(number(vector.get(0)), number(vector.get(1)), number(vector.get(2))),
-                bondType(json, "link_type"),
-                cap(required(json, "head_cap").getAsJsonObject()),
-                cap(required(json, "tail_cap").getAsJsonObject()),
-                integer(json, "preview_units")
-        );
+                bondType(json, "link_type"), cap(required(json, "head_cap").getAsJsonObject()),
+                cap(required(json, "tail_cap").getAsJsonObject()), integer(json, "preview_units"));
     }
 
     /**
-     * Retrieves the polymer definition from a molecule definition's metadata if present.
+     * Returns the polymer definition from a molecule definition's metadata if present.
      *
      * @param definition the {@link MoleculeDef} to inspect
      * @return the {@link PolymerDefinition}, or {@code null} if not present
@@ -232,15 +231,12 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
      * Parses a terminal cap from a JSON object.
      *
      * @param json the cap {@link JsonObject}
-     * @return the parsed {@link Cap} instance
+     * @return the parsed {@link Cap}
      */
     private static Cap cap(JsonObject json) {
         fields(json, "structure", "attachment", "bond_type");
-        return new Cap(
-                StructureRecipe.parse(required(json, "structure").getAsJsonObject()),
-                integer(json, "attachment"),
-                bondType(json, "bond_type")
-        );
+        return new Cap(StructureRecipe.parse(required(json, "structure").getAsJsonObject()),
+                integer(json, "attachment"), bondType(json, "bond_type"));
     }
 
     /**
@@ -272,8 +268,8 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     }
 
     /**
-     * Formats an atomic composition map into a standard chemical formula string,
-     * placing Carbon (C) and Hydrogen (H) first.
+     * Formats an atomic composition map into a standard chemical formula string, placing Carbon (C) and Hydrogen (H)
+     * first.
      *
      * @param composition the composition map
      * @return formatted chemical formula string
@@ -294,9 +290,9 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     /**
      * Appends an element symbol and count to a string builder, omitting the count if it equals 1.
      *
-     * @param target  the {@link StringBuilder} target
-     * @param element the element symbol string
-     * @param count   the atom count
+     * @param target the {@link StringBuilder} target
+     * @param element the element symbol, such as C or O
+     * @param count the atom count
      */
     private static void append(StringBuilder target, String element, long count) {
         target.append(element);
@@ -308,7 +304,7 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     /**
      * Validates that all fields present in the JSON object are within the allowed set.
      *
-     * @param json    the {@link JsonObject} to check
+     * @param json the {@link JsonObject} to check
      * @param allowed array of allowed field name strings
      * @throws IllegalArgumentException if an unsupported field is encountered
      */
@@ -322,9 +318,9 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     }
 
     /**
-     * Retrieves a required JSON element from an object, throwing an exception if missing or null.
+     * Returns a required JSON element from an object, throwing an exception if missing or null.
      *
-     * @param json  the parent {@link JsonObject}
+     * @param json the parent {@link JsonObject}
      * @param field the field name
      * @return the retrieved {@link JsonElement}
      * @throws IllegalArgumentException if the field is missing or null
@@ -344,8 +340,8 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
      * @throws IllegalArgumentException if the value is not a finite number
      */
     private static double number(JsonElement value) {
-        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber() ||
-                !Double.isFinite(value.getAsDouble())) {
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
+                || !Double.isFinite(value.getAsDouble())) {
             throw new IllegalArgumentException("A polymer coordinate or index must be a finite number");
         }
         return value.getAsDouble();
@@ -354,7 +350,7 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     /**
      * Extracts a non-negative integer value from a JSON object field.
      *
-     * @param json  the parent {@link JsonObject}
+     * @param json the parent {@link JsonObject}
      * @param field the field name
      * @return the integer value
      * @throws IllegalArgumentException if the value is not a non-negative integer
@@ -370,7 +366,7 @@ public record PolymerDefinition(StructureFragment repeatUnit, int head, int tail
     /**
      * Parses a bond type enum value from a JSON object field.
      *
-     * @param json  the parent {@link JsonObject}
+     * @param json the parent {@link JsonObject}
      * @param field the field name
      * @return the resolved {@link BondType}
      * @throws IllegalArgumentException if the field is not a valid bond type name
