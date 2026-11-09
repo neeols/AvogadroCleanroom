@@ -6,7 +6,8 @@ import java.util.Set;
 
 /**
  * Generates pre-rendered native tooltip card artwork for item exports.
- * <p>Native tooltip colors composited over a solid fill, independent of the current screen.
+ * <p>
+ * Native tooltip colors composited over a solid fill, independent of the current screen.
  */
 final class TooltipCardArtwork {
 
@@ -19,20 +20,20 @@ final class TooltipCardArtwork {
     /**
      * Represents generated tooltip card artwork containing raw pixel data and protected colors.
      *
-     * @param pixels          raw ARGB pixel color array
+     * @param pixels raw ARGB pixel color array
      * @param protectedColors array of protected color integers
      */
-    record Image(int[] pixels, int[] protectedColors) {}
+    record Image(int[] pixels, int[] protectedColors) {
+    }
 
-    /** Private constructor to prevent instantiation of utility class. */
     private TooltipCardArtwork() {}
 
     /**
      * Creates and renders a tooltip card image for the specified dimensions, scale, and background.
      *
-     * @param width      card width in pixels
-     * @param height     card height in pixels
-     * @param scale      GUI scale factor
+     * @param width card width in pixels
+     * @param height card height in pixels
+     * @param scale GUI scale factor
      * @param background background RGB color integer
      * @return a new {@link Image} containing pixels and protected colors
      */
@@ -42,7 +43,9 @@ final class TooltipCardArtwork {
         Arrays.fill(pixels, fill);
         Set<Integer> colors = new LinkedHashSet<>();
         colors.add(fill);
-        int top = composite(BORDER_TOP, fill), bottom = composite(BORDER_BOTTOM, fill);
+        int borderTop = io.github.wurtzitane.avogadro.client.UiThemes.color("tooltip.border.top", BORDER_TOP);
+        int borderBottom = io.github.wurtzitane.avogadro.client.UiThemes.color("tooltip.border.bottom", BORDER_BOTTOM);
+        int top = composite(borderTop, fill), bottom = composite(borderBottom, fill);
         for (int y = scale; y < 2 * scale; y++) {
             Arrays.fill(pixels, y * width + scale, (y + 1) * width - scale, top);
         }
@@ -53,7 +56,7 @@ final class TooltipCardArtwork {
         colors.add(bottom);
         int start = 2 * scale, end = height - 2 * scale;
         for (int y = start; y < end; y++) {
-            int color = composite(interpolate(BORDER_TOP, BORDER_BOTTOM, (y - start + .5) / (end - start)), fill);
+            int color = composite(interpolate(borderTop, borderBottom, (y - start + .5) / (end - start)), fill);
             Arrays.fill(pixels, y * width + scale, y * width + 2 * scale, color);
             Arrays.fill(pixels, (y + 1) * width - 2 * scale, (y + 1) * width - scale, color);
             colors.add(color);

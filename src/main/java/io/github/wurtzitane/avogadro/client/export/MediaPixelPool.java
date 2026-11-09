@@ -1,12 +1,13 @@
 package io.github.wurtzitane.avogadro.client.export;
 
-import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.Queue;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.function.Function;
 
 /**
  * Reusable pixel memory pool for zero-allocation frame capture.
- * <p>Exactly two owned frames across capture, its queue, quantizers and writer. Never waits.
+ * <p>
+ * Exactly two owned frames across capture, its queue, quantizers and writer. Never waits.
  */
 final class MediaPixelPool implements AutoCloseable {
 
@@ -23,10 +24,10 @@ final class MediaPixelPool implements AutoCloseable {
     private volatile boolean closed;
 
     /**
-     * Constructs a new {@link MediaPixelPool} with specified dimensions and alpha settings.
+     * Creates a {@link MediaPixelPool} with specified dimensions and alpha settings.
      *
-     * @param width         image width in pixels
-     * @param height        image height in pixels
+     * @param width image width in pixels
+     * @param height image height in pixels
      * @param unpremultiply {@code true} for unpremultiplied alpha
      */
     MediaPixelPool(int width, int height, boolean unpremultiply) {
@@ -37,9 +38,10 @@ final class MediaPixelPool implements AutoCloseable {
 
     /**
      * Acquires an available pixel buffer slot from the pool.
-     * <p>Render-thread acquisition; workers only release. Exhaustion pauses capture for a tick.
+     * <p>
+     * Render-thread acquisition; workers only release. Exhaustion pauses capture for a tick.
      *
-     * @return an acquired {@link MediaPixels} instance, or {@code null} if exhausted or closed
+     * @return an acquired {@link MediaPixels}, or {@code null} if exhausted or closed
      */
     MediaPixels acquire() {
         if (closed) {
@@ -75,7 +77,7 @@ final class MediaPixelPool implements AutoCloseable {
      * Releases a pixel buffer back into the pool.
      *
      * @param pixels the {@link MediaPixels} to release
-     * @throws IllegalStateException    if the frame was already released
+     * @throws IllegalStateException if the frame was already released
      * @throws IllegalArgumentException if the frame does not belong to this pool
      */
     void release(MediaPixels pixels) {
@@ -96,9 +98,9 @@ final class MediaPixelPool implements AutoCloseable {
     /**
      * Polls and releases a queue of queued frames.
      *
-     * @param frames  queue of frames
-     * @param pixels  function mapping frames to their corresponding {@link MediaPixels}
-     * @param <T>     frame type parameter
+     * @param frames queue of frames
+     * @param pixels function mapping frames to their corresponding {@link MediaPixels}
+     * @param <T> frame type parameter
      */
     <T> void releaseQueued(Queue<T> frames, Function<T, MediaPixels> pixels) {
         T frame;

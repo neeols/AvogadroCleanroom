@@ -1,10 +1,10 @@
 package io.github.wurtzitane.avogadro.molecule;
 
+import java.util.Objects;
+
 import net.minecraft.nbt.NBTTagCompound;
 import net.minecraft.nbt.NBTUtil;
 import net.minecraft.util.ResourceLocation;
-
-import java.util.Objects;
 
 /** A normalized fluid registry ID and optional partial compound-NBT predicate. */
 public final class FluidAssociation {
@@ -20,12 +20,14 @@ public final class FluidAssociation {
      *
      * @param fluid fluid resource location
      */
-    public FluidAssociation(ResourceLocation fluid) { this(fluid, null); }
+    public FluidAssociation(ResourceLocation fluid) {
+        this(fluid, null);
+    }
 
     /**
      * Constructs a fluid association with a specified fluid resource location and optional required NBT.
      *
-     * @param fluid       fluid resource location
+     * @param fluid fluid resource location
      * @param requiredNbt required NBT compound tag predicate, or {@code null}
      */
     public FluidAssociation(ResourceLocation fluid, NBTTagCompound requiredNbt) {
@@ -34,25 +36,31 @@ public final class FluidAssociation {
     }
 
     /**
-     * Retrieves the fluid resource location.
+     * Returns the fluid resource location.
      *
      * @return fluid resource location
      */
-    public ResourceLocation fluid() { return fluid; }
+    public ResourceLocation fluid() {
+        return fluid;
+    }
 
     /**
      * Checks whether this fluid association specifies required NBT tags.
      *
      * @return {@code true} if required NBT is present, {@code false} otherwise
      */
-    public boolean hasNbt() { return requiredNbt != null; }
+    public boolean hasNbt() {
+        return requiredNbt != null;
+    }
 
     /**
-     * Retrieves a copy of the required NBT compound tag predicate.
+     * Returns a copy of the required NBT compound tag predicate.
      *
      * @return cloned NBT compound tag, or {@code null}
      */
-    public NBTTagCompound requiredNbt() { return requiredNbt == null ? null : requiredNbt.copy(); }
+    public NBTTagCompound requiredNbt() {
+        return requiredNbt == null ? null : requiredNbt.copy();
+    }
 
     /**
      * Evaluates whether actual NBT compound tags match the required predicate.
@@ -69,13 +77,15 @@ public final class FluidAssociation {
      *
      * @return selector string
      */
-    public String selector() { return fluid + (requiredNbt == null ? "" : "#" + requiredNbt); }
+    public String selector() {
+        return fluid + (requiredNbt == null ? "" : "#" + requiredNbt);
+    }
 
     /**
      * Parses a fluid association from a selector string.
      *
      * @param selector selector string
-     * @return parsed {@link FluidAssociation} instance
+     * @return parsed {@link FluidAssociation}
      */
     public static FluidAssociation parse(String selector) {
         // Use the same bounded SNBT parser as item bindings so predicate semantics stay identical.
@@ -85,7 +95,8 @@ public final class FluidAssociation {
         } catch (IllegalArgumentException exception) {
             throw new IllegalArgumentException("Invalid fluid association: " + exception.getMessage(), exception);
         }
-        if (parsed.metadata() != null) throw new IllegalArgumentException("Fluid associations do not have item metadata");
+        if (parsed.metadata() != null)
+            throw new IllegalArgumentException("Fluid associations do not have item metadata");
         return new FluidAssociation(parsed.item(), parsed.requiredNbt());
     }
 }

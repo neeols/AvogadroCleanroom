@@ -6,7 +6,8 @@ import java.util.Set;
 
 /**
  * Manages recipe viewport camera rotation, zooming, panning, and frame tracking states.
- * <p>A recipe viewport camera; ordinary tooltips, HUDs and media exports keep their own orientation.
+ * <p>
+ * A recipe viewport camera; ordinary tooltips, HUDs and media exports keep their own orientation.
  */
 public final class MoleculeCamera {
 
@@ -40,11 +41,12 @@ public final class MoleculeCamera {
     private int draggingButton = -1;
     private int lastX;
     private int lastY;
+    private long animationPause, animationOffset;
 
     /**
-     * Constructs a new {@link MoleculeCamera}.
+     * Creates a {@link MoleculeCamera}.
      *
-     * @param viewportWidth  viewport width in pixels
+     * @param viewportWidth viewport width in pixels
      * @param viewportHeight viewport height in pixels
      */
     public MoleculeCamera(int viewportWidth, int viewportHeight) {
@@ -86,6 +88,24 @@ public final class MoleculeCamera {
         return rotation;
     }
 
+    /**
+     * Continuous particle time that follows this camera's pause state. Resuming removes the paused interval,
+     * so electrons continue from their displayed positions instead of jumping to wall-clock time.
+     * @param now monotonic timestamp in nanoseconds
+     * @return animation timestamp with paused intervals removed
+     */
+    public long animationTime(long now) {
+        if (rotation.isPaused()) {
+            if (animationPause == 0) animationPause = now;
+            return animationPause - animationOffset;
+        }
+        if (animationPause != 0) {
+            animationOffset += now - animationPause;
+            animationPause = 0;
+        }
+        return now - animationOffset;
+    }
+
     /** Calculates the current yaw rotation angle. */
     public float yaw(float automaticYaw, long now) {
         return rotation.yaw(automaticYaw, now);
@@ -109,11 +129,11 @@ public final class MoleculeCamera {
     /**
      * Starts a mouse drag or rotation interaction.
      *
-     * @param mouseX       current mouse x coordinate
-     * @param mouseY       current mouse y coordinate
-     * @param button       mouse button index
+     * @param mouseX current mouse x coordinate
+     * @param mouseY current mouse y coordinate
+     * @param button mouse button index
      * @param automaticYaw automatic yaw angle
-     * @param now          current timestamp in nanoseconds
+     * @param now current timestamp in nanoseconds
      * @return {@code true} if handled, {@code false} otherwise
      */
     public boolean start(int mouseX, int mouseY, int button, float automaticYaw, long now) {
@@ -169,9 +189,10 @@ public final class MoleculeCamera {
 
     /**
      * Zooms around the pointer's offset from the viewport center, retaining its inspected model position.
-     * <p>Zoom around the pointer's offset from the viewport center, retaining its inspected model position.
+     * <p>
+     * Zoom around the pointer's offset from the viewport center, retaining its inspected model position.
      *
-     * @param delta    scroll delta amount
+     * @param delta scroll delta amount
      * @param pointerX mouse pointer x coordinate
      * @param pointerY mouse pointer y coordinate
      * @return {@code true} if handled, {@code false} otherwise
@@ -194,6 +215,7 @@ public final class MoleculeCamera {
         cancelCapture();
         panX = panY = 0;
         zoom = 1;
+        animationPause = animationOffset = 0;
     }
 
     /** Cancels active dragging and capture states. */

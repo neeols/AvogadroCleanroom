@@ -1,13 +1,16 @@
 package io.github.wurtzitane.avogadro.api;
 
-import io.github.wurtzitane.avogadro.molecule.MoleculeRegistrations;
-
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
 
+import io.github.wurtzitane.avogadro.molecule.MoleculeRegistrations;
+
 /**
- * A retained, owner-scoped source layer. 
- * <p>Runtime commits are dispatched to the server thread.
+ * Manages the molecule definitions registered by one mod or pack.
+ *
+ * <p>
+ * The owner name keeps your registrations separate from other contributors. Changes made while a server is running are
+ * applied on the server thread. The returned future completes when the new view is ready.
  */
 public final class MoleculeRegistration {
 
@@ -18,9 +21,9 @@ public final class MoleculeRegistration {
     private final boolean script;
 
     /**
-     * Constructs a new {@link MoleculeRegistration} instance with the specified owner and script flag.
+     * Creates a {@link MoleculeRegistration} with the specified owner and script flag.
      *
-     * @param owner  the owner identifier string
+     * @param owner the owner identifier string
      * @param script {@code true} if managed by a script, {@code false} otherwise
      */
     public MoleculeRegistration(String owner, boolean script) {
@@ -29,7 +32,7 @@ public final class MoleculeRegistration {
     }
 
     /**
-     * Retrieves the owner identifier of this registration layer.
+     * Returns the owner identifier of this registration layer.
      *
      * @return the owner string
      */

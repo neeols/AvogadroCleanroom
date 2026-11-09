@@ -3,6 +3,7 @@ package io.github.wurtzitane.avogadro.client;
 import io.github.wurtzitane.avogadro.Config;
 import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStore;
+
 import net.minecraft.block.Block;
 import net.minecraft.block.state.IBlockState;
 import net.minecraft.client.Minecraft;
@@ -18,6 +19,7 @@ import net.minecraftforge.fluids.IFluidBlock;
 import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.TickEvent;
+
 import org.lwjgl.opengl.Display;
 
 /** Input applies to world HUDs only; inventory tooltips never consult this controller. */
@@ -44,8 +46,7 @@ public final class WorldHudController {
     /** Previous HUD key code. */
     private static int previousKey;
 
-    /** Private constructor to prevent instantiation of utility class. */
-    private WorldHudController() {}
+    public WorldHudController() {}
 
     /**
      * Handles client tick events to update world HUD toggle state and key triggers.
@@ -54,7 +55,8 @@ public final class WorldHudController {
      */
     @SubscribeEvent
     public void tick(TickEvent.ClientTickEvent event) {
-        if (event.phase != TickEvent.Phase.END) return;
+        if (event.phase != TickEvent.Phase.END)
+            return;
         refreshWorld();
         Minecraft minecraft = Minecraft.getMinecraft();
         Config.HudMode mode = Config.WORLD_HUD_MODE.get();
@@ -65,14 +67,14 @@ public final class WorldHudController {
             previousMode = mode;
             previousKey = key;
         }
-        if (world == null || !focused() || minecraft.currentScreen != null
-                || !Config.WORLD_HUD_ENABLED.get()) {
+        if (world == null || !focused() || minecraft.currentScreen != null || !Config.WORLD_HUD_ENABLED.get()) {
             toggled = false;
             wasDown = false;
             return;
         }
         boolean down = key != 0 && AvogadroKeys.isWorldHudDown();
-        if (mode == Config.HudMode.TOGGLE && down && !wasDown) toggled = !toggled;
+        if (mode == Config.HudMode.TOGGLE && down && !wasDown)
+            toggled = !toggled;
         wasDown = down;
     }
 
@@ -85,21 +87,22 @@ public final class WorldHudController {
     public static boolean active(Config.HudProvider provider) {
         refreshWorld();
         Minecraft minecraft = Minecraft.getMinecraft();
-        if (world == null || !focused() || minecraft.currentScreen != null
-                || !Config.WORLD_HUD_ENABLED.get() || AvogadroKeys.WORLD_HUD.getKeyCode() == 0
-                || selectedProvider() != provider) return false;
+        if (world == null || !focused() || minecraft.currentScreen != null || !Config.WORLD_HUD_ENABLED.get()
+                || AvogadroKeys.WORLD_HUD.getKeyCode() == 0 || selectedProvider() != provider)
+            return false;
         return Config.WORLD_HUD_MODE.get() == Config.HudMode.HOLD ? AvogadroKeys.isWorldHudDown() : toggled;
     }
 
     /** AUTO deliberately selects one adapter, leaving every host's own text untouched. */
     public static Config.HudProvider selectedProvider() {
         Config.HudProvider requested = Config.WORLD_HUD_PROVIDER.get();
-        if (requested != Config.HudProvider.AUTO) return requested;
+        if (requested != Config.HudProvider.AUTO)
+            return requested;
         return Loader.isModLoaded("theoneprobe") ? Config.HudProvider.PROBE : Config.HudProvider.WAILA;
     }
 
     /**
-     * Retrieves the current world generation revision counter.
+     * Returns the current world generation revision counter.
      *
      * @return generation long value
      */
@@ -122,7 +125,8 @@ public final class WorldHudController {
     /** Refreshes world and connection state references, incrementing generation on change. */
     private static void refreshWorld() {
         Minecraft minecraft = Minecraft.getMinecraft();
-        if (world == minecraft.world && connection == minecraft.getConnection()) return;
+        if (world == minecraft.world && connection == minecraft.getConnection())
+            return;
         world = minecraft.world;
         connection = minecraft.getConnection();
         generation++;
@@ -132,18 +136,23 @@ public final class WorldHudController {
 
     /** Existing item/container matching, or a fluid identified directly by the world block. */
     public static MoleculeDef match(World world, BlockPos pos, RayTraceResult hit, ItemStack pick) {
-        if (world == null || !world.isRemote || pos == null || !world.isBlockLoaded(pos)) return null;
+        if (world == null || !world.isRemote || pos == null || !world.isBlockLoaded(pos))
+            return null;
         IBlockState state = world.getBlockState(pos);
         Block block = state.getBlock();
-        Fluid fluid = block instanceof IFluidBlock fluidBlock ? fluidBlock.getFluid()
+        Fluid fluid = block instanceof IFluidBlock fluidBlock
+                ? fluidBlock.getFluid()
                 : FluidRegistry.lookupFluidForBlock(block);
-        if (fluid == null && block == Blocks.FLOWING_WATER) fluid = FluidRegistry.WATER;
-        if (fluid == null && block == Blocks.FLOWING_LAVA) fluid = FluidRegistry.LAVA;
+        if (fluid == null && block == Blocks.FLOWING_WATER)
+            fluid = FluidRegistry.WATER;
+        if (fluid == null && block == Blocks.FLOWING_LAVA)
+            fluid = FluidRegistry.LAVA;
         ResourceLocation id = fluid == null ? null : MoleculeStore.lookup(fluid);
         if (id == null) {
             ItemStack stack = pick;
             if (stack == null) {
-                if (hit == null || Minecraft.getMinecraft().player == null) return null;
+                if (hit == null || Minecraft.getMinecraft().player == null)
+                    return null;
                 stack = block.getPickBlock(state, hit, world, pos, Minecraft.getMinecraft().player);
             }
             id = MoleculeStore.lookup(stack);

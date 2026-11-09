@@ -12,7 +12,8 @@ import java.util.concurrent.TimeUnit;
 
 /**
  * Asynchronous multi-threaded pipeline for quantifying and writing GIF frames.
- * <p>Two leased workspaces at most; the single writer always consumes submission order.
+ * <p>
+ * Two leased workspaces at most; the single writer always consumes submission order.
  */
 final class GifFramePipeline implements AutoCloseable {
 
@@ -32,7 +33,7 @@ final class GifFramePipeline implements AutoCloseable {
     private int submitted, written;
 
     /**
-     * Constructs a new {@link GifFramePipeline} with automatic worker thread count selection.
+     * Creates a {@link GifFramePipeline} with automatic worker thread count selection.
      *
      * @param encoder the target {@link GifMediaEncoder}
      */
@@ -43,12 +44,13 @@ final class GifFramePipeline implements AutoCloseable {
     /**
      * Calculates the optimal number of worker threads based on image dimensions.
      *
-     * @param width  image width in pixels
+     * @param width image width in pixels
      * @param height image height in pixels
      * @return recommended worker count (1 or 2)
      */
     static int workerCount(int width, int height) {
-        return (long) width * height > 1_048_576 ? 1
+        return (long) width * height > 1_048_576
+                ? 1
                 : Math.max(1, Math.min(2, Runtime.getRuntime().availableProcessors() / 2));
     }
 
@@ -56,7 +58,7 @@ final class GifFramePipeline implements AutoCloseable {
      * Constructs a fully specified {@link GifFramePipeline} with a given quantizer count.
      *
      * @param encoder the target {@link GifMediaEncoder}
-     * @param count   number of quantizer workspaces (1 or 2)
+     * @param count number of quantizer workspaces (1 or 2)
      * @throws IllegalArgumentException if count is outside the range 1..2
      */
     GifFramePipeline(GifMediaEncoder encoder, int count) {
@@ -68,20 +70,21 @@ final class GifFramePipeline implements AutoCloseable {
         for (int i = 0; i < count; i++) {
             quantizers[i] = encoder.quantizer();
         }
-        workers = new ThreadPoolExecutor(count, count, 0, TimeUnit.MILLISECONDS,
-                new ArrayBlockingQueue<>(count), runnable -> {
-            Thread thread = new Thread(runnable, "Avogadro GIF quantizer");
-            thread.setDaemon(true);
-            return thread;
-        });
+        workers = new ThreadPoolExecutor(count, count, 0, TimeUnit.MILLISECONDS, new ArrayBlockingQueue<>(count),
+                runnable -> {
+                    Thread thread = new Thread(runnable, "Avogadro GIF quantizer");
+                    thread.setDaemon(true);
+                    return thread;
+                });
     }
 
     /**
      * Submits a pixel buffer for asynchronous quantization and writing.
-     * <p>Ownership is transferred until release runs, including cancellation and failure.
+     * <p>
+     * Ownership is transferred until release runs, including cancellation and failure.
      *
-     * @param pixels  the source {@link MediaPixels}
-     * @param index   zero-based frame index
+     * @param pixels the source {@link MediaPixels}
+     * @param index zero-based frame index
      * @param release runnable action to release the pixel buffer when done
      * @throws IOException if frame submission order is violated or export fails
      */
@@ -115,7 +118,7 @@ final class GifFramePipeline implements AutoCloseable {
     }
 
     /**
-     * Retrieves the count of successfully written frames.
+     * Returns the count of successfully written frames.
      *
      * @return written frames count
      */
@@ -195,9 +198,9 @@ final class GifFramePipeline implements AutoCloseable {
         Future<BufferedImage> future;
 
         /**
-         * Constructs a new {@link Pending} frame task.
+         * Creates a {@link Pending} frame task.
          *
-         * @param index   frame index
+         * @param index frame index
          * @param release release runnable
          */
         Pending(int index, Runnable release) {

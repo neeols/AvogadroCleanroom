@@ -3,17 +3,21 @@ package io.github.wurtzitane.avogadro.api;
 import java.util.Map;
 
 /**
- * Explicit inputs to a reproducible finite polymer realization.
+ * Settings for building one polymer-network model.
  *
- * @param counts        map of component or monomer counts
- * @param probabilities map of probability values for linking or branching
- * @param seed          the random seed ensuring reproducibility
+ * <p>
+ * Use the parameter names declared by {@link PolymerNetworkDefinition}. Missing values use that definition's defaults.
+ * The seed fixes the outcome of random choices.
+ *
+ * @param counts repeat counts by parameter name
+ * @param probabilities branch or crosslink chances, from 0 (never) to 1 (always)
+ * @param seed a number used to repeat the same random choices
  */
 public record NetworkPreviewRequest(Map<String, Integer> counts, Map<String, Double> probabilities, long seed) {
 
     /**
-     * Compact constructor for {@link NetworkPreviewRequest} that creates immutable defensive copies
-     * of all internal maps and validates that all probability values are finite and lie between 0.0 and 1.0 inclusive.
+     * Compact constructor for {@link NetworkPreviewRequest} that creates immutable defensive copies of all internal
+     * maps and validates that all probability values are finite and lie between 0.0 and 1.0 inclusive.
      *
      * @throws IllegalArgumentException if any probability value is non-finite or outside the range [0, 1]
      */

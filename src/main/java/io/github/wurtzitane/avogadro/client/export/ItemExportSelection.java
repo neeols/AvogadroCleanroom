@@ -1,8 +1,11 @@
 package io.github.wurtzitane.avogadro.client.export;
 
+import java.util.Objects;
+
 import io.github.wurtzitane.avogadro.client.PixelFont;
 import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStore;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.init.Items;
@@ -11,15 +14,13 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraft.util.text.TextFormatting;
 
-import java.util.Objects;
-
 /**
  * Represents an accepted item stack and its presentation metadata, independent of subsequent inventory changes.
  *
- * @param stack      the copied item stack being exported
+ * @param stack the copied item stack being exported
  * @param definition the matching {@link MoleculeDef} for the item
- * @param title      the formatted display title of the item
- * @param font       the font renderer used for drawing item text
+ * @param title the formatted display title of the item
+ * @param font the font renderer used for drawing item text
  */
 public record ItemExportSelection(ItemStack stack, MoleculeDef definition, String title, FontRenderer font) {
 
@@ -35,7 +36,9 @@ public record ItemExportSelection(ItemStack stack, MoleculeDef definition, Strin
     }
 
     /**
-     * {@inheritDoc}
+     * Returns a copy of the selected item stack.
+     *
+     * @return a defensive copy of the item stack
      */
     @Override
     public ItemStack stack() {
@@ -45,17 +48,18 @@ public record ItemExportSelection(ItemStack stack, MoleculeDef definition, Strin
     /**
      * Selects and resolves an item export selection from a target specifier, metadata, and held stack.
      *
-     * @param target   the target specifier (e.g., "held" or a registry ID)
+     * @param target the target specifier (e.g., "held" or a registry ID)
      * @param metadata optional item metadata value
-     * @param held     the player's currently held mainhand stack
-     * @return a new validated {@link ItemExportSelection} instance
+     * @param held the player's currently held mainhand stack
+     * @return a new validated {@link ItemExportSelection}
      * @throws IllegalArgumentException if the stack cannot be resolved or lacks a matching molecule definition
      */
     public static ItemExportSelection select(String target, Integer metadata, ItemStack held) {
         ItemStack stack = resolveStack(target, metadata, held);
         MoleculeDef definition = MoleculeStore.view().find(stack);
         if (definition == null) {
-            throw new IllegalArgumentException("No loaded molecule matches this item. Use a bound item or filled container.");
+            throw new IllegalArgumentException(
+                    "No loaded molecule matches this item. Use a bound item or filled container.");
         }
         FontRenderer font = stack.getItem().getFontRenderer(stack);
         font = PixelFont.wrap(font);
@@ -65,9 +69,9 @@ public record ItemExportSelection(ItemStack stack, MoleculeDef definition, Strin
     /**
      * Resolves a target item string and metadata into an active {@link ItemStack}.
      *
-     * @param target   target specifier string
+     * @param target target specifier string
      * @param metadata optional metadata integer
-     * @param held     held mainhand stack
+     * @param held held mainhand stack
      * @return the resolved {@link ItemStack}
      * @throws IllegalArgumentException if arguments or registry lookups are invalid
      */
@@ -104,8 +108,10 @@ public record ItemExportSelection(ItemStack stack, MoleculeDef definition, Strin
      * @return formatted title string
      */
     static String title(ItemStack stack) {
-        return stack.getItem().getForgeRarity(stack).getColor()
-                + (stack.hasDisplayName() ? TextFormatting.ITALIC.toString() : "")
-                + stack.getDisplayName() + TextFormatting.RESET;
+        var rarity = stack.getItem().getForgeRarity(stack).getColor();
+        // Common items use the card's contrasting ink; rarity colors retain their meaning.
+        return (rarity == TextFormatting.WHITE ? TextFormatting.RESET : rarity)
+                + (stack.hasDisplayName() ? TextFormatting.ITALIC.toString() : "") + stack.getDisplayName()
+                + TextFormatting.RESET;
     }
 }

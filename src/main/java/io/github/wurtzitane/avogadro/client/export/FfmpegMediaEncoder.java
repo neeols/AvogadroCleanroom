@@ -60,17 +60,18 @@ public final class FfmpegMediaEncoder implements MediaEncoder {
     private boolean finished;
 
     /**
-     * Constructs a new {@link FfmpegMediaEncoder} starting an FFmpeg process writing to a temporary MP4 file.
+     * Creates a {@link FfmpegMediaEncoder} starting an FFmpeg process writing to a temporary MP4 file.
      *
      * @param temporaryOutput path to the temporary output file
-     * @param width           video width in pixels (must be an even number >= 2)
-     * @param height          video height in pixels (must be an even number >= 2)
-     * @param fps             frames per second
-     * @param executable      path or command name of the FFmpeg executable
-     * @throws IOException              if process startup or pipe opening fails
+     * @param width video width in pixels (must be an even number >= 2)
+     * @param height video height in pixels (must be an even number >= 2)
+     * @param fps frames per second
+     * @param executable path or command name of the FFmpeg executable
+     * @throws IOException if process startup or pipe opening fails
      * @throws IllegalArgumentException if dimensions are not even or frame rate is invalid
      */
-    public FfmpegMediaEncoder(Path temporaryOutput, int width, int height, int fps, String executable) throws IOException {
+    public FfmpegMediaEncoder(Path temporaryOutput, int width, int height, int fps, String executable)
+            throws IOException {
         if (width < 2 || height < 2 || (width & 1) != 0 || (height & 1) != 0) {
             throw new IllegalArgumentException("H.264 dimensions must be positive even numbers");
         }
@@ -81,12 +82,11 @@ public final class FfmpegMediaEncoder implements MediaEncoder {
         this.height = height;
         pixels = new int[width];
         row = new byte[Math.multiplyExact(width, 4)];
-        process = new ProcessBuilder(executable, "-hide_banner", "-loglevel", "error", "-nostdin", "-y",
-                "-f", "rawvideo", "-pixel_format", "rgba", "-video_size", width + "x" + height,
-                "-framerate", Integer.toString(fps), "-i", "pipe:0", "-an", "-c:v", "libx264",
-                "-preset", "medium", "-crf", "18", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
-                "-f", "mp4", temporaryOutput.toAbsolutePath().toString())
-                .redirectErrorStream(true).start();
+        process = new ProcessBuilder(executable, "-hide_banner", "-loglevel", "error", "-nostdin", "-y", "-f",
+                "rawvideo", "-pixel_format", "rgba", "-video_size", width + "x" + height, "-framerate",
+                Integer.toString(fps), "-i", "pipe:0", "-an", "-c:v", "libx264", "-preset", "medium", "-crf", "18",
+                "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-f", "mp4",
+                temporaryOutput.toAbsolutePath().toString()).redirectErrorStream(true).start();
         log = new ProcessLog(process.getInputStream());
         input = new BufferedOutputStream(process.getOutputStream(), 64 * 1024);
     }
@@ -108,7 +108,8 @@ public final class FfmpegMediaEncoder implements MediaEncoder {
         }
         String encoder = probe(executable, "-hide_banner", "-h", "encoder=libx264");
         if (!X264_HEADER.matcher(encoder).find()) {
-            throw new IOException("This FFmpeg build has no libx264 H.264 encoder. Install a build with libx264 or use GIF.");
+            throw new IOException(
+                    "This FFmpeg build has no libx264 H.264 encoder. Install a build with libx264 or use GIF.");
         }
         return executable.toAbsolutePath().normalize().toString();
     }
@@ -130,7 +131,8 @@ public final class FfmpegMediaEncoder implements MediaEncoder {
             } else {
                 boolean windows = System.getProperty("os.name", "").toLowerCase(Locale.ROOT).contains("win");
                 String[] names = windows && !command.toLowerCase(Locale.ROOT).endsWith(".exe")
-                        ? new String[]{command + ".exe", command} : new String[]{command};
+                        ? new String[]{command + ".exe", command}
+                        : new String[]{command};
                 String search = System.getenv("PATH");
                 if (search != null) {
                     for (String directory : search.split(Pattern.quote(java.io.File.pathSeparator))) {
@@ -319,7 +321,8 @@ public final class FfmpegMediaEncoder implements MediaEncoder {
             }
             try {
                 input.close();
-            } catch (IOException ignored) { }
+            } catch (IOException ignored) {
+            }
             log.close();
         } finally {
             if (interrupted) {
@@ -343,7 +346,7 @@ public final class FfmpegMediaEncoder implements MediaEncoder {
         private final Thread reader;
 
         /**
-         * Constructs a new {@link ProcessLog} and starts a background reader thread.
+         * Creates a {@link ProcessLog} and starts a background reader thread.
          *
          * @param stream process input stream
          */
@@ -367,10 +370,11 @@ public final class FfmpegMediaEncoder implements MediaEncoder {
                         }
                     }
                 }
-            } catch (IOException ignored) { }
+            } catch (IOException ignored) {
+            }
         }
 
-        /** Retrieves the stripped process log text. */
+        /** Returns the stripped process log text. */
         String text() {
             synchronized (tail) {
                 return tail.toString().strip();
@@ -389,7 +393,8 @@ public final class FfmpegMediaEncoder implements MediaEncoder {
         public void close() {
             try {
                 stream.close();
-            } catch (IOException ignored) { }
+            } catch (IOException ignored) {
+            }
         }
     }
 }

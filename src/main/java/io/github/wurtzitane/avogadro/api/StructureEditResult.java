@@ -4,8 +4,11 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * Immutable edited geometry and a source-index map.
- * <p>Removed atoms map to -1.
+ * The edited fragment and a map showing where each original atom ended up.
+ *
+ * <p>
+ * Look up an original atom's index in {@link #oldToNew()} to get its final index. A value of -1 means that atom was
+ * removed.
  *
  * @param fragment the edited {@link StructureFragment} result
  * @param oldToNew immutable list mapping original atom indices to their new indices, or -1 if removed
@@ -13,12 +16,13 @@ import java.util.Objects;
 public record StructureEditResult(StructureFragment fragment, List<Integer> oldToNew) {
 
     /**
-     * Compact constructor for {@link StructureEditResult} that validates null safety, creates
-     * an immutable defensive copy of the index mapping list, and ensures all mapped indices
-     * fall within valid bounds of the resulting fragment.
+     * Compact constructor for {@link StructureEditResult} that validates null safety, creates an immutable defensive
+     * copy of the index mapping list, and ensures all mapped indices fall within valid bounds of the resulting
+     * fragment.
      *
-     * @throws NullPointerException     if the fragment is null
-     * @throws IllegalArgumentException if any mapped index is out of bounds (< -1 or >= fragment atom count)
+     * @throws NullPointerException if the fragment is null
+     * @throws IllegalArgumentException if any mapped index is out of bounds ({@code < -1} or
+     *     {@code >= fragment.atoms().size()})
      */
     public StructureEditResult {
         Objects.requireNonNull(fragment, "fragment");

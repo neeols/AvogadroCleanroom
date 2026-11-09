@@ -1,19 +1,19 @@
 package io.github.wurtzitane.avogadro.item;
 
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.relauncher.Side;
-import net.minecraftforge.fml.relauncher.SideOnly;
-
-import io.github.wurtzitane.avogadro.api.MoleculeWeight;
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
-
 import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
 import java.util.StringJoiner;
 import java.util.WeakHashMap;
+
+import io.github.wurtzitane.avogadro.api.MoleculeWeight;
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
+
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.relauncher.Side;
+import net.minecraftforge.fml.relauncher.SideOnly;
 
 /** Cached immutable metadata; independent of the item registry and mutable ItemStacks. */
 final class MoleculeItemMetadata {
@@ -43,11 +43,10 @@ final class MoleculeItemMetadata {
     private static final Map<MoleculeDef, Optional<String>> WEIGHT_TEXT = Collections
             .synchronizedMap(new WeakHashMap<>());
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeItemMetadata() {}
 
     /**
-     * Retrieves a validated resource location identifier for the given text string.
+     * Returns a validated resource location identifier for the given text string.
      *
      * @param text identifier text string
      * @return validated resource location, or {@code null}
@@ -55,7 +54,8 @@ final class MoleculeItemMetadata {
     // Cache the value read now, never an ItemStack or its mutable NBT compound. Oversized NBT
     // strings use the original validation path without occupying persistent cache storage.
     static ResourceLocation validatedId(String text) {
-        if (text.length() > 1024) return parseId(text).orElse(null);
+        if (text.length() > 1024)
+            return parseId(text).orElse(null);
         synchronized (IDS) {
             return IDS.computeIfAbsent(text, MoleculeItemMetadata::parseId).orElse(null);
         }
@@ -76,19 +76,21 @@ final class MoleculeItemMetadata {
     }
 
     /**
-     * Retrieves or generates a formatted fallback name for a molecule definition.
+     * Returns or generates a formatted fallback name for a molecule definition.
      *
      * @param definition molecule definition
      * @return formatted fallback name string
      */
     static String fallbackName(MoleculeDef definition) {
-        if (definition.name() != null) return definition.name();
+        if (definition.name() != null)
+            return definition.name();
         return FALLBACK_NAMES.computeIfAbsent(definition, value -> {
             String path = value.id().getPath();
             String[] words = path.substring(path.lastIndexOf('/') + 1).replace('_', ' ').replace('-', ' ').split(" +");
             StringJoiner result = new StringJoiner(" ");
             for (String word : words)
-                if (!word.isEmpty()) result.add(Character.toUpperCase(word.charAt(0)) + word.substring(1));
+                if (!word.isEmpty())
+                    result.add(Character.toUpperCase(word.charAt(0)) + word.substring(1));
             return result.toString();
         });
     }
@@ -102,16 +104,19 @@ final class MoleculeItemMetadata {
     static Optional<String> weightText(MoleculeDef definition) {
         return WEIGHT_TEXT.computeIfAbsent(definition, value -> {
             try {
-                if (value.inspection().metadata().containsKey(io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY))
+                if (value.inspection().metadata()
+                        .containsKey(io.github.wurtzitane.avogadro.api.PolymerNetworkDefinition.METADATA_KEY))
                     return Optional.of(MoleculeWeight.calculate(value.structure()).molarMassText());
-                if (io.github.wurtzitane.avogadro.api.MoleculeClassification.of(value) ==
-                        io.github.wurtzitane.avogadro.api.MoleculeClassification.POLYMER)
-                    return Optional.of(MoleculeWeight.calculate(
-                            io.github.wurtzitane.avogadro.api.PolymerDefinition.of(value).repeatUnitFormula()).molarMassText());
-                return Optional.of((io.github.wurtzitane.avogadro.api.MoleculeClassification.of(value) ==
-                        io.github.wurtzitane.avogadro.api.MoleculeClassification.CRYSTAL ?
-                        MoleculeWeight.calculate(value).molarMassText() :
-                        MoleculeWeight.calculate(value).entityMassText()));
+                if (io.github.wurtzitane.avogadro.api.MoleculeClassification
+                        .of(value) == io.github.wurtzitane.avogadro.api.MoleculeClassification.POLYMER)
+                    return Optional.of(MoleculeWeight
+                            .calculate(
+                                    io.github.wurtzitane.avogadro.api.PolymerDefinition.of(value).repeatUnitFormula())
+                            .molarMassText());
+                return Optional.of((io.github.wurtzitane.avogadro.api.MoleculeClassification
+                        .of(value) == io.github.wurtzitane.avogadro.api.MoleculeClassification.CRYSTAL
+                                ? MoleculeWeight.calculate(value).molarMassText()
+                                : MoleculeWeight.calculate(value).entityMassText()));
             } catch (IllegalArgumentException unsupported) {
                 return Optional.empty();
             }
@@ -119,7 +124,7 @@ final class MoleculeItemMetadata {
     }
 
     /**
-     * Retrieves the localized display name for a molecule definition on the client side.
+     * Returns the localized display name for a molecule definition on the client side.
      *
      * @param definition molecule definition
      * @return localized display name string
@@ -140,7 +145,7 @@ final class MoleculeItemMetadata {
         private static long revision = Long.MIN_VALUE;
 
         /**
-         * Retrieves the localized name for a molecule definition, clearing cache on revision changes.
+         * Returns the localized name for a molecule definition, clearing cache on revision changes.
          *
          * @param definition molecule definition
          * @return translated display name string
@@ -152,11 +157,14 @@ final class MoleculeItemMetadata {
                 revision = current;
             }
             return NAMES.computeIfAbsent(definition, value -> {
-                if (value.name() != null) return net.minecraft.client.resources.I18n.hasKey(value.name()) ?
-                        net.minecraft.client.resources.I18n.format(value.name()) : value.name();
+                if (value.name() != null)
+                    return net.minecraft.client.resources.I18n.hasKey(value.name())
+                            ? net.minecraft.client.resources.I18n.format(value.name())
+                            : value.name();
                 String key = "molecule." + value.id().getNamespace() + "." + value.id().getPath().replace('/', '.');
-                return net.minecraft.client.resources.I18n.hasKey(key) ?
-                        net.minecraft.client.resources.I18n.format(key) : fallbackName(value);
+                return net.minecraft.client.resources.I18n.hasKey(key)
+                        ? net.minecraft.client.resources.I18n.format(key)
+                        : fallbackName(value);
             });
         }
     }

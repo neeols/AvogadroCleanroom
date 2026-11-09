@@ -1,8 +1,12 @@
 package io.github.wurtzitane.avogadro.molecule;
 
+import java.io.IOException;
+import java.nio.file.Path;
+
 import io.github.wurtzitane.avogadro.Avogadro;
 import io.github.wurtzitane.avogadro.api.MoleculeView;
 import io.github.wurtzitane.avogadro.api.MoleculesChangedEvent;
+
 import net.minecraft.command.CommandBase;
 import net.minecraft.command.CommandException;
 import net.minecraft.command.ICommandSender;
@@ -12,9 +16,6 @@ import net.minecraft.server.MinecraftServer;
 import net.minecraft.util.text.TextComponentString;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.common.gameevent.PlayerEvent;
-
-import java.io.IOException;
-import java.nio.file.Path;
 
 /** Server snapshots are independent of the integrated client's visible store. */
 public final class MoleculeServerEvents {
@@ -33,21 +34,23 @@ public final class MoleculeServerEvents {
      *
      * @param defaults default resource data
      * @param instance instance resource data
-     * @param world    world-level resource data
+     * @param world world-level resource data
      */
-    private record Sources(MoleculeResources.Data defaults, MoleculeResources.Data instance, MoleculeResources.Data world) {}
+    private record Sources(MoleculeResources.Data defaults, MoleculeResources.Data instance,
+            MoleculeResources.Data world) {
+    }
 
     /**
      * Container record representing a prepared server snapshot.
      *
-     * @param data    molecule resource data
+     * @param data molecule resource data
      * @param payload encoded byte array payload
-     * @param view    molecule view instance
+     * @param view molecule view instance
      */
-    static record Snapshot(MoleculeResources.Data data, byte[] payload, MoleculeView view) {}
+    static record Snapshot(MoleculeResources.Data data, byte[] payload, MoleculeView view) {
+    }
 
-    /** Private constructor to prevent instantiation of utility class. */
-    private MoleculeServerEvents() {}
+    public MoleculeServerEvents() {}
 
     /**
      * Starts server-side molecule event handling and reloads configurations.
@@ -71,16 +74,18 @@ public final class MoleculeServerEvents {
     }
 
     /**
-     * Retrieves the active Minecraft server instance.
+     * Returns the active Minecraft server instance.
      *
-     * @return active {@link MinecraftServer} instance, or {@code null}
+     * @return active {@link MinecraftServer}, or {@code null}
      */
-    static MinecraftServer activeServer() { return activeServer; }
+    static MinecraftServer activeServer() {
+        return activeServer;
+    }
 
     /**
-     * Retrieves the current molecule view from the active snapshot.
+     * Returns the current molecule view from the active snapshot.
      *
-     * @return current {@link MoleculeView} instance
+     * @return current {@link MoleculeView}
      */
     public static MoleculeView view() {
         Snapshot snapshot = current;
@@ -88,9 +93,9 @@ public final class MoleculeServerEvents {
     }
 
     /**
-     * Retrieves the current resource data from the active snapshot.
+     * Returns the current resource data from the active snapshot.
      *
-     * @return current {@link MoleculeResources.Data} instance
+     * @return current {@link MoleculeResources.Data}
      */
     public static MoleculeResources.Data data() {
         Snapshot snapshot = current;
@@ -133,13 +138,15 @@ public final class MoleculeServerEvents {
     /**
      * Computes registration sources combining current sources with mod and script layers.
      *
-     * @param mods    mod molecule resource data
+     * @param mods mod molecule resource data
      * @param scripts script molecule resource data
-     * @return composed {@link MoleculeResources.Data} instance
+     * @return composed {@link MoleculeResources.Data}
      */
     static MoleculeResources.Data registrationSources(MoleculeResources.Data mods, MoleculeResources.Data scripts) {
         Sources selected = sources;
-        if (selected == null) selected = new Sources(MoleculeRegistrations.defaults(), MoleculeResources.Data.empty(), MoleculeResources.Data.empty());
+        if (selected == null)
+            selected = new Sources(MoleculeRegistrations.defaults(), MoleculeResources.Data.empty(),
+                    MoleculeResources.Data.empty());
         return compose(selected, mods, scripts);
     }
 
@@ -147,11 +154,12 @@ public final class MoleculeServerEvents {
      * Merges multiple source data layers and mod/script layers into a unified data structure.
      *
      * @param sources sources container
-     * @param mods    mod resource data
+     * @param mods mod resource data
      * @param scripts script resource data
-     * @return merged {@link MoleculeResources.Data} instance
+     * @return merged {@link MoleculeResources.Data}
      */
-    private static MoleculeResources.Data compose(Sources sources, MoleculeResources.Data mods, MoleculeResources.Data scripts) {
+    private static MoleculeResources.Data compose(Sources sources, MoleculeResources.Data mods,
+            MoleculeResources.Data scripts) {
         return MoleculeResources.mergeAll(sources.defaults, mods, sources.instance, sources.world, scripts);
     }
 
@@ -159,7 +167,7 @@ public final class MoleculeServerEvents {
      * Prepares a server snapshot by loading definitions, encoding payloads, and building views.
      *
      * @param next target resource data
-     * @return prepared {@link Snapshot} instance
+     * @return prepared {@link Snapshot}
      * @throws CommandException if encoding fails
      */
     static Snapshot prepareSnapshot(MoleculeResources.Data next) throws CommandException {
@@ -170,7 +178,8 @@ public final class MoleculeServerEvents {
         try {
             payload = MoleculeSync.encode(selected);
         } catch (IOException invalid) {
-            throw new CommandException("Avogadro reload rejected: " + invalid.getMessage() + ". Previous snapshot retained.");
+            throw new CommandException(
+                    "Avogadro reload rejected: " + invalid.getMessage() + ". Previous snapshot retained.");
         }
         var itemTags = MoleculeResources.parseTags(next.itemTags());
         var fluidTags = MoleculeResources.parseTags(next.fluidTags());
@@ -189,11 +198,15 @@ public final class MoleculeServerEvents {
         MinecraftServer server = activeServer;
         if (server != null) {
             for (EntityPlayerMP player : server.getPlayerList().getPlayers()) {
-                try { MoleculeNetwork.sendTo(player, snapshot.payload); }
-                catch (RuntimeException failure) { Avogadro.LOGGER.warn("Cannot send molecule snapshot to {}", player.getName(), failure); }
+                try {
+                    MoleculeNetwork.sendTo(player, snapshot.payload);
+                } catch (RuntimeException failure) {
+                    Avogadro.LOGGER.warn("Cannot send molecule snapshot to {}", player.getName(), failure);
+                }
             }
         }
-        MoleculeRegistrations.notifyChanged(new MoleculesChangedEvent(MoleculesChangedEvent.Scope.SERVER, snapshot.view, ""));
+        MoleculeRegistrations
+                .notifyChanged(new MoleculesChangedEvent(MoleculesChangedEvent.Scope.SERVER, snapshot.view, ""));
     }
 
     /**
@@ -213,7 +226,7 @@ public final class MoleculeServerEvents {
     public static final class ReloadCommand extends CommandBase {
 
         /**
-         * Retrieves the command name.
+         * Returns the command name.
          *
          * @return command name string
          */
@@ -223,7 +236,7 @@ public final class MoleculeServerEvents {
         }
 
         /**
-         * Retrieves the command usage string.
+         * Returns the command usage string.
          *
          * @param sender command sender instance
          * @return usage string
@@ -234,7 +247,7 @@ public final class MoleculeServerEvents {
         }
 
         /**
-         * Retrieves the required permission level for executing the command.
+         * Returns the required permission level for executing the command.
          *
          * @return permission level integer
          */
@@ -248,7 +261,7 @@ public final class MoleculeServerEvents {
          *
          * @param server server instance
          * @param sender command sender instance
-         * @param args   command arguments array
+         * @param args command arguments array
          * @throws CommandException if execution fails
          */
         @Override
@@ -257,8 +270,8 @@ public final class MoleculeServerEvents {
                 throw new WrongUsageException(getUsage(sender));
             }
             int count = reload(server);
-            sender.sendMessage(new TextComponentString("Avogadro: reloaded " + count
-                    + " molecules and sent the snapshot to connected Avogadro clients."));
+            sender.sendMessage(new TextComponentString(
+                    "Avogadro: reloaded " + count + " molecules and sent the snapshot to connected Avogadro clients."));
         }
     }
 }

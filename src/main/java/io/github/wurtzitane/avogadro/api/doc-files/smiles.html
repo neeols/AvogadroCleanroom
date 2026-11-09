@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><title>SMILES and JSON: groups, radicals and geometry</title></head><body><div class="av-guide"><nav class="av-breadcrumb" aria-label="Guide navigation"><a href="../../../../../../index.html">Avogadro API</a><a href="examples.html">All examples</a><a href="chirality.html">Chirality</a><a href="smiles.html">SMILES and JSON</a></nav><h1>SMILES and JSON: groups, radicals and geometry</h1><p class="av-lead">Choose a molecular graph with SMILES, add explicit authoring metadata in JSON or the shared Java/Groovy API, then apply bounded geometric constraints when needed.</p><p>Java examples run in your host mod’s common initialization with <code>import io.github.wurtzitane.avogadro.api.*;</code>. Groovy examples belong in a GroovyScript post-init script; both sides need GroovyScript, but connected clients need no local script. JSON is one definition per file under <code>config/avogadro/server/data/chemistry/molecules/</code>; the filename supplies the path of the ID. Use <code>/avogadro reload</code> for JSON changes; restart for script changes. The library registers none of these samples automatically.</p><p><a href="ChemistryRecipes.java">Complete Java companion</a> · <a href="ChemistryRecipes.groovy">Complete Groovy companion</a></p><div class="av-language"><span class="av-language-controls">Example language</span><noscript>All three variants are shown when JavaScript is unavailable.</noscript></div><h2>Supported SMILES surface</h2><table><caption>Notation accepted by this implementation and its limits</caption><thead><tr><th>Feature</th><th>Example</th><th>Behavior</th></tr></thead><tbody><tr><td>Organic elements / branching</td><td>CC(O)C</td><td>Implicit H follows the existing valence rules; a schematic layout is generated.</td></tr><tr><td>Single, double, triple bonds</td><td>CC, C=C, CC#N</td><td>Explicit multiplicity is rendered. The ordinary parser does not support quadruple-bond SMILES; use typed explicit bonds.</td></tr><tr><td>Aromatic atoms</td><td>c1ccccc1, [nH]1cccc1</td><td>Existing schematic aromatic behavior is retained; aromatic links are drawn as single connections in the legacy layout, not an aromaticity/bond-order solver.</td></tr><tr><td>Ring closures</td><td>C1CCCCC1, C%12CCCCC%12</td><td>Digits pair connections, not atoms; tetrahedral ring ordering is handled by the stereo parser.</td></tr><tr><td>Disconnected components</td><td>[Na+].[Cl-]</td><td>Both ions are rendered separately; the dot is not a bond and does not supply a crystal packing.</td></tr><tr><td>Bracket atoms / H</td><td>[C], [CH3], [NH4+]</td><td>Bracket H counts are explicit; charge does not automatically create examiner electron-shell data.</td></tr><tr><td>Isotope prefix</td><td>[13C]</td><td>The element is read correctly. Stereo input retains isotope mass for CIP; average-mass and nuclear-examiner APIs remain separate.</td></tr><tr><td>Tetrahedral chirality</td><td>C[C@H](O)C(=O)O</td><td>Validated 3D coordinates and R/S; see the dedicated chirality guide and limits.</td></tr><tr><td>External groups</td><td>*CCO, [*:1]CCO</td><td>Standard wildcard becomes an R or R1 placeholder, with no invented internal atoms or mass.</td></tr><tr><td>Unsupported forms</td><td>F/C=C/F, reaction &gt;, CXSMILES</td><td>Directional-bond stereochemistry and reactions are rejected; do not treat this as a complete chemistry parser.</td></tr></tbody></table><figure><img src="chemistry-smiles.png" alt="Aromatic ring, triple bonds, double bonds and disconnected ions" style="max-width:100%;height:auto"><figcaption>Aromatic ring, triple bonds, double bonds and disconnected ions — captured from the actual Minecraft client framebuffer using Avogadro’s production renderer, with every stored atom and hydrogen present.</figcaption></figure><div class="av-example" data-example="benzene"><div data-language="java"><pre><code class="language-java">AvogadroApi.owner(&quot;chemistry_guide&quot;).register(
+    new MoleculeBuilder(&quot;chemistry:benzene&quot;).smiles(&quot;c1ccccc1&quot;));</code></pre></div><div data-language="groovy"><pre><code class="language-groovy">import io.github.wurtzitane.avogadro.api.*
+
+mods.avogadro.molecules.register(
+    new MoleculeBuilder(&quot;chemistry:benzene&quot;).smiles(&quot;c1ccccc1&quot;))</code></pre></div><div data-language="json"><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Benzene · aromatic ring&quot;,
+  &quot;smiles&quot;: &quot;c1ccccc1&quot;
+}</code></pre></div></div><p><a href="chemistry-benzene.json">Download this definition</a></p><div class="av-example" data-example="nitrile"><div data-language="java"><pre><code class="language-java">AvogadroApi.owner(&quot;chemistry_guide&quot;).register(
+    new MoleculeBuilder(&quot;chemistry:nitrile&quot;).smiles(&quot;CC#N&quot;));</code></pre></div><div data-language="groovy"><pre><code class="language-groovy">import io.github.wurtzitane.avogadro.api.*
+
+mods.avogadro.molecules.register(
+    new MoleculeBuilder(&quot;chemistry:nitrile&quot;).smiles(&quot;CC#N&quot;))</code></pre></div><div data-language="json"><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Acetonitrile · triple bond&quot;,
+  &quot;smiles&quot;: &quot;CC#N&quot;
+}</code></pre></div></div><p><a href="chemistry-nitrile.json">Download this definition</a></p><div class="av-example" data-example="carbon_dioxide"><div data-language="java"><pre><code class="language-java">AvogadroApi.owner(&quot;chemistry_guide&quot;).register(
+    new MoleculeBuilder(&quot;chemistry:carbon_dioxide&quot;).smiles(&quot;O=C=O&quot;));</code></pre></div><div data-language="groovy"><pre><code class="language-groovy">import io.github.wurtzitane.avogadro.api.*
+
+mods.avogadro.molecules.register(
+    new MoleculeBuilder(&quot;chemistry:carbon_dioxide&quot;).smiles(&quot;O=C=O&quot;))</code></pre></div><div data-language="json"><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Carbon dioxide · double bonds&quot;,
+  &quot;smiles&quot;: &quot;O=C=O&quot;
+}</code></pre></div></div><p><a href="chemistry-carbon_dioxide.json">Download this definition</a></p><div class="av-example" data-example="ions"><div data-language="java"><pre><code class="language-java">AvogadroApi.owner(&quot;chemistry_guide&quot;).register(
+    new MoleculeBuilder(&quot;chemistry:ions&quot;).smiles(&quot;[Na+].[Cl-]&quot;));</code></pre></div><div data-language="groovy"><pre><code class="language-groovy">import io.github.wurtzitane.avogadro.api.*
+
+mods.avogadro.molecules.register(
+    new MoleculeBuilder(&quot;chemistry:ions&quot;).smiles(&quot;[Na+].[Cl-]&quot;))</code></pre></div><div data-language="json"><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Sodium / chloride · separate components&quot;,
+  &quot;smiles&quot;: &quot;[Na+].[Cl-]&quot;
+}</code></pre></div></div><p><a href="chemistry-ions.json">Download this definition</a></p><h2>External R-groups</h2><p>A placeholder uses element <code>*</code> and a visible label of 1–8 ASCII identifier characters, such as R1, Ar or Side. It is a group attachment position, not a fictitious element and not a hydrogen omission. It has no implicit hydrogens, nuclear model, specified radical count or unique mass. <code>MoleculeWeight.calculate</code> rejects unresolved groups; <code>composition(structure)</code> counts only known real atoms.</p><figure><img src="chemistry-annotations.png" alt="Labeled external group and explicit methyl-radical dot" style="max-width:100%;height:auto"><figcaption>Labeled external group and explicit methyl-radical dot — captured from the actual Minecraft client framebuffer using Avogadro’s production renderer, with every stored atom and hydrogen present.</figcaption></figure><div class="av-example" data-example="external_group"><div data-language="java"><pre><code class="language-java">AvogadroApi.owner(&quot;chemistry_guide&quot;).register(
+    new MoleculeBuilder(&quot;chemistry:external_group&quot;).smiles(&quot;[*:1]CCO&quot;));</code></pre></div><div data-language="groovy"><pre><code class="language-groovy">import io.github.wurtzitane.avogadro.api.*
+
+mods.avogadro.molecules.register(
+    new MoleculeBuilder(&quot;chemistry:external_group&quot;).smiles(&quot;[*:1]CCO&quot;))</code></pre></div><div data-language="json"><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Generic alcohol · unresolved R1&quot;,
+  &quot;smiles&quot;: &quot;[*:1]CCO&quot;
+}</code></pre></div></div><p><a href="chemistry-external_group.json">Download this definition</a></p><pre><code class="language-java">var part = new StructureBuilder();
+int group = part.addRGroup(&quot;R1&quot;, 0, 0, 0);
+int carbon = part.addAtom(&quot;C&quot;, 1.5, 0, 0);
+part.bond(group, carbon).attachment(&quot;side_chain&quot;, group);
+StructureFragment fragment = part.build();</code></pre><p>Explicit atom JSON uses <code>{"e":"*","x":0,"y":0,"z":0,"label":"R1"}</code>. To rename a wildcard from SMILES, call <code>builder.rGroup(index, "Ar")</code>, or set <code>"atom_annotations":{"0":{"label":"Ar"}}</code>. To resolve it, use the existing fragment editor to replace the wildcard with a real atom, or remove it and attach a complete fragment through the existing assembly/attachment API. Supply all missing atoms and bonds, including hydrogen; resolution does not invent valence completion.</p><h2>Explicit radicals</h2><div class="av-example" data-example="radical"><div data-language="java"><pre><code class="language-java">AvogadroApi.owner(&quot;chemistry_guide&quot;).register(
+    new MoleculeBuilder(&quot;chemistry:radical&quot;).smiles(&quot;[CH3]&quot;).radical(0, 1));</code></pre></div><div data-language="groovy"><pre><code class="language-groovy">import io.github.wurtzitane.avogadro.api.*
+
+mods.avogadro.molecules.register(
+    new MoleculeBuilder(&quot;chemistry:radical&quot;).smiles(&quot;[CH3]&quot;).radical(0, 1))</code></pre></div><div data-language="json"><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Methyl radical · one unpaired electron&quot;,
+  &quot;smiles&quot;: &quot;[CH3]&quot;,
+  &quot;atom_annotations&quot;: {
+    &quot;0&quot;: {
+      &quot;radical_electrons&quot;: 1
+    }
+  }
+}</code></pre></div></div><p><a href="chemistry-radical.json">Download this definition</a></p><p><code>[CH3]</code> provides the methyl atom inventory. The explicit <code>radical_electrons: 1</code> annotation supplies one unpaired electron and adds a stationary, screen-facing dot attached to that atom’s moving position. Counts 0–4 are accepted; zero clears an inherited radical. The count survives copies, fragment transformations, JSON, synchronization, viewers and exports. It neither changes the bonds nor synthesizes electron-shell configurations, charges or spin multiplicity. Lowercase SMILES still means aromatic spelling, never radical shorthand.</p><p>On explicit atoms use <code>{"e":"C","x":0,"y":0,"z":0,"radical_electrons":1}</code>. In a <code>StructureBuilder</code>, call <code>radical(index, count)</code>. Labels and dots use the active resource-pack font. Ordinary atoms keep their existing shaded appearance.</p><h2>Bond length and dihedral constraints</h2><figure><img src="chemistry-constraints.png" alt="Butane before and after setting a 1.54-unit central bond and a 60-degree torsion" style="max-width:100%;height:auto"><figcaption>Butane before and after setting a 1.54-unit central bond and a 60-degree torsion — captured from the actual Minecraft client framebuffer using Avogadro’s production renderer, with every stored atom and hydrogen present.</figcaption></figure><div class="av-example" data-example="butane_gauche"><div data-language="java"><pre><code class="language-java">AvogadroApi.owner(&quot;chemistry_guide&quot;).register(
+    new MoleculeBuilder(&quot;chemistry:butane_gauche&quot;).smiles(&quot;CCCC&quot;).constraints(StructureConstraints.builder()
+        .bondLength(1, 2, 1.54).dihedral(0, 1, 2, 3, 60).build()));</code></pre></div><div data-language="groovy"><pre><code class="language-groovy">import io.github.wurtzitane.avogadro.api.*
+
+mods.avogadro.molecules.register(
+    new MoleculeBuilder(&quot;chemistry:butane_gauche&quot;).smiles(&quot;CCCC&quot;).constraints(StructureConstraints.builder()
+        .bondLength(1, 2, 1.54).dihedral(0, 1, 2, 3, 60).build()))</code></pre></div><div data-language="json"><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Butane · 60 degree torsion&quot;,
+  &quot;smiles&quot;: &quot;CCCC&quot;,
+  &quot;constraints&quot;: [
+    {
+      &quot;type&quot;: &quot;bond_length&quot;,
+      &quot;atoms&quot;: [
+        1,
+        2
+      ],
+      &quot;length&quot;: 1.54
+    },
+    {
+      &quot;type&quot;: &quot;dihedral&quot;,
+      &quot;atoms&quot;: [
+        0,
+        1,
+        2,
+        3
+      ],
+      &quot;degrees&quot;: 60.0
+    }
+  ]
+}</code></pre></div></div><p><a href="chemistry-butane_gauche.json">Download this definition</a></p><p>Targets apply once during loading. Length translates the second bond endpoint’s connected component; torsion rotates the third endpoint’s side about the second-to-third bond. Positive torsion follows the right-hand rule around B→C, from the perpendicular B→A projection to C→D. Coordinates share one unit; the example interprets it as ångströms. The full graph remains present.</p><p>Use <code>constraints.apply(fragment)</code> for reusable fragments, or <code>constraints.apply(structure)</code> for loaded geometry with verified stereo. In a structure recipe, add <code>{"op":"constrain","constraints":[...]}</code> to its ordered operations. Ring bonds, collinear torsions, missing connections, nonfinite values and conflicting final targets are rejected. There is no ring solver, collision resolution or force-field minimization. At most 64 targets are allowed; lengths are positive and at most 10000 units.</p><h2>JSON ordering and validation</h2><ol><li>Select one geometry source: <code>smiles</code>, explicit atoms/bonds, <code>structure</code>, or <code>copy</code>.</li><li>Inline atom fields and <code>atom_annotations</code> attach explicit group/radical metadata. Top-level annotations override the corresponding inherited annotation; omitted indices remain unchanged.</li><li>Top-level <code>constraints</code> operate on the resulting geometry. Labels and annotations remain attached to their atom indices.</li><li>Matching fields such as <code>items</code>, <code>fluids</code>, tags and material associations work as before. A generated sample can represent a generic structure, but it has no complete mass until its groups are resolved.</li></ol><p>Ordinary SMILES retain written heavy-atom order with added hydrogens afterward. Stereo SMILES canonicalize atom order. Never assume a canonicalized center’s index: inspect the loaded graph before applying index-specific metadata. Unknown annotation/constraint fields and fractional indices fail explicitly. See <a href="reference.html">the shared field reference</a> for remaining schema details.</p></div></body></html>

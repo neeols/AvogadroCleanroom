@@ -1,18 +1,23 @@
 package io.github.wurtzitane.avogadro.api;
 
-import io.github.wurtzitane.avogadro.molecule.MoleculeRegistrations;
-import io.github.wurtzitane.avogadro.molecule.MoleculeServerEvents;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.function.Predicate;
+
+import io.github.wurtzitane.avogadro.molecule.MoleculeRegistrations;
+import io.github.wurtzitane.avogadro.molecule.MoleculeServerEvents;
+
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 
 /**
- * Common-side registration and authoritative server queries.
- * <p>Contains no client classes.
+ * Registers molecules and looks up the server's molecule definitions.
+ *
+ * <p>
+ * Use this API in code that can run on either a client or a dedicated server. For drawing models or exporting images,
+ * use the separate client API.
  */
 public final class AvogadroApi {
 
@@ -25,14 +30,12 @@ public final class AvogadroApi {
     /** List of dynamic predicates determining item tooltip exclusions. */
     private static final List<Predicate<ItemStack>> TOOLTIP_PREDICATES = new CopyOnWriteArrayList<>();
 
-    /**
-     * Private constructor to prevent instantiation of this utility/API class.
-     */
     private AvogadroApi() {}
 
     /**
      * Registers a fast, read-only host predicate for automatic item previews.
-     * <p>HEI and store associations remain unchanged.
+     * <p>
+     * HEI and store associations remain unchanged.
      *
      * @param predicate the predicate to evaluate item stacks
      */
@@ -67,13 +70,13 @@ public final class AvogadroApi {
      * @param namespace the namespace string to exclude
      */
     public static void excludeItemTooltipNamespace(String namespace) {
-        var checked = io.github.wurtzitane.avogadro.molecule.MoleculeLoader.identifier(java.util.Objects.requireNonNull(namespace) + ":_");
+        var checked = io.github.wurtzitane.avogadro.molecule.MoleculeLoader
+                .identifier(java.util.Objects.requireNonNull(namespace) + ":_");
         TOOLTIP_NAMESPACE_EXCLUSIONS.add(checked.getNamespace());
     }
 
     /**
-     * Suppresses only the automatic item tooltip preview for a specific item,
-     * retaining molecule and HEI associations.
+     * Suppresses only the automatic item tooltip preview for a specific item, retaining molecule and HEI associations.
      *
      * @param itemId the resource location of the item ID
      */
@@ -88,7 +91,8 @@ public final class AvogadroApi {
      * @return {@code true} if excluded, {@code false} otherwise
      */
     public static boolean isItemTooltipExcluded(ResourceLocation itemId) {
-        return itemId != null && (TOOLTIP_EXCLUSIONS.contains(itemId) || TOOLTIP_NAMESPACE_EXCLUSIONS.contains(itemId.getNamespace()));
+        return itemId != null && (TOOLTIP_EXCLUSIONS.contains(itemId)
+                || TOOLTIP_NAMESPACE_EXCLUSIONS.contains(itemId.getNamespace()));
     }
 
     /**
@@ -112,7 +116,7 @@ public final class AvogadroApi {
     }
 
     /**
-     * Retrieves the item stack associated with a molecule definition.
+     * Returns the item stack associated with a molecule definition.
      *
      * @param molecule the molecule definition
      * @return the corresponding {@link ItemStack}
@@ -125,7 +129,7 @@ public final class AvogadroApi {
      * Creates a new molecule builder with the specified ID.
      *
      * @param id the molecule identifier
-     * @return a new {@link MoleculeBuilder} instance
+     * @return a new {@link MoleculeBuilder}
      */
     public static MoleculeBuilder builder(String id) {
         return new MoleculeBuilder(id);
@@ -134,7 +138,7 @@ public final class AvogadroApi {
     /**
      * Creates a new structure assembly builder.
      *
-     * @return a new {@link StructureAssembly.Builder} instance
+     * @return a new {@link StructureAssembly.Builder}
      */
     public static StructureAssembly.Builder assemblyBuilder() {
         return StructureAssembly.builder();
@@ -144,7 +148,7 @@ public final class AvogadroApi {
      * Creates a structure editor for a source molecule definition.
      *
      * @param source the source molecule definition
-     * @return a new {@link StructureEditor} instance
+     * @return a new {@link StructureEditor}
      */
     public static StructureEditor edit(io.github.wurtzitane.avogadro.molecule.MoleculeDef source) {
         return StructureFragment.from(source).edit();
@@ -153,7 +157,7 @@ public final class AvogadroApi {
     /**
      * Creates a new structure edits builder.
      *
-     * @return a new {@link StructureEdits.Builder} instance
+     * @return a new {@link StructureEdits.Builder}
      */
     public static StructureEdits.Builder edits() {
         return StructureEdits.builder();
@@ -162,14 +166,14 @@ public final class AvogadroApi {
     /**
      * Creates a new general structure builder.
      *
-     * @return a new {@link StructureBuilder} instance
+     * @return a new {@link StructureBuilder}
      */
     public static StructureBuilder structureBuilder() {
         return new StructureBuilder();
     }
 
     /**
-     * Retrieves the molecule registration owner handle.
+     * Returns the molecule registration owner handle.
      *
      * @param owner the owner identifier string
      * @return the corresponding {@link MoleculeRegistration}
@@ -179,8 +183,9 @@ public final class AvogadroApi {
     }
 
     /**
-     * Retrieves the server-side molecule view.
-     * <p>Empty until a server world has started; this never returns the integrated client's local overrides.
+     * Returns the server-side molecule view.
+     * <p>
+     * Empty until a server world has started; this never returns the integrated client's local overrides.
      *
      * @return the authoritative server {@link MoleculeView}
      */
@@ -189,8 +194,9 @@ public final class AvogadroApi {
     }
 
     /**
-     * Retrieves the registered common startup definitions.
-     * <p>Includes retained registrations and excludes world-specific JSON.
+     * Returns the registered common startup definitions.
+     * <p>
+     * Includes retained registrations and excludes world-specific JSON.
      *
      * @return the registered {@link MoleculeView}
      */

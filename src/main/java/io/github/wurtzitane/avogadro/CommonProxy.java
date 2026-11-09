@@ -6,9 +6,10 @@ import io.github.wurtzitane.avogadro.molecule.MoleculeResources;
 public class CommonProxy {
 
     /**
-     * Retrieves the appropriate molecule view depending on whether a dedicated server or integrated client context is active.
+     * Returns the appropriate molecule view depending on whether a dedicated server or integrated client context is
+     * active.
      *
-     * @return constructed {@link io.github.wurtzitane.avogadro.api.MoleculeView} instance
+     * @return constructed {@link io.github.wurtzitane.avogadro.api.MoleculeView}
      */
     public io.github.wurtzitane.avogadro.api.MoleculeView moleculeItemView() {
         return net.minecraftforge.fml.common.FMLCommonHandler.instance().getMinecraftServerInstance() == null
@@ -17,7 +18,7 @@ public class CommonProxy {
     }
 
     /**
-     * Retrieves the fallback item name string for a given molecule definition.
+     * Returns the fallback item name string for a given molecule definition.
      *
      * @param definition molecule definition instance
      * @return fallback item name string
@@ -42,7 +43,7 @@ public class CommonProxy {
      * @param player player interacting with the entity
      */
     public void interactPeriodicTable(io.github.wurtzitane.avogadro.entity.PeriodicTableEntity entity,
-                                      net.minecraft.entity.player.EntityPlayer player) {}
+            net.minecraft.entity.player.EntityPlayer player) {}
 
     /**
      * Applies server-side resource data updates.

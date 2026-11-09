@@ -2,6 +2,7 @@ package io.github.wurtzitane.avogadro.client;
 
 import net.minecraft.client.settings.KeyBinding;
 import net.minecraftforge.fml.client.registry.ClientRegistry;
+
 import org.lwjgl.input.Keyboard;
 
 /**
@@ -15,14 +16,17 @@ public final class AvogadroKeys {
 
     /** Keybinding for examining molecules with Shift+N within GUI screens. */
     public static final KeyBinding EXAMINE_MOLECULE = new KeyBinding("key.avogadro.examineMolecule",
-            net.minecraftforge.client.settings.KeyConflictContext.GUI, net.minecraftforge.client.settings.KeyModifier.SHIFT,
-            Keyboard.KEY_N, "key.categories.avogadro");
+            net.minecraftforge.client.settings.KeyConflictContext.GUI,
+            net.minecraftforge.client.settings.KeyModifier.SHIFT, Keyboard.KEY_N, "key.categories.avogadro");
 
     /** Keybinding for toggling or displaying the world HUD. */
     public static final KeyBinding WORLD_HUD = new KeyBinding("key.avogadro.worldHud", Keyboard.KEY_NONE,
             "key.categories.avogadro");
 
-    /** Private constructor to prevent instantiation of utility class. */
+    /** Shows the atomic model in single-atom tooltips; the hold/toggle choice lives in Tooltip options. */
+    public static final KeyBinding TOOLTIP_ATOM = new KeyBinding("key.avogadro.tooltipAtom",
+            net.minecraftforge.client.settings.KeyConflictContext.GUI, Keyboard.KEY_LCONTROL, "key.categories.avogadro");
+
     private AvogadroKeys() {}
 
     /** Registers all Avogadro keybindings with the client registry. */
@@ -30,6 +34,7 @@ public final class AvogadroKeys {
         ClientRegistry.registerKeyBinding(WORLD_HUD);
         ClientRegistry.registerKeyBinding(PAUSE_MOLECULE);
         ClientRegistry.registerKeyBinding(EXAMINE_MOLECULE);
+        ClientRegistry.registerKeyBinding(TOOLTIP_ATOM);
     }
 
     /**

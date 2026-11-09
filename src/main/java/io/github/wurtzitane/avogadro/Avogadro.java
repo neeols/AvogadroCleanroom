@@ -1,9 +1,15 @@
 package io.github.wurtzitane.avogadro;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.Map;
+
 import io.github.wurtzitane.avogadro.molecule.MoleculeNetwork;
 import io.github.wurtzitane.avogadro.molecule.MoleculeRegistrations;
 import io.github.wurtzitane.avogadro.molecule.MoleculeResources;
 import io.github.wurtzitane.avogadro.molecule.MoleculeServerEvents;
+
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.fml.common.Mod;
@@ -14,25 +20,19 @@ import net.minecraftforge.fml.common.event.FMLServerStartingEvent;
 import net.minecraftforge.fml.common.event.FMLServerStoppedEvent;
 import net.minecraftforge.fml.common.network.NetworkCheckHandler;
 import net.minecraftforge.fml.relauncher.Side;
+
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.util.Map;
-
 /** Main mod class for Avogadro, handling lifecycle events, network version checks, configuration setup, and proxies. */
-@Mod(modid = Avogadro.MODID, name = "Avogadro", version = Avogadro.VERSION,
-        dependencies = "required-after:modularui@[3.1.6,)", acceptedMinecraftVersions = "[1.12.2]", acceptableRemoteVersions = "*",
-        guiFactory = "io.github.wurtzitane.avogadro.client.AvogadroGuiFactory")
+@Mod(modid = Avogadro.MODID, name = "Avogadro", version = Avogadro.VERSION, dependencies = "required-after:modularui@[3.1.6,)", acceptedMinecraftVersions = "[1.12.2]", acceptableRemoteVersions = "*", guiFactory = "io.github.wurtzitane.avogadro.client.AvogadroGuiFactory")
 public final class Avogadro {
 
     /** Unique mod identifier string. */
     public static final String MODID = "avogadro";
 
     /** Mod version string. */
-    public static final String VERSION = "1.0.0-cleanroom.57";
+    public static final String VERSION = "1.0.0";
 
     /** Mod logger instance. */
     public static final Logger LOGGER = LogManager.getLogger(MODID);
@@ -41,22 +41,24 @@ public final class Avogadro {
     public static Path configDirectory;
 
     /** Sided proxy instance for client and server execution separation. */
-    @SidedProxy(clientSide = "io.github.wurtzitane.avogadro.client.ClientProxy",
-            serverSide = "io.github.wurtzitane.avogadro.CommonProxy")
+    @SidedProxy(clientSide = "io.github.wurtzitane.avogadro.client.ClientProxy", serverSide = "io.github.wurtzitane.avogadro.CommonProxy")
     public static CommonProxy proxy;
 
     /**
      * Verifies remote mod version compatibility during network handshakes.
      *
-     * @param mods       map of mod IDs to versions on the remote side
+     * @param mods map of mod IDs to versions on the remote side
      * @param remoteSide remote side connection type
      * @return {@code true} if compatible, {@code false} otherwise
      */
     @NetworkCheckHandler
     public boolean compatibleRemote(Map<String, String> mods, Side remoteSide) {
         String remote = mods.get(MODID);
-        if (remote == null || VERSION.equals(remote)) return true;
-        LOGGER.warn("Avogadro requires matching client/server versions for molecule synchronization: local {}, remote {}", VERSION, remote);
+        if (remote == null || VERSION.equals(remote))
+            return true;
+        LOGGER.warn(
+                "Avogadro requires matching client/server versions for molecule synchronization: local {}, remote {}",
+                VERSION, remote);
         return false;
     }
 
@@ -74,7 +76,8 @@ public final class Avogadro {
         }
 
         Config.load(event.getSuggestedConfigurationFile());
-        io.github.wurtzitane.avogadro.molecule.SmilesGeometryCache.initialize(configDirectory.resolve("cache/smiles-v1"));
+        io.github.wurtzitane.avogadro.molecule.SmilesGeometryCache
+                .initialize(configDirectory.resolve("cache/smiles-v1"));
         io.github.wurtzitane.avogadro.item.MoleculeItems.initializeTabs();
         MoleculeRegistrations.initialize(MoleculeResources.readCommonDefaults());
         MoleculeNetwork.register();
@@ -116,7 +119,7 @@ public final class Avogadro {
      * Helper method for constructing resource locations within the Avogadro namespace.
      *
      * @param path resource path string
-     * @return constructed {@link ResourceLocation} instance
+     * @return constructed {@link ResourceLocation}
      */
     public static ResourceLocation rl(String path) {
         return new ResourceLocation(MODID, path);

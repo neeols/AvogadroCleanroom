@@ -1,17 +1,23 @@
 package io.github.wurtzitane.avogadro.api;
 
+import java.util.*;
+
 import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
 
-import java.util.*;
-
 /**
- * Calculates average-composition masses, not isotope-specific masses.
- * <p>Contains no client or world dependencies.
+ * Calculates mass by adding the standard average atomic weights of the elements in a model or formula.
+ *
+ * <p>
+ * Results include grams per mole and grams per molecule or formula unit. These are average-composition values; they do
+ * not calculate the exact mass of a particular isotope.
  */
 public final class MoleculeWeight {
 
-    /** Exact SI value, <a href="https://www.bipm.org/en/measurement-units/si-defining-constants">BIPM SI Defining Constants</a>. */
+    /**
+     * Exact SI value, <a href="https://www.bipm.org/en/measurement-units/si-defining-constants">BIPM SI Defining
+     * Constants</a>.
+     */
     public static final double AVOGADRO_CONSTANT = 6.02214076e23;
 
     /** Map of element symbols to their abridged standard atomic weights (CIAAW 2024 central values). */
@@ -20,15 +26,12 @@ public final class MoleculeWeight {
     /** Maximum formula coefficient or atom count limit. */
     private static final long LIMIT = 1_000_000_000L;
 
-    /**
-     * Private constructor to prevent instantiation of this utility class.
-     */
     private MoleculeWeight() {}
 
     /**
-     * Represents the calculated molar and individual entity mass results.
+     * The calculated mass in grams per mole and grams per molecule or formula unit.
      *
-     * @param molarMass      the molar mass in grams per mole (g/mol)
+     * @param molarMass the molar mass in grams per mole (g/mol)
      * @param gramsPerEntity the absolute mass per individual entity in grams
      */
     public record Result(double molarMass, double gramsPerEntity) {
@@ -63,7 +66,8 @@ public final class MoleculeWeight {
         return switch (MoleculeClassification.of(molecule)) {
             case CRYSTAL -> calculate(molecule.formula());
             case MIXTURE -> throw new IllegalArgumentException("Variable mixtures have no unique molecular mass");
-            case POLYMER -> throw new IllegalArgumentException("A polymer has no unique mass without a chain length and end groups");
+            case POLYMER -> throw new IllegalArgumentException(
+                    "A polymer has no unique mass without a chain length and end groups");
             default -> calculate(molecule.structure());
         };
     }
@@ -75,6 +79,8 @@ public final class MoleculeWeight {
      * @return the calculated {@link Result}
      */
     public static Result calculate(MoleculeStructure structure) {
+        if (structure.atoms().stream().anyMatch(atom -> atom.element().symbol().equals("*")))
+            throw new IllegalArgumentException("Unresolved external groups have no molecular mass; resolve every R-group first");
         return calculate(composition(structure));
     }
 
@@ -142,6 +148,7 @@ public final class MoleculeWeight {
     public static Map<String, Long> composition(MoleculeStructure structure) {
         Map<String, Long> result = new TreeMap<>();
         for (var atom : structure.atoms()) {
+            if (atom.element().symbol().equals("*")) continue;
             result.merge(atom.element().symbol(), 1L, Long::sum);
         }
         return Collections.unmodifiableMap(result);
@@ -149,7 +156,8 @@ public final class MoleculeWeight {
 
     /**
      * Parses a chemical formula string into an atomic composition map.
-     * <p>Supports ASCII or subscript counts, nested ()/[] groups, and dot-separated hydrates.
+     * <p>
+     * Supports ASCII or subscript counts, nested ()/[] groups, and dot-separated hydrates.
      *
      * @param formula the chemical formula string
      * @return an unmodifiable map of element symbols to atom counts
@@ -183,8 +191,8 @@ public final class MoleculeWeight {
     /**
      * Merges source composition counts into a target map with a specified multiplier.
      *
-     * @param target     the target composition map
-     * @param source     the source composition map to merge
+     * @param target the target composition map
+     * @param source the source composition map to merge
      * @param multiplier the multiplier factor for the counts
      * @throws IllegalArgumentException if counts overflow limits
      */
@@ -216,7 +224,7 @@ public final class MoleculeWeight {
         int index;
 
         /**
-         * Constructs a new formula parser for the given text.
+         * Creates a formula parser for the given text.
          *
          * @param text the text to parse
          */
@@ -237,7 +245,7 @@ public final class MoleculeWeight {
          * Parses a formula group enclosed by specified delimiters.
          *
          * @param closing the closing delimiter character, or '\0' for root level
-         * @param depth   the current recursion depth
+         * @param depth the current recursion depth
          * @return a map of element symbols to atom counts for this group
          */
         Map<String, Long> group(char closing, int depth) {
@@ -308,18 +316,18 @@ public final class MoleculeWeight {
      * @return an immutable map of element symbols to standard atomic weights
      */
     private static Map<String, Double> weights() {
-        String data = "H 1.0080 He 4.0026 Li 6.94 Be 9.0122 B 10.81 C 12.011 N 14.007 O 15.999 F 18.998 Ne 20.180 " +
-                "Na 22.990 Mg 24.305 Al 26.982 Si 28.085 P 30.974 S 32.06 Cl 35.45 Ar 39.95 K 39.098 Ca 40.078 " +
-                "Sc 44.956 Ti 47.867 V 50.942 Cr 51.996 Mn 54.938 Fe 55.845 Co 58.933 Ni 58.693 Cu 63.546 Zn 65.38 " +
-                "Ga 69.723 Ge 72.630 As 74.922 Se 78.971 Br 79.904 Kr 83.798 Rb 85.468 Sr 87.62 Y 88.906 Zr 91.222 " +
-                "Nb 92.906 Mo 95.95 Tc 98 Ru 101.07 Rh 102.91 Pd 106.42 Ag 107.87 Cd 112.41 In 114.82 Sn 118.71 " +
-                "Sb 121.76 Te 127.60 I 126.90 Xe 131.29 Cs 132.91 Ba 137.33 La 138.91 Ce 140.12 Pr 140.91 Nd 144.24 " +
-                "Pm 145 Sm 150.36 Eu 151.96 Gd 157.25 Tb 158.93 Dy 162.50 Ho 164.93 Er 167.26 Tm 168.93 Yb 173.05 " +
-                "Lu 174.97 Hf 178.49 Ta 180.95 W 183.84 Re 186.21 Os 190.23 Ir 192.22 Pt 195.08 Au 196.97 Hg 200.59 " +
-                "Tl 204.38 Pb 207.2 Bi 208.98 Po 209 At 210 Rn 222 Fr 223 Ra 226.03 Ac 227 Th 232.04 " +
-                "Pa 231.04 U 238.03 Np 237.05 Pu 244.06 Am 243.06 Cm 247.07 Bk 247.07 Cf 251.08 Es 252.08 Fm 257.10 " +
-                "Md 258.10 No 259.10 Lr 266 Rf 267 Db 268 Sg 269 Bh 270 Hs 277 Mt 278 Ds 281 " +
-                "Rg 282 Cn 285 Nh 286 Fl 289 Mc 290 Lv 293 Ts 294 Og 294";
+        String data = "H 1.0080 He 4.0026 Li 6.94 Be 9.0122 B 10.81 C 12.011 N 14.007 O 15.999 F 18.998 Ne 20.180 "
+                + "Na 22.990 Mg 24.305 Al 26.982 Si 28.085 P 30.974 S 32.06 Cl 35.45 Ar 39.95 K 39.098 Ca 40.078 "
+                + "Sc 44.956 Ti 47.867 V 50.942 Cr 51.996 Mn 54.938 Fe 55.845 Co 58.933 Ni 58.693 Cu 63.546 Zn 65.38 "
+                + "Ga 69.723 Ge 72.630 As 74.922 Se 78.971 Br 79.904 Kr 83.798 Rb 85.468 Sr 87.62 Y 88.906 Zr 91.222 "
+                + "Nb 92.906 Mo 95.95 Tc 98 Ru 101.07 Rh 102.91 Pd 106.42 Ag 107.87 Cd 112.41 In 114.82 Sn 118.71 "
+                + "Sb 121.76 Te 127.60 I 126.90 Xe 131.29 Cs 132.91 Ba 137.33 La 138.91 Ce 140.12 Pr 140.91 Nd 144.24 "
+                + "Pm 145 Sm 150.36 Eu 151.96 Gd 157.25 Tb 158.93 Dy 162.50 Ho 164.93 Er 167.26 Tm 168.93 Yb 173.05 "
+                + "Lu 174.97 Hf 178.49 Ta 180.95 W 183.84 Re 186.21 Os 190.23 Ir 192.22 Pt 195.08 Au 196.97 Hg 200.59 "
+                + "Tl 204.38 Pb 207.2 Bi 208.98 Po 209 At 210 Rn 222 Fr 223 Ra 226.03 Ac 227 Th 232.04 "
+                + "Pa 231.04 U 238.03 Np 237.05 Pu 244.06 Am 243.06 Cm 247.07 Bk 247.07 Cf 251.08 Es 252.08 Fm 257.10 "
+                + "Md 258.10 No 259.10 Lr 266 Rf 267 Db 268 Sg 269 Bh 270 Hs 277 Mt 278 Ds 281 "
+                + "Rg 282 Cn 285 Nh 286 Fl 289 Mc 290 Lv 293 Ts 294 Og 294";
         String[] parts = data.split(" ");
         Map<String, Double> result = new HashMap<>();
         for (int i = 0; i < parts.length; i += 2) {

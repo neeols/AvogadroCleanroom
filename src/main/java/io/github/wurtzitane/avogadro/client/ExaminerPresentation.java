@@ -5,9 +5,11 @@ import com.cleanroommc.modularui.screen.RichTooltip;
 import com.cleanroommc.modularui.screen.viewport.ModularGuiContext;
 import com.cleanroommc.modularui.theme.WidgetThemeEntry;
 import com.cleanroommc.modularui.widget.Widget;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.resources.I18n;
+
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL14;
 
@@ -16,29 +18,32 @@ import org.lwjgl.opengl.GL14;
  */
 public final class ExaminerPresentation {
 
-    /** Private constructor to prevent instantiation of utility class. */
     private ExaminerPresentation() {}
 
     /**
      * Draws the shared information icon within a 14 by 14 area.
      *
-     * @param x       x coordinate position
-     * @param y       y coordinate position
+     * @param x x coordinate position
+     * @param y y coordinate position
      * @param hovered whether the icon is currently hovered
-     * @param color   base ARGB color integer
+     * @param color base ARGB color integer
      */
     public static void drawInfoIcon(int x, int y, boolean hovered, int color) {
-        int ink = 0xFF000000 | (hovered ? StructureStyle.ACCENT : color);
+        hovered = UiThemes.hovered(hovered);
+        int ink = UiThemes.color(hovered ? "info.hover.icon" : "info.icon",
+                0xFF000000 | (hovered ? StructureStyle.ACCENT() : color));
+        int symbol = UiThemes.color(hovered ? "info.hover.symbol" : "info.symbol", StructureStyle.PANEL());
         boolean texture = GL11.glIsEnabled(GL11.GL_TEXTURE_2D);
         boolean alpha = GL11.glIsEnabled(GL11.GL_ALPHA_TEST);
         boolean blend = GL11.glIsEnabled(GL11.GL_BLEND);
         int shade = GL11.glGetInteger(GL11.GL_SHADE_MODEL);
         int src = GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB), dst = GL11.glGetInteger(GL14.GL_BLEND_DST_RGB);
-        int srcAlpha = GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA), dstAlpha = GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA);
+        int srcAlpha = GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA),
+                dstAlpha = GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA);
         try {
             GuiDraw.drawCircle(x + 1, y + 1, 12, ink, 32);
-            GuiDraw.drawRect(x + 6, y + 4, 2, 1, StructureStyle.PANEL);
-            GuiDraw.drawRect(x + 6, y + 6, 2, 4, StructureStyle.PANEL);
+            GuiDraw.drawRect(x + 6, y + 4, 2, 1, symbol);
+            GuiDraw.drawRect(x + 6, y + 6, 2, 4, symbol);
         } finally {
             if (texture) {
                 GlStateManager.enableTexture2D();
@@ -66,7 +71,7 @@ public final class ExaminerPresentation {
     static final class ControlsWidget extends Widget<ControlsWidget> {
         private final int color;
 
-        /** Constructs a new {@link ControlsWidget}. */
+        /** Creates a {@link ControlsWidget}. */
         ControlsWidget(boolean atomNavigation, int color) {
             this.color = color;
             tooltip(tooltip -> {
@@ -74,7 +79,8 @@ public final class ExaminerPresentation {
                         .addLine(I18n.format("avogadro.examiner.help.rotate"))
                         .addLine(I18n.format("avogadro.examiner.help.pan"))
                         .addLine(I18n.format("avogadro.examiner.help.zoom"))
-                        .addLine(I18n.format("avogadro.examiner.help.pause", AvogadroKeys.PAUSE_MOLECULE.getDisplayName()))
+                        .addLine(I18n.format("avogadro.examiner.help.pause",
+                                AvogadroKeys.PAUSE_MOLECULE.getDisplayName()))
                         .addLine(I18n.format("avogadro.examiner.help.reset"));
                 if (atomNavigation) {
                     tooltip.addLine(I18n.format("avogadro.examiner.help.inspect"))
@@ -140,11 +146,12 @@ public final class ExaminerPresentation {
             String label = Math.round(zoom * 100) + "%";
             boolean blend = GL11.glIsEnabled(GL11.GL_BLEND);
             int src = GL11.glGetInteger(GL14.GL_BLEND_SRC_RGB), dst = GL11.glGetInteger(GL14.GL_BLEND_DST_RGB);
-            int srcAlpha = GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA), dstAlpha = GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA);
+            int srcAlpha = GL11.glGetInteger(GL14.GL_BLEND_SRC_ALPHA),
+                    dstAlpha = GL11.glGetInteger(GL14.GL_BLEND_DST_ALPHA);
             try {
                 GlStateManager.enableBlend();
-                GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA,
-                        GL11.GL_ONE, GL11.GL_ZERO);
+                GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE,
+                        GL11.GL_ZERO);
                 font.drawString(label, width - font.getStringWidth(label) - 8, height - font.FONT_HEIGHT - 7,
                         alpha << 24 | color & 0xFFFFFF);
             } finally {

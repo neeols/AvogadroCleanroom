@@ -1,12 +1,13 @@
 package io.github.wurtzitane.avogadro.client;
 
+import io.github.wurtzitane.avogadro.Config;
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+import io.github.wurtzitane.avogadro.molecule.MoleculeStore;
+
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.client.event.RenderTooltipEvent;
 import net.minecraftforge.fluids.FluidStack;
 
-import io.github.wurtzitane.avogadro.Config;
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-import io.github.wurtzitane.avogadro.molecule.MoleculeStore;
 import org.lwjgl.opengl.GL11;
 
 /** Extra image space shared by the native Forge, HEI and CodeChickenLib tooltip renderers. */
@@ -27,14 +28,13 @@ public final class MoleculeTooltips {
     /** Thread-local ingredient container for contextual lookups. */
     private static final ThreadLocal<Ingredient> INGREDIENT = new ThreadLocal<>();
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeTooltips() {}
 
     /**
      * Public fluid context for one tooltip draw; nested tooltips do not inherit it.
      *
      * @param fluid fluid stack ingredient context
-     * @param draw  runnable task performing the draw
+     * @param draw runnable task performing the draw
      */
     public static void withFluidTooltip(FluidStack fluid, Runnable draw) {
         withIngredient(fluid, draw);
@@ -44,7 +44,7 @@ public final class MoleculeTooltips {
      * Sets an ingredient context for the duration of the supplied draw task execution.
      *
      * @param ingredient ingredient object (item stack or fluid stack)
-     * @param draw       runnable task performing the draw
+     * @param draw runnable task performing the draw
      */
     public static void withIngredient(Object ingredient, Runnable draw) {
         Ingredient previous = INGREDIENT.get();
@@ -52,8 +52,10 @@ public final class MoleculeTooltips {
         try {
             draw.run();
         } finally {
-            if (previous == null) INGREDIENT.remove();
-            else INGREDIENT.set(previous);
+            if (previous == null)
+                INGREDIENT.remove();
+            else
+                INGREDIENT.set(previous);
         }
     }
 
@@ -62,35 +64,42 @@ public final class MoleculeTooltips {
         Frame previous = FRAME.get();
         Ingredient source = INGREDIENT.get();
         Object ingredient = source == null || source.claimed ? null : source.value;
-        if (source != null) source.claimed = true;
+        if (source != null)
+            source.claimed = true;
         FRAME.set(new Frame(ingredient));
         try {
             draw.run();
         } finally {
-            if (previous == null) FRAME.remove();
-            else FRAME.set(previous);
+            if (previous == null)
+                FRAME.remove();
+            else
+                FRAME.set(previous);
         }
     }
 
     /**
      * Called after the host has dispatched every Pre listener and honored cancellation.
      *
-     * @param event    render tooltip pre event
+     * @param event render tooltip pre event
      * @param canceled whether the event was canceled
      */
     public static void afterPre(RenderTooltipEvent.Pre event, boolean canceled) {
         Frame frame = FRAME.get();
-        if (frame == null || canceled || !Config.ENABLE_TOOLTIPS.get() || event.getLines().isEmpty()) return;
-        if (!(frame.ingredient instanceof FluidStack) && !event.getStack().isEmpty() &&
-                io.github.wurtzitane.avogadro.api.AvogadroApi.isItemTooltipExcluded(event.getStack()))
+        if (frame == null || canceled || !Config.ENABLE_TOOLTIPS.get() || event.getLines().isEmpty())
             return;
-        ResourceLocation id = frame.ingredient instanceof FluidStack fluid ? MoleculeStore.lookup(fluid) :
-                MoleculeStore.lookup(event.getStack());
+        if (!(frame.ingredient instanceof FluidStack) && !event.getStack().isEmpty()
+                && io.github.wurtzitane.avogadro.api.AvogadroApi.isItemTooltipExcluded(event.getStack()))
+            return;
+        ResourceLocation id = frame.ingredient instanceof FluidStack fluid
+                ? MoleculeStore.lookup(fluid)
+                : MoleculeStore.lookup(event.getStack());
         frame.definition = id == null ? null : MoleculeStore.get(id);
-        if (frame.definition == null) return;
+        if (frame.definition == null)
+            return;
         frame.screenHeight = event.getScreenHeight();
         int availableWidth = Math.max(0, event.getScreenWidth() - 8);
-        if (event.getMaxWidth() > 0) availableWidth = Math.min(availableWidth, event.getMaxWidth());
+        if (event.getMaxWidth() > 0)
+            availableWidth = Math.min(availableWidth, event.getMaxWidth());
         frame.size = Math.min(Config.TOOLTIP_SIZE.get(), availableWidth - HORIZONTAL_PADDING);
         frame.image = frame.size > 0;
     }
@@ -103,7 +112,8 @@ public final class MoleculeTooltips {
      */
     public static int minimumWidth(int nativeWidth) {
         Frame frame = FRAME.get();
-        if (frame == null) return nativeWidth;
+        if (frame == null)
+            return nativeWidth;
         return Math.max(nativeWidth, frame.image ? frame.size + HORIZONTAL_PADDING : 0);
     }
 
@@ -120,7 +130,8 @@ public final class MoleculeTooltips {
     /** After native text/item rows are measured, before the host positions its background. */
     public static int reserveHeight(int nativeHeight) {
         Frame frame = FRAME.get();
-        if (frame == null || frame.reserved || !hasContent()) return nativeHeight;
+        if (frame == null || frame.reserved || !hasContent())
+            return nativeHeight;
         frame.reserved = true;
         frame.size = Math.min(frame.size, frame.screenHeight - nativeHeight - GAP - VERTICAL_PADDING - 8);
         if (frame.size <= 0) {
@@ -134,7 +145,8 @@ public final class MoleculeTooltips {
     /** Draw before native PostText listeners, leaving their state and event order alone. */
     public static void beforePostText(RenderTooltipEvent.PostText event) {
         Frame frame = FRAME.get();
-        if (frame == null || !hasContent() || !frame.reserved || frame.drawn) return;
+        if (frame == null || !hasContent() || !frame.reserved || frame.drawn)
+            return;
         frame.drawn = true;
         int x = event.getX() + (event.getWidth() - frame.size) / 2;
         int y = event.getY() + event.getHeight() - frame.extraHeight + GAP + VERTICAL_PADDING / 2;
@@ -145,9 +157,9 @@ public final class MoleculeTooltips {
      * Renders a molecule or crystal definition inside a tooltip window.
      *
      * @param definition molecule definition to render
-     * @param x          x coordinate
-     * @param y          y coordinate
-     * @param size       render size
+     * @param x x coordinate
+     * @param y y coordinate
+     * @param size render size
      */
     public static void draw(MoleculeDef definition, int x, int y, int size) {
         // The renderer changes raw GL only and restores its attribute stack. Keep our
@@ -157,10 +169,18 @@ public final class MoleculeTooltips {
         GL11.glPushMatrix();
         try {
             GL11.glTranslated(0, 0, 300);
-            if (io.github.wurtzitane.avogadro.api.MoleculeClassification.of(definition) ==
-                    io.github.wurtzitane.avogadro.api.MoleculeClassification.CRYSTAL)
-                CrystalPreview.draw(definition, x, y, size, MoleculeRenderer.rotationAngle());
-            else MoleculeRenderer.render(definition.structure(), x, y, size, MoleculeRenderer.rotationAngle());
+            float yaw = MoleculeRenderer.rotationAngle();
+            AtomicPreview.warm(definition);
+            if (TooltipAtomControl.active() && AtomicPreview.draw(definition, x, y, size, size, size, yaw, 15,
+                    0, 0, 1, x - 12, y - 6, x + size + 12, y + size + 6, System.nanoTime()))
+                return;
+            if (io.github.wurtzitane.avogadro.api.MoleculeClassification
+                    .of(definition) == io.github.wurtzitane.avogadro.api.MoleculeClassification.CRYSTAL)
+                CrystalPreview.draw(definition, x, y, size, yaw);
+            else if (AtomicPreview.supports(definition))
+                MoleculeRenderer.renderLive(definition.structure(), x, y, size, yaw, 15);
+            else
+                MoleculeRenderer.render(definition.structure(), x, y, size, yaw);
         } finally {
             GL11.glMatrixMode(GL11.GL_MODELVIEW);
             GL11.glPopMatrix();
@@ -177,7 +197,7 @@ public final class MoleculeTooltips {
         private boolean claimed;
 
         /**
-         * Constructs a new ingredient wrapper.
+         * Creates a ingredient wrapper.
          *
          * @param value ingredient object
          */
@@ -201,7 +221,7 @@ public final class MoleculeTooltips {
         private boolean image;
 
         /**
-         * Constructs a new tooltip render frame.
+         * Creates a tooltip render frame.
          *
          * @param ingredient ingredient associated with the tooltip
          */

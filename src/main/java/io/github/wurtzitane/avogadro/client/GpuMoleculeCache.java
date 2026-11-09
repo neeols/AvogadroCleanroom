@@ -1,16 +1,19 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.nio.ByteBuffer;
+import java.nio.FloatBuffer;
+
 import io.github.wurtzitane.avogadro.Avogadro;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
+
 import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.*;
-import java.nio.FloatBuffer;
-import java.nio.ByteBuffer;
 
 /**
  * Manages render-thread owned, bounded GPU storage and VBO/VAO caching for molecules.
- * <p>Render-thread owned, bounded GPU storage. The fixed-function VBO path needs no shaders.
+ * <p>
+ * Render-thread owned, bounded GPU storage. The fixed-function VBO path needs no shaders.
  */
 final class GpuMoleculeCache {
 
@@ -41,7 +44,6 @@ final class GpuMoleculeCache {
     /** Flag tracking whether shader initialization has been attempted. */
     private static boolean shaderAttempted;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private GpuMoleculeCache() {}
 
     /**
@@ -49,23 +51,24 @@ final class GpuMoleculeCache {
      *
      * @param molecule molecule structure
      * @param transform transformation matrix
-     * @param cubic     whether cubic crystal rendering is enabled
-     * @param palette   element palette snapshot
+     * @param cubic whether cubic crystal rendering is enabled
+     * @param palette element palette snapshot
      * @return {@code true} if successfully drawn, {@code false} otherwise
      */
-    static boolean draw(MoleculeStructure molecule, Matrix4f transform, boolean cubic, ElementPalette.Snapshot palette) {
+    static boolean draw(MoleculeStructure molecule, Matrix4f transform, boolean cubic,
+            ElementPalette.Snapshot palette) {
         return draw(molecule, transform, cubic, palette, false);
     }
 
     /** Renders a molecule with immediate preparation option. */
     static boolean draw(MoleculeStructure molecule, Matrix4f transform, boolean cubic, ElementPalette.Snapshot palette,
-                        boolean immediate) {
+            boolean immediate) {
         return draw(molecule, transform, cubic, palette, immediate, MoleculeStyle.DEFAULT);
     }
 
     /** Renders a molecule with specified style settings. */
     static boolean draw(MoleculeStructure molecule, Matrix4f transform, boolean cubic, ElementPalette.Snapshot palette,
-                        boolean immediate, MoleculeStyle style) {
+            boolean immediate, MoleculeStyle style) {
         checkContext();
         Entry entry = find(molecule, cubic, palette, style);
         if (entry == null) {
@@ -101,11 +104,13 @@ final class GpuMoleculeCache {
             if (entry.vao != 0) {
                 GL20.glUniform1i(kindUniform, 0);
                 GL30.glBindVertexArray(entry.vao);
-                GL31.glDrawElementsInstanced(GL11.GL_TRIANGLES, shapeCounts[cubic ? 1 : 0], GL11.GL_UNSIGNED_INT, 0L, entry.atomCount);
+                GL31.glDrawElementsInstanced(GL11.GL_TRIANGLES, shapeCounts[cubic ? 1 : 0], GL11.GL_UNSIGNED_INT, 0L,
+                        entry.atomCount);
                 if (entry.bondCount != 0) {
                     GL20.glUniform1i(kindUniform, 1);
                     GL30.glBindVertexArray(entry.bondVao);
-                    GL31.glDrawElementsInstanced(GL11.GL_TRIANGLES, shapeCounts[cubic ? 3 : 2], GL11.GL_UNSIGNED_INT, 0L, entry.bondCount);
+                    GL31.glDrawElementsInstanced(GL11.GL_TRIANGLES, shapeCounts[cubic ? 3 : 2], GL11.GL_UNSIGNED_INT,
+                            0L, entry.bondCount);
                 }
             } else {
                 if (entry.fixedVao != 0) {
@@ -136,21 +141,23 @@ final class GpuMoleculeCache {
 
     /**
      * Starts or advances preparation without drawing.
-     * <p>Starts/advances preparation without drawing; preview captures must wait for this.
+     * <p>
+     * Starts/advances preparation without drawing; preview captures must wait for this.
      *
      * @param molecule molecule structure
-     * @param cubic    whether cubic crystal rendering is enabled
-     * @param palette  element palette snapshot
+     * @param cubic whether cubic crystal rendering is enabled
+     * @param palette element palette snapshot
      * @return {@code true} if ready or preparation advanced
      */
     static boolean prepare(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette) {
         checkContext();
-        return find(molecule, cubic, palette) != null || prepareEntry(molecule, cubic, palette, false, MoleculeStyle.DEFAULT) != null;
+        return find(molecule, cubic, palette) != null
+                || prepareEntry(molecule, cubic, palette, false, MoleculeStyle.DEFAULT) != null;
     }
 
     /** Prepares and allocates an entry in the GPU cache. */
     private static Entry prepareEntry(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette,
-                                      boolean immediate, MoleculeStyle style) {
+            boolean immediate, MoleculeStyle style) {
         int previousBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
         int previousVao = context.OpenGL30 ? GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING) : 0;
         GL11.glPushClientAttrib(GL11.GL_CLIENT_VERTEX_ARRAY_BIT);
@@ -165,16 +172,16 @@ final class GpuMoleculeCache {
         }
     }
 
-    /** Retrieves or creates a resident cache entry. */
+    /** Returns or creates a resident cache entry. */
     private static Entry get(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette,
-                             boolean immediate, MoleculeStyle style) {
+            boolean immediate, MoleculeStyle style) {
         Entry resident = find(molecule, cubic, palette, style);
         if (resident != null) {
             return resident;
         }
         for (Entry uploading : entries) {
-            if (uploading != null && uploading.molecule == molecule && uploading.cubic == cubic &&
-                    uploading.palette == palette.revision() && uploading.style.equals(style)) {
+            if (uploading != null && uploading.molecule == molecule && uploading.cubic == cubic
+                    && uploading.palette == palette.revision() && uploading.style.equals(style)) {
                 uploading.used = ++clock;
                 return advance(uploading, immediate) ? uploading : null;
             }
@@ -197,15 +204,16 @@ final class GpuMoleculeCache {
         InstanceData shared = null;
         if (instanced) {
             for (Entry other : entries) {
-                if (other != null && other.ready && other.molecule == molecule &&
-                        other.palette == palette.revision() && other.style.equals(style) && other.instances != null) {
+                if (other != null && other.ready && other.molecule == molecule && other.palette == palette.revision()
+                        && other.style.equals(style) && other.instances != null) {
                     shared = other.instances;
                     break;
                 }
             }
         }
-        PreparedMoleculeGeometry.Job job = shared == null ?
-                PreparedMoleculeGeometry.request(molecule, cubic, palette, instanced, style) : null;
+        PreparedMoleculeGeometry.Job job = shared == null
+                ? PreparedMoleculeGeometry.request(molecule, cubic, palette, instanced, style)
+                : null;
         if (shared == null && job == null) {
             if (immediate) {
                 throw new IllegalStateException("Geometry preparation is busy; try the export again");
@@ -247,8 +255,8 @@ final class GpuMoleculeCache {
             while (bytes + entry.bytes > MAX_BYTES) {
                 int oldest = -1;
                 for (int i = 0; i < entries.length; i++) {
-                    if (entries[i] != null && entries[i].pins == 0 &&
-                            (oldest < 0 || entries[i].used < entries[oldest].used)) {
+                    if (entries[i] != null && entries[i].pins == 0
+                            && (oldest < 0 || entries[i].used < entries[oldest].used)) {
                         oldest = i;
                     }
                 }
@@ -299,7 +307,8 @@ final class GpuMoleculeCache {
     /** Finds a cached entry matching the molecule, cubic flag, palette, and style. */
     static Entry find(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette, MoleculeStyle style) {
         for (Entry entry : entries) {
-            if (entry != null && entry.ready && entry.molecule == molecule && entry.cubic == cubic && entry.palette == palette.revision() && entry.style.equals(style)) {
+            if (entry != null && entry.ready && entry.molecule == molecule && entry.cubic == cubic
+                    && entry.palette == palette.revision() && entry.style.equals(style)) {
                 entry.used = ++clock;
                 return entry;
             }
@@ -310,8 +319,8 @@ final class GpuMoleculeCache {
     /** Checks whether a molecule geometry is ready in the GPU cache. */
     static boolean isReady(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette) {
         for (Entry entry : entries) {
-            if (entry != null && entry.ready && entry.molecule == molecule &&
-                    entry.cubic == cubic && entry.palette == palette.revision() && entry.style.equals(MoleculeStyle.DEFAULT)) {
+            if (entry != null && entry.ready && entry.molecule == molecule && entry.cubic == cubic
+                    && entry.palette == palette.revision() && entry.style.equals(MoleculeStyle.DEFAULT)) {
                 return true;
             }
         }
@@ -357,10 +366,10 @@ final class GpuMoleculeCache {
         long started = System.nanoTime();
         try {
             if (entry.instances != null) {
-                entry.vao = instanceVao(entry.cubic ? cubeShape : atomShape,
-                        shapeIndices[entry.cubic ? 1 : 0], entry.buffer, false);
-                entry.bondVao = instanceVao(entry.cubic ? squareShape : roundShape,
-                        shapeIndices[entry.cubic ? 3 : 2], entry.bondBuffer, true);
+                entry.vao = instanceVao(entry.cubic ? cubeShape : atomShape, shapeIndices[entry.cubic ? 1 : 0],
+                        entry.buffer, false);
+                entry.bondVao = instanceVao(entry.cubic ? squareShape : roundShape, shapeIndices[entry.cubic ? 3 : 2],
+                        entry.bondBuffer, true);
             } else {
                 if (context.OpenGL30) {
                     entry.fixedVao = GL30.glGenVertexArrays();
@@ -419,14 +428,16 @@ final class GpuMoleculeCache {
 
     /**
      * Pins only the currently drawn model; callers keep their target/depth contents between ranges.
-     * <p>Pins only the currently drawn model; callers keep their target/depth contents between ranges.
+     * <p>
+     * Pins only the currently drawn model; callers keep their target/depth contents between ranges.
      */
     static ExportCursor beginExport(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette) {
         return beginExport(molecule, cubic, palette, MoleculeStyle.DEFAULT);
     }
 
     /** Begins an export cursor session with explicit styling. */
-    static ExportCursor beginExport(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette, MoleculeStyle style) {
+    static ExportCursor beginExport(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette,
+            MoleculeStyle style) {
         checkContext();
         Entry entry = find(molecule, cubic, palette, style);
         if (entry == null) {
@@ -444,7 +455,7 @@ final class GpuMoleculeCache {
         private int first, kind, privateVao;
         private boolean closed;
 
-        /** Constructs a new export cursor and increments entry pin counts. */
+        /** Creates a export cursor and increments entry pin counts. */
         ExportCursor(Entry entry) {
             this.entry = entry;
             entry.pins++;
@@ -492,7 +503,8 @@ final class GpuMoleculeCache {
                     }
                     GL30.glBindVertexArray(privateVao);
                     GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, shapeIndices[shape]);
-                    GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, bond ? (entry.cubic ? squareShape : roundShape) : (entry.cubic ? cubeShape : atomShape));
+                    GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER,
+                            bond ? (entry.cubic ? squareShape : roundShape) : (entry.cubic ? cubeShape : atomShape));
                     attribute(0, 4, 24, 0, 0);
                     attribute(1, 2, 24, 16, 0);
                     GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, bond ? entry.bondBuffer : entry.buffer);
@@ -509,7 +521,8 @@ final class GpuMoleculeCache {
                     }
                     GL20.glUseProgram(program);
                     GL20.glUniform1i(kindUniform, kind);
-                    GL31.glDrawElementsInstanced(GL11.GL_TRIANGLES, shapeCounts[shape], GL11.GL_UNSIGNED_INT, 0L, batch);
+                    GL31.glDrawElementsInstanced(GL11.GL_TRIANGLES, shapeCounts[shape], GL11.GL_UNSIGNED_INT, 0L,
+                            batch);
                     first += batch;
                 } else {
                     GL20.glUseProgram(0);
@@ -576,34 +589,35 @@ final class GpuMoleculeCache {
         }
         int vertex = 0, fragment = 0;
         try {
-            vertex = shader(GL20.GL_VERTEX_SHADER, """
-                #version 120
-                attribute vec4 mesh;
-                attribute vec2 normal;
-                attribute vec4 origin;
-                attribute vec3 target;
-                attribute vec3 right;
-                attribute vec3 up;
-                uniform int cylinder;
-                void main() {
-                    vec3 position; vec3 color; float light;
-                    if(cylinder == 0) {
-                        position = origin.xyz + mesh.xyz * origin.w;
-                        light = mesh.w; color = target;
-                    } else {
-                        position = (mesh.z == 0.0 ? origin.xyz : target) + (right * mesh.x + up * mesh.y) * origin.w;
-                        vec3 n = normalize(right * mesh.w + up * normal.x);
-                        light = .35 + .65 * max(0.0, dot(n,vec3(-.577,.577,-.577)));
-                        color = vec3(.8);
-                    }
-                    gl_FrontColor = vec4(floor(color * light * 255.0) / 255.0,1.0);
-                    gl_Position = gl_ModelViewProjectionMatrix * vec4(position,1.0);
-                }
-                """);
+            vertex = shader(GL20.GL_VERTEX_SHADER,
+                    """
+                            #version 120
+                            attribute vec4 mesh;
+                            attribute vec2 normal;
+                            attribute vec4 origin;
+                            attribute vec3 target;
+                            attribute vec3 right;
+                            attribute vec3 up;
+                            uniform int cylinder;
+                            void main() {
+                                vec3 position; vec3 color; float light;
+                                if(cylinder == 0) {
+                                    position = origin.xyz + mesh.xyz * origin.w;
+                                    light = mesh.w; color = target;
+                                } else {
+                                    position = (mesh.z == 0.0 ? origin.xyz : target) + (right * mesh.x + up * mesh.y) * origin.w;
+                                    vec3 n = normalize(right * mesh.w + up * normal.x);
+                                    light = .35 + .65 * max(0.0, dot(n,vec3(-.577,.577,-.577)));
+                                    color = vec3(.8);
+                                }
+                                gl_FrontColor = vec4(floor(color * light * 255.0) / 255.0,1.0);
+                                gl_Position = gl_ModelViewProjectionMatrix * vec4(position,1.0);
+                            }
+                            """);
             fragment = shader(GL20.GL_FRAGMENT_SHADER, """
-                #version 120
-                void main() { gl_FragColor = gl_Color; }
-                """);
+                    #version 120
+                    void main() { gl_FragColor = gl_Color; }
+                    """);
             program = GL20.glCreateProgram();
             GL20.glAttachShader(program, vertex);
             GL20.glAttachShader(program, fragment);
@@ -726,12 +740,12 @@ final class GpuMoleculeCache {
         PreparedMoleculeGeometry.Job preparation;
         InstanceData instances;
 
-        /** Constructs a new cache entry with default style. */
+        /** Creates a cache entry with default style. */
         Entry(MoleculeStructure molecule, boolean cubic, long palette) {
             this(molecule, cubic, palette, MoleculeStyle.DEFAULT);
         }
 
-        /** Constructs a new cache entry with explicit style. */
+        /** Creates a cache entry with explicit style. */
         Entry(MoleculeStructure molecule, boolean cubic, long palette, MoleculeStyle style) {
             this.molecule = molecule;
             this.cubic = cubic;

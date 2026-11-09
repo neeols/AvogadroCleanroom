@@ -1,30 +1,33 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import io.github.wurtzitane.avogadro.Avogadro;
 import io.github.wurtzitane.avogadro.Config;
+import io.github.wurtzitane.avogadro.client.compat.DemonicaRenderScope;
 import io.github.wurtzitane.avogadro.item.MoleculeItems;
-import io.github.wurtzitane.avogadro.molecule.MoleculeStore;
-import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
 import io.github.wurtzitane.avogadro.molecule.AtomElement;
 import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-import net.minecraft.client.renderer.tileentity.TileEntityItemStackRenderer;
+import io.github.wurtzitane.avogadro.molecule.MoleculeStore;
+import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
+
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
+import net.minecraft.client.renderer.tileentity.TileEntityItemStackRenderer;
 import net.minecraft.item.ItemStack;
 import net.minecraftforge.client.event.ModelRegistryEvent;
 import net.minecraftforge.client.model.ModelLoader;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
 import net.minecraftforge.fml.relauncher.Side;
+
 import org.joml.Matrix4f;
 import org.lwjgl.opengl.GL11;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
-import java.util.Map;
-
 /**
- * Custom renderer for molecule item stacks, handling native item coordinates, transformation matrices,
- * and immediate-mode OpenGL state setup without triggering GUI clipping or depth-clear paths.
+ * Custom renderer for molecule item stacks, handling native item coordinates, transformation matrices, and
+ * immediate-mode OpenGL state setup without triggering GUI clipping or depth-clear paths.
  */
 @Mod.EventBusSubscriber(modid = Avogadro.MODID, value = Side.CLIENT)
 public final class MoleculeItemRenderer extends TileEntityItemStackRenderer {
@@ -62,8 +65,8 @@ public final class MoleculeItemRenderer extends TileEntityItemStackRenderer {
     }
 
     /**
-     * Registers model resource locations and assigns the custom tile entity item stack renderer
-     * during the model registry event.
+     * Registers model resource locations and assigns the custom tile entity item stack renderer during the model
+     * registry event.
      *
      * @param event the forge model registry event
      */
@@ -79,7 +82,8 @@ public final class MoleculeItemRenderer extends TileEntityItemStackRenderer {
 
     /** Clears cached transformation poses and frame definitions. */
     static void clearBounds() {
-        if (instance == null) return;
+        if (instance == null)
+            return;
         instance.poses.clear();
         instance.frameDefinitions.clear();
     }
@@ -88,13 +92,14 @@ public final class MoleculeItemRenderer extends TileEntityItemStackRenderer {
     static void beginFrame() {
         frame++;
         frameYaw = MoleculeRenderer.rotationAngle();
-        if (instance != null) instance.frameDefinitions.clear();
+        if (instance != null)
+            instance.frameDefinitions.clear();
     }
 
     /**
      * Renders a custom item stack using modern transformation matrices and raw OpenGL calls.
      *
-     * @param stack        the item stack to render
+     * @param stack the item stack to render
      * @param partialTicks tick delta time
      */
     @Override
@@ -105,13 +110,15 @@ public final class MoleculeItemRenderer extends TileEntityItemStackRenderer {
             poses.clear();
             frameDefinitions.clear();
         }
-        String id = stack.getItem() == MoleculeItems.MODEL && stack.hasTagCompound() ?
-                stack.getTagCompound().getString(MoleculeItems.ID_TAG) : "";
+        String id = stack.getItem() == MoleculeItems.MODEL && stack.hasTagCompound()
+                ? stack.getTagCompound().getString(MoleculeItems.ID_TAG)
+                : "";
         MoleculeDef definition = frameDefinitions.get(id);
         if (definition == null && !frameDefinitions.containsKey(id)) {
             definition = MoleculeItems.resolve(stack, view);
             // Keep the short-lived identity cache bounded even for unusual custom item batches.
-            if (frameDefinitions.size() >= 256) frameDefinitions.clear();
+            if (frameDefinitions.size() >= 256)
+                frameDefinitions.clear();
             frameDefinitions.put(id, definition);
         }
         MoleculeStructure molecule = definition == null ? MISSING : definition.structure();
@@ -122,19 +129,21 @@ public final class MoleculeItemRenderer extends TileEntityItemStackRenderer {
         // Native item callers can have different transforms and depth/lighting state
         // even for adjacent copies. Keep each draw immediate and save only the state
         // we change; the geometry cache batches compatible primitives within the item.
-        GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_DEPTH_BUFFER_BIT |
-                GL11.GL_LIGHTING_BIT | GL11.GL_CURRENT_BIT);
-        try {
-            GL11.glDisable(GL11.GL_TEXTURE_2D);
-            GL11.glDisable(GL11.GL_LIGHTING);
-            GL11.glDisable(GL11.GL_CULL_FACE);
-            GL11.glEnable(GL11.GL_DEPTH_TEST);
-            GL11.glDepthFunc(GL11.GL_LEQUAL);
-            GL11.glDepthMask(true);
-            GL11.glShadeModel(GL11.GL_SMOOTH);
-            MoleculeRenderer.drawTransformed(molecule, matrix, cubic);
-        } finally {
-            GL11.glPopAttrib();
+        try (var scope = DemonicaRenderScope.open()) {
+            GL11.glPushAttrib(
+                    GL11.GL_ENABLE_BIT | GL11.GL_DEPTH_BUFFER_BIT | GL11.GL_LIGHTING_BIT | GL11.GL_CURRENT_BIT);
+            try {
+                GL11.glDisable(GL11.GL_TEXTURE_2D);
+                GL11.glDisable(GL11.GL_LIGHTING);
+                GL11.glDisable(GL11.GL_CULL_FACE);
+                GL11.glEnable(GL11.GL_DEPTH_TEST);
+                GL11.glDepthFunc(GL11.GL_LEQUAL);
+                GL11.glDepthMask(true);
+                GL11.glShadeModel(GL11.GL_SMOOTH);
+                MoleculeRenderer.drawTransformed(molecule, matrix, cubic);
+            } finally {
+                GL11.glPopAttrib();
+            }
         }
     }
 
@@ -155,7 +164,8 @@ public final class MoleculeItemRenderer extends TileEntityItemStackRenderer {
         private ItemPose(MoleculeStructure molecule) {
             float sphere = 0, cube = 0;
             for (var atom : molecule.atoms()) {
-                float x = atom.x() - molecule.centerX(), y = atom.y() - molecule.centerY(), z = atom.z() - molecule.centerZ();
+                float x = atom.x() - molecule.centerX(), y = atom.y() - molecule.centerY(),
+                        z = atom.z() - molecule.centerZ();
                 float distance = (float) Math.sqrt(x * x + y * y + z * z);
                 sphere = Math.max(sphere, distance + atom.element().radius() * 0.9f);
                 cube = Math.max(cube, distance + atom.element().radius() * 1.56f);
@@ -168,17 +178,17 @@ public final class MoleculeItemRenderer extends TileEntityItemStackRenderer {
          * Computes and returns the 4x4 matrix transformation for rendering the item.
          *
          * @param molecule the structure being rendered
-         * @param cubic    whether atoms are rendered as cubes or spheres
-         * @param frame    the current frame index
-         * @param yaw      the current rotation angle
+         * @param cubic whether atoms are rendered as cubes or spheres
+         * @param frame the current frame index
+         * @param yaw the current rotation angle
          * @return updated matrix transformation
          */
         private Matrix4f transform(MoleculeStructure molecule, boolean cubic, long frame, float yaw) {
             if (this.frame != frame || this.cubic != cubic) {
                 float scale = 0.44f / Math.max(cubic ? cube : sphere, 0.001f);
-                matrix.translation(0.5f, 0.5f, 0.5f)
-                        .rotateX((float) Math.toRadians(15)).rotateY((float) Math.toRadians(yaw))
-                        .scale(scale).translate(-molecule.centerX(), -molecule.centerY(), -molecule.centerZ());
+                matrix.translation(0.5f, 0.5f, 0.5f).rotateX((float) Math.toRadians(15))
+                        .rotateY((float) Math.toRadians(yaw)).scale(scale)
+                        .translate(-molecule.centerX(), -molecule.centerY(), -molecule.centerZ());
                 this.frame = frame;
                 this.cubic = cubic;
             }

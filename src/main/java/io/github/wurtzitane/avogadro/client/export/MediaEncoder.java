@@ -5,14 +5,15 @@ import java.io.IOException;
 
 /**
  * A streaming media encoder interface for exporting animated frame sequences.
- * <p>Call {@link #finish()} only after every frame has been written in order.
+ * <p>
+ * Call {@link #finish()} only after every frame has been written in order.
  */
 public interface MediaEncoder extends AutoCloseable {
 
     /**
      * Writes a rendered frame image at the specified frame index.
      *
-     * @param frame      the frame image to write
+     * @param frame the frame image to write
      * @param frameIndex the zero-based sequential frame index
      * @throws IOException if an I/O error occurs or frame order/dimensions are invalid
      */
@@ -27,7 +28,8 @@ public interface MediaEncoder extends AutoCloseable {
 
     /**
      * Releases system resources and aborts an unfinished export.
-     * <p>{@inheritDoc}
+     * <p>
+     * {@inheritDoc}
      */
     @Override
     void close();

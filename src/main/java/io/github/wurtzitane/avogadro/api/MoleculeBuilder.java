@@ -1,24 +1,36 @@
 package io.github.wurtzitane.avogadro.api;
 
+import java.util.Collection;
+import java.util.Map;
+import java.util.Objects;
+
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
+
+import io.github.wurtzitane.avogadro.molecule.BondType;
+import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
+
 import net.minecraft.item.Item;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.ResourceLocation;
 import net.minecraftforge.fluids.Fluid;
 import net.minecraftforge.fluids.FluidStack;
 
-import com.google.gson.Gson;
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import io.github.wurtzitane.avogadro.molecule.BondType;
-import io.github.wurtzitane.avogadro.molecule.MoleculeLoader;
-
-import java.util.Collection;
-import java.util.Map;
-import java.util.Objects;
-
 /**
- * Builder class for constructing molecule geometry, associations, and optional atomic examination data.
+ * Builds a molecule definition: its shape, display name, matching items and fluids, and optional atom details.
+ *
+ * <p>
+ * Call {@link #build()} to validate the definition. To make it available in game, register it through
+ * {@link AvogadroApi#owner(String)}.
+ *
+ * <pre>{@code
+ * var water = AvogadroApi.builder("example:water")
+ *     .name("Water")
+ *     .smiles("O");
+ * AvogadroApi.owner("example").register(water);
+ * }</pre>
  */
 public final class MoleculeBuilder {
 
@@ -29,7 +41,7 @@ public final class MoleculeBuilder {
     private final JsonObject fields;
 
     /**
-     * Constructs a new molecule builder from a string identifier.
+     * Creates a molecule builder from a string identifier.
      *
      * @param id the string identifier for the molecule
      */
@@ -38,7 +50,7 @@ public final class MoleculeBuilder {
     }
 
     /**
-     * Constructs a new molecule builder from a resource location identifier.
+     * Creates a molecule builder from a resource location identifier.
      *
      * @param id the {@link ResourceLocation} identifier for the molecule
      */
@@ -47,9 +59,54 @@ public final class MoleculeBuilder {
     }
 
     /**
+     * Assigns an external-group label to an existing wildcard atom after geometry loading.
+     * @param atom zero-based wildcard index in the loaded geometry
+     * @param label 1–8 character group name, such as R1
+     * @return this builder
+     */
+    public MoleculeBuilder rGroup(int atom, String label) {
+        return annotate(atom, new io.github.wurtzitane.avogadro.molecule.AtomAnnotation(label, 0));
+    }
+
+    /**
+     * Records explicit unpaired electrons, independently of valence and examiner shell data.
+     * @param atom zero-based real atom index in the loaded geometry
+     * @param electrons count from zero through four; zero explicitly clears an inherited radical
+     * @return this builder
+     */
+    public MoleculeBuilder radical(int atom, int electrons) {
+        return annotate(atom, new io.github.wurtzitane.avogadro.molecule.AtomAnnotation("", electrons));
+    }
+
+    /**
+     * Stores one annotation using the common JSON representation.
+     * @param atom nonnegative atom index
+     * @param annotation validated metadata
+     * @return this builder
+     */
+    private MoleculeBuilder annotate(int atom, io.github.wurtzitane.avogadro.molecule.AtomAnnotation annotation) {
+        if (atom < 0) throw new IllegalArgumentException("Atom index cannot be negative");
+        JsonObject values = fields.has("atom_annotations") ? fields.getAsJsonObject("atom_annotations") : new JsonObject();
+        JsonObject entry = new JsonObject(); annotation.write(entry);
+        if (annotation.label().isEmpty()) entry.addProperty("radical_electrons", annotation.radicalElectrons());
+        values.add(Integer.toString(atom), entry); fields.add("atom_annotations", values);
+        return this;
+    }
+
+    /**
+     * Sets load-time bond-length and torsion constraints; replaces the previous sequence.
+     * @param constraints immutable geometric targets, applied after the selected geometry source
+     * @return this builder
+     */
+    public MoleculeBuilder constraints(StructureConstraints constraints) {
+        fields.add("constraints", Objects.requireNonNull(constraints, "constraints").toJson());
+        return this;
+    }
+
+    /**
      * Private constructor initializing the builder with an ID and an existing fields object.
      *
-     * @param id     the {@link ResourceLocation} identifier
+     * @param id the {@link ResourceLocation} identifier
      * @param fields the backing {@link JsonObject}
      */
     private MoleculeBuilder(ResourceLocation id, JsonObject fields) {
@@ -60,9 +117,9 @@ public final class MoleculeBuilder {
     /**
      * Creates a molecule builder from a resource ID and a serialized JSON string.
      *
-     * @param id   the {@link ResourceLocation} identifier
+     * @param id the {@link ResourceLocation} identifier
      * @param json the JSON string representing the molecule specification
-     * @return a new {@link MoleculeBuilder} instance
+     * @return a new {@link MoleculeBuilder}
      */
     static MoleculeBuilder fromJson(ResourceLocation id, String json) {
         return new MoleculeBuilder(id, JsonParser.parseString(json).getAsJsonObject());
@@ -71,9 +128,9 @@ public final class MoleculeBuilder {
     /**
      * Creates a molecule builder from a string identifier and a map of property fields.
      *
-     * @param id     the string identifier
+     * @param id the string identifier
      * @param fields a map of fields to populate
-     * @return a new {@link MoleculeBuilder} instance
+     * @return a new {@link MoleculeBuilder}
      */
     public static MoleculeBuilder from(String id, Map<?, ?> fields) {
         MoleculeBuilder result = new MoleculeBuilder(id);
@@ -92,7 +149,7 @@ public final class MoleculeBuilder {
     }
 
     /**
-     * Retrieves the identifier of this molecule.
+     * Returns the identifier of this molecule.
      *
      * @return the {@link ResourceLocation} identifier
      */
@@ -104,7 +161,7 @@ public final class MoleculeBuilder {
      * Sets the SMILES string for the molecule definition.
      *
      * @param value the SMILES string
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder smiles(String value) {
         fields.addProperty("smiles", value);
@@ -115,7 +172,7 @@ public final class MoleculeBuilder {
      * Sets a copy reference target for the molecule definition.
      *
      * @param value the target string reference
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder copy(String value) {
         fields.addProperty("copy", value);
@@ -126,7 +183,7 @@ public final class MoleculeBuilder {
      * Sets a copy reference target using a resource location.
      *
      * @param value the target {@link ResourceLocation}
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder copy(ResourceLocation value) {
         return copy(value.toString());
@@ -136,7 +193,7 @@ public final class MoleculeBuilder {
      * Sets the chemical formula display string.
      *
      * @param value the formula string
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder formula(String value) {
         fields.addProperty("formula", value);
@@ -146,8 +203,8 @@ public final class MoleculeBuilder {
     /**
      * Configures the crystal cell parameters for this molecule and sets its classification to crystal.
      *
-     * @param cell the {@link CrystalCell} instance
-     * @return this builder instance for chaining
+     * @param cell the {@link CrystalCell}
+     * @return this builder
      */
     public MoleculeBuilder crystalCell(CrystalCell cell) {
         fields.add("crystal", Objects.requireNonNull(cell).toJson());
@@ -157,8 +214,8 @@ public final class MoleculeBuilder {
     /**
      * Configures the polymer definition for this molecule and sets its classification to polymer.
      *
-     * @param polymer the {@link PolymerDefinition} instance
-     * @return this builder instance for chaining
+     * @param polymer the {@link PolymerDefinition}
+     * @return this builder
      */
     public MoleculeBuilder polymer(PolymerDefinition polymer) {
         fields.add("polymer", Objects.requireNonNull(polymer, "polymer").toJson());
@@ -168,8 +225,8 @@ public final class MoleculeBuilder {
     /**
      * Configures the polymer network definition for this molecule and sets its classification to polymer.
      *
-     * @param network the {@link PolymerNetworkDefinition} instance
-     * @return this builder instance for chaining
+     * @param network the {@link PolymerNetworkDefinition}
+     * @return this builder
      */
     public MoleculeBuilder polymerNetwork(PolymerNetworkDefinition network) {
         fields.add("polymer_network", Objects.requireNonNull(network).toJson());
@@ -177,10 +234,10 @@ public final class MoleculeBuilder {
     }
 
     /**
-     * Adds structure edits to the molecule configuration.
+     * Adds editing steps to apply after resolving the molecule named by {@link #copy(String)}.
      *
-     * @param edits the {@link StructureEdits} instance
-     * @return this builder instance for chaining
+     * @param edits the {@link StructureEdits}
+     * @return this builder
      */
     public MoleculeBuilder edits(StructureEdits edits) {
         fields.add("edits", Objects.requireNonNull(edits).toJson());
@@ -188,10 +245,11 @@ public final class MoleculeBuilder {
     }
 
     /**
-     * Sets whether this molecule should be materialized.
+     * Converts the copied polymer or crystal preview into a fixed collection of atoms before editing it. The result no
+     * longer keeps the adjustable polymer or crystal recipe.
      *
-     * @param value {@code true} to materialize, {@code false} otherwise
-     * @return this builder instance for chaining
+     * @param value whether to turn the copied preview into a fixed structure
+     * @return this builder
      */
     public MoleculeBuilder materialize(boolean value) {
         fields.addProperty("materialize", value);
@@ -202,13 +260,14 @@ public final class MoleculeBuilder {
      * Sets a structure assembly recipe for the molecule.
      *
      * @param assembly the {@link StructureAssembly} to use
-     * @return this builder instance for chaining
+     * @return this builder
      * @throws IllegalArgumentException if combined with conflicting geometry fields
      */
     public MoleculeBuilder structure(StructureAssembly assembly) {
         JsonObject recipe = new JsonObject();
         recipe.add("assembly", assembly.toJson());
-        for (String field : new String[]{"copy", "smiles", "structure", "atoms", "bonds", "polymer", "polymer_network"}) {
+        for (String field : new String[]{"copy", "smiles", "structure", "atoms", "bonds", "polymer",
+                "polymer_network"}) {
             if (fields.has(field)) {
                 throw new IllegalArgumentException("structure cannot be combined with " + field);
             }
@@ -218,10 +277,10 @@ public final class MoleculeBuilder {
     }
 
     /**
-     * Sets the human-readable display name of the molecule.
+     * Sets the display name of the molecule.
      *
      * @param value the display name string
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder name(String value) {
         fields.addProperty("name", value);
@@ -232,7 +291,7 @@ public final class MoleculeBuilder {
      * Sets whether an item should be automatically generated for this molecule.
      *
      * @param value {@code true} to generate an item, {@code false} otherwise
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder generateItem(boolean value) {
         fields.addProperty("generate_item", value);
@@ -243,7 +302,7 @@ public final class MoleculeBuilder {
      * Sets whether container matching is enabled.
      *
      * @param value {@code true} to match containers, {@code false} otherwise
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder matchContainers(boolean value) {
         fields.addProperty("match_containers", value);
@@ -254,7 +313,7 @@ public final class MoleculeBuilder {
      * Associates item objects with this molecule.
      *
      * @param values the item association values
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder items(Object... values) {
         return associations("items", values, Kind.ITEM);
@@ -264,7 +323,7 @@ public final class MoleculeBuilder {
      * Associates fluid objects with this molecule.
      *
      * @param values the fluid association values
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder fluids(Object... values) {
         return associations("fluids", values, Kind.FLUID);
@@ -274,7 +333,7 @@ public final class MoleculeBuilder {
      * Associates item tag strings with this molecule.
      *
      * @param values the item tag values
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder itemTags(Object... values) {
         return associations("item_tags", values, Kind.TAG);
@@ -284,7 +343,7 @@ public final class MoleculeBuilder {
      * Associates fluid tag strings with this molecule.
      *
      * @param values the fluid tag values
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder fluidTags(Object... values) {
         return associations("fluid_tags", values, Kind.TAG);
@@ -294,7 +353,7 @@ public final class MoleculeBuilder {
      * Associates material identifiers with this molecule.
      *
      * @param values the material values
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder materials(Object... values) {
         return associations("materials", values, Kind.ID);
@@ -303,11 +362,11 @@ public final class MoleculeBuilder {
     /**
      * Defines exact nuclear and electron populations for atoms of this symbol in this molecule.
      *
-     * @param symbol       the element symbol (e.g., "H")
+     * @param symbol the element symbol (e.g., "H")
      * @param atomicNumber the atomic number (number of protons)
-     * @param neutrons     the number of neutrons
-     * @param shells       variable array of electron counts per shell
-     * @return this builder instance for chaining
+     * @param neutrons the number of neutrons
+     * @param shells variable array of electron counts per shell
+     * @return this builder
      * @throws IllegalArgumentException if the element symbol is invalid
      */
     public MoleculeBuilder element(String symbol, int atomicNumber, int neutrons, int... shells) {
@@ -317,20 +376,21 @@ public final class MoleculeBuilder {
         if (!fields.has("elements")) {
             fields.add("elements", new JsonObject());
         }
-        fields.getAsJsonObject("elements").add(symbol, new AtomicConfiguration(atomicNumber, neutrons, 0,
-                java.util.Arrays.stream(shells).boxed().toList()).toJson());
+        fields.getAsJsonObject("elements").add(symbol,
+                new AtomicConfiguration(atomicNumber, neutrons, 0, java.util.Arrays.stream(shells).boxed().toList())
+                        .toJson());
         return this;
     }
 
     /**
      * Configures the atomic properties for a specific atom index.
      *
-     * @param index        the atom index
+     * @param index the atom index
      * @param atomicNumber the atomic number
-     * @param neutrons     the neutron count
-     * @param charge       the net electrical charge
-     * @param shells       variable array of electron counts per shell
-     * @return this builder instance for chaining
+     * @param neutrons the neutron count
+     * @param charge the net electrical charge
+     * @param shells variable array of electron counts per shell
+     * @return this builder
      * @throws IllegalArgumentException if the index is negative
      */
     public MoleculeBuilder atomConfiguration(int index, int atomicNumber, int neutrons, int charge, int... shells) {
@@ -340,18 +400,16 @@ public final class MoleculeBuilder {
         if (!fields.has("atom_configurations")) {
             fields.add("atom_configurations", new JsonObject());
         }
-        fields.getAsJsonObject("atom_configurations").add(Integer.toString(index),
-                new AtomicConfiguration(atomicNumber, neutrons, charge,
-                        java.util.Arrays.stream(shells).boxed().toList()).toJson());
+        fields.getAsJsonObject("atom_configurations").add(Integer.toString(index), new AtomicConfiguration(atomicNumber,
+                neutrons, charge, java.util.Arrays.stream(shells).boxed().toList()).toJson());
         return this;
     }
 
     /**
      * Adds a component molecule dependency identifier.
      *
-     * @pushed
      * @param id the component molecule identifier string
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder component(String id) {
         array("components").add(MoleculeLoader.identifier(id).toString());
@@ -360,10 +418,11 @@ public final class MoleculeBuilder {
 
     /**
      * Assigns a creative-tab grouping explicitly.
-     * <p>AUTO classifies the rendered element symbols.
+     * <p>
+     * AUTO classifies the rendered element symbols.
      *
      * @param value the {@link MoleculeClassification} to apply
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder classification(MoleculeClassification value) {
         return inspectionMetadata(MoleculeClassification.METADATA_KEY,
@@ -373,9 +432,9 @@ public final class MoleculeBuilder {
     /**
      * Adds arbitrary inspection metadata key-value pairs.
      *
-     * @param key   the metadata key
+     * @param key the metadata key
      * @param value the metadata value
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder inspectionMetadata(String key, String value) {
         if (!fields.has("inspection")) {
@@ -389,12 +448,13 @@ public final class MoleculeBuilder {
      * Imports finished geometry using the ordinary explicit atom/bond format.
      *
      * @param fragment the {@link StructureFragment} containing geometry
-     * @return this builder instance for chaining
+     * @return this builder
      * @throws IllegalArgumentException if combined with conflicting structure fields
      */
     public MoleculeBuilder structure(StructureFragment fragment) {
         Objects.requireNonNull(fragment, "fragment");
-        for (String field : new String[] { "copy", "smiles", "structure", "atoms", "bonds", "polymer", "polymer_network" }) {
+        for (String field : new String[]{"copy", "smiles", "structure", "atoms", "bonds", "polymer",
+                "polymer_network"}) {
             if (fields.has(field)) {
                 throw new IllegalArgumentException("structure cannot be combined with " + field);
             }
@@ -414,8 +474,8 @@ public final class MoleculeBuilder {
     /**
      * Imports finished geometry from a structure builder.
      *
-     * @param builder the {@link StructureBuilder} instance
-     * @return this builder instance for chaining
+     * @param builder the {@link StructureBuilder}
+     * @return this builder
      */
     public MoleculeBuilder structure(StructureBuilder builder) {
         return structure(Objects.requireNonNull(builder, "builder").build());
@@ -425,9 +485,9 @@ public final class MoleculeBuilder {
      * Adds an atom to the raw atom array and returns its assigned index.
      *
      * @param element the element symbol
-     * @param x       the x-coordinate
-     * @param y       the y-coordinate
-     * @param z       the z-coordinate
+     * @param x the x-coordinate
+     * @param y the y-coordinate
+     * @param z the z-coordinate
      * @return the integer index of the newly added atom
      */
     public int addAtom(String element, double x, double y, double z) {
@@ -445,10 +505,10 @@ public final class MoleculeBuilder {
      * Adds an atom to the structure.
      *
      * @param element the element symbol
-     * @param x       the x-coordinate
-     * @param y       the y-coordinate
-     * @param z       the z-coordinate
-     * @return this builder instance for chaining
+     * @param x the x-coordinate
+     * @param y the y-coordinate
+     * @param z the z-coordinate
+     * @return this builder
      */
     public MoleculeBuilder atom(String element, double x, double y, double z) {
         addAtom(element, x, y, z);
@@ -459,8 +519,8 @@ public final class MoleculeBuilder {
      * Adds a single bond between two atom indices.
      *
      * @param from the source atom index
-     * @param to   the target atom index
-     * @return this builder instance for chaining
+     * @param to the target atom index
+     * @return this builder
      */
     public MoleculeBuilder bond(int from, int to) {
         return bond(from, to, BondType.SINGLE);
@@ -470,9 +530,9 @@ public final class MoleculeBuilder {
      * Adds a bond of a specified type between two atom indices.
      *
      * @param from the source atom index
-     * @param to   the target atom index
+     * @param to the target atom index
      * @param type the {@link BondType} enum value
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder bond(int from, int to, BondType type) {
         JsonArray bond = new JsonArray();
@@ -487,9 +547,9 @@ public final class MoleculeBuilder {
      * Adds a bond specified by a string type between two atom indices.
      *
      * @param from the source atom index
-     * @param to   the target atom index
+     * @param to the target atom index
      * @param type the bond type string
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder bond(int from, int to, String type) {
         JsonArray bond = new JsonArray();
@@ -504,9 +564,9 @@ public final class MoleculeBuilder {
      * Adds a bond specified by an integer type code between two atom indices.
      *
      * @param from the source atom index
-     * @param to   the target atom index
+     * @param to the target atom index
      * @param type the integer bond type code
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder bond(int from, int to, int type) {
         JsonArray bond = new JsonArray();
@@ -520,7 +580,7 @@ public final class MoleculeBuilder {
     /**
      * Explicitly defines an empty bond array, disabling automatic bonding as in JSON specification.
      *
-     * @return this builder instance for chaining
+     * @return this builder
      */
     public MoleculeBuilder noBonds() {
         fields.add("bonds", new JsonArray());
@@ -530,7 +590,7 @@ public final class MoleculeBuilder {
     /**
      * Builds and returns an immutable {@link MoleculeSpec}.
      *
-     * @return a new {@link MoleculeSpec} instance
+     * @return a new {@link MoleculeSpec}
      */
     public MoleculeSpec build() {
         return MoleculeSpec.fromJson(id, fields.toString());
@@ -546,7 +606,7 @@ public final class MoleculeBuilder {
     }
 
     /**
-     * Retrieves or creates a JSON array field by name.
+     * Returns or creates a JSON array field by name.
      *
      * @param field the field name string
      * @return the {@link JsonArray}
@@ -561,10 +621,10 @@ public final class MoleculeBuilder {
     /**
      * Helper method to populate association arrays.
      *
-     * @param field  the field name
+     * @param field the field name
      * @param values array of association objects
-     * @param kind   the association {@link Kind}
-     * @return this builder instance for chaining
+     * @param kind the association {@link Kind}
+     * @return this builder
      */
     private MoleculeBuilder associations(String field, Object[] values, Kind kind) {
         JsonArray entries = new JsonArray();
@@ -596,7 +656,7 @@ public final class MoleculeBuilder {
      * Resolves and formats an association object into its string identifier based on its kind.
      *
      * @param value the association object
-     * @param kind  the association {@link Kind}
+     * @param kind the association {@link Kind}
      * @return the formatted identifier string
      * @throws IllegalArgumentException if the association is invalid or unsupported
      */
@@ -644,9 +704,6 @@ public final class MoleculeBuilder {
      * Represents the category of association being parsed.
      */
     private enum Kind {
-        ITEM,
-        FLUID,
-        TAG,
-        ID
+        ITEM, FLUID, TAG, ID
     }
 }

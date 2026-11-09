@@ -1,5 +1,10 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.lang.reflect.Constructor;
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.List;
+
 import com.cleanroommc.kirino.ICS;
 import com.cleanroommc.kirino.engine.render.core.shader.ImmediateShaderAccess;
 import com.cleanroommc.kirino.gl.shader.Shader;
@@ -11,18 +16,17 @@ import com.cleanroommc.kirino.ui.simpletext.backend.DefaultTextProducer;
 import com.cleanroommc.kirino.ui.simpletext.backend.DefaultTextRenderer;
 import com.cleanroommc.kirino.ui.simpletext.text.StyledText;
 import com.cleanroommc.kirino.ui.simpletext.text.TextStyle;
+
+import io.github.wurtzitane.avogadro.client.compat.DemonicaRenderScope;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.util.ResourceLocation;
+
 import org.apache.logging.log4j.LogManager;
 import org.lwjgl.opengl.*;
 
-import java.lang.reflect.Constructor;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.List;
-
-/** Backend pixel font management and Kirino text rendering integration. */
+/** Native bitmap-glyph drawing with the existing Kirino fallback for other fonts and characters. */
 final class PixelFontBackend {
 
     /** Active vanilla source text runtime. */
@@ -37,7 +41,6 @@ final class PixelFontBackend {
     /** Last failed text runtime source instance. */
     private static SimpleTextRuntime failedSource;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private PixelFontBackend() {}
 
     /**
@@ -51,7 +54,7 @@ final class PixelFontBackend {
     }
 
     /**
-     * Retrieves the physical scale from the pixel grid.
+     * Returns the physical scale from the pixel grid.
      *
      * @return physical scale value, or {@code 0} if unavailable
      */
@@ -64,25 +67,36 @@ final class PixelFontBackend {
      * Renders styled text using the Kirino pixel text backend.
      *
      * @param original original font renderer
-     * @param text     text string to render
-     * @param x        x coordinate
-     * @param y        y coordinate
-     * @param color    text color value
-     * @param shadow   whether to render shadow
+     * @param text text string to render
+     * @param x x coordinate
+     * @param y y coordinate
+     * @param color text color value
+     * @param shadow whether to render shadow
      * @return {@code true} if successfully drawn, {@code false} otherwise
      */
     static boolean draw(FontRenderer original, String text, float x, float y, int color, boolean shadow) {
-        if (!available()) return false;
+        if (!available())
+            return false;
         SimpleTextRuntime current = ICS.instance().textVanilla();
-        if (failedSource == current) return false;
+        if (failedSource == current)
+            return false;
         try (State ignored = new State()) {
-            if (source != current) rebuild(current);
+            if (PixelGlyphFont.draw(original, text, x, y, color, shadow))
+                return true;
+            if (source != current)
+                rebuild(current);
             PixelGrid grid = PixelGrid.capture();
-            if (grid != null) { x = grid.snapX(x); y = grid.snapY(y); }
-            if ((color & 0xFC000000) == 0) color |= 0xFF000000;
-            StyledText styled = new StyledText(text, shadow ? StyledText.Syntax.MINECRAFT_SHADOW_ON : StyledText.Syntax.MINECRAFT,
+            if (grid != null) {
+                x = grid.snapX(x);
+                y = grid.snapY(y);
+            }
+            if (!UiThemes.isScoped() && (color & 0xFC000000) == 0)
+                color |= 0xFF000000;
+            StyledText styled = new StyledText(text,
+                    shadow ? StyledText.Syntax.MINECRAFT_SHADOW_ON : StyledText.Syntax.MINECRAFT,
                     TextStyle.DEFAULT.withColor(color));
             String plain = styled.getPureText();
+            int[] themeColors = ThemeText.colors(text, color);
             List<Decoration> underlines = new ArrayList<>(), strikes = new ArrayList<>();
             runtime.begin();
             for (int pass = shadow ? 0 : 1; pass < 2; pass++) {
@@ -93,21 +107,32 @@ final class PixelFontBackend {
                     int count = Character.charCount(cp);
                     String glyph = plain.substring(index, index + count);
                     index += count;
-                    if (cp == '\n') { cursor = x; line += original.FONT_HEIGHT; continue; }
-                    if (cp == '\r') continue;
+                    if (cp == '\n') {
+                        cursor = x;
+                        line += original.FONT_HEIGHT;
+                        continue;
+                    }
+                    if (cp == '\r')
+                        continue;
                     TextStyle style = styled.get(glyphIndex);
+                    if (themeColors != null)
+                        style = style.withColor(themeColors[glyphIndex]);
                     boolean bold = (style.hint() & (1 << 25)) != 0;
                     float advance = original.getStringWidth(glyph) + (bold ? 1 : 0);
                     TextStyle ink = style.withHint(style.hint() & ~((1 << 25) | (1 << 27) | (1 << 28) | (1 << 29)));
-                    if (shadowPass) ink = ink.withColor(style.color() & 0xFF000000 | (style.color() & 0xFCFCFC) >> 2);
+                    if (shadowPass)
+                        ink = ink.withColor(ThemeText.shadow(style.color()));
                     StyledText character = new StyledText(glyph, StyledText.Syntax.KIRINO, ink);
                     float offset = shadowPass ? 1 : 0;
                     runtime.appendStyled(character, cursor + offset, line + offset);
-                    if (bold) runtime.appendStyled(character, cursor + offset + 1, line + offset);
-                    if (!shadowPass && style.underlineEnabled()) addDecoration(underlines, cursor - 1, cursor + advance,
-                            line + original.FONT_HEIGHT - 1, style.color(), shadow);
-                    if (!shadowPass && style.strikethroughEnabled()) addDecoration(strikes, cursor, cursor + advance,
-                            line + original.FONT_HEIGHT / 2 - 1, style.color(), shadow);
+                    if (bold)
+                        runtime.appendStyled(character, cursor + offset + 1, line + offset);
+                    if (!shadowPass && style.underlineEnabled())
+                        addDecoration(underlines, cursor - 1, cursor + advance, line + original.FONT_HEIGHT - 1,
+                                style.color(), shadow);
+                    if (!shadowPass && style.strikethroughEnabled())
+                        addDecoration(strikes, cursor, cursor + advance, line + original.FONT_HEIGHT / 2 - 1,
+                                style.color(), shadow);
                     cursor += advance;
                 }
             }
@@ -117,7 +142,8 @@ final class PixelFontBackend {
             return true;
         } catch (RuntimeException | LinkageError failure) {
             failedSource = current;
-            LogManager.getLogger("Avogadro Pixel Font").warn("Kirino pixel text is unavailable; using the resource-pack font", failure);
+            LogManager.getLogger("Avogadro Pixel Font")
+                    .warn("Kirino pixel text is unavailable; using the resource-pack font", failure);
             release();
             return false;
         }
@@ -126,25 +152,27 @@ final class PixelFontBackend {
     /**
      * Record representing a text decoration line run (underline or strikethrough).
      *
-     * @param left   left x coordinate
-     * @param right  right x coordinate
-     * @param top    top y coordinate
-     * @param color  decoration color
+     * @param left left x coordinate
+     * @param right right x coordinate
+     * @param top top y coordinate
+     * @param color decoration color
      * @param shadow whether decoration has shadow
      */
-    private record Decoration(float left, float right, float top, int color, boolean shadow) {}
+    private record Decoration(float left, float right, float top, int color, boolean shadow) {
+    }
 
     /**
      * Adds or merges a text decoration run into the list.
      *
-     * @param runs   list of decorations
-     * @param left   left coordinate
-     * @param right  right coordinate
-     * @param top    top coordinate
-     * @param color  color value
+     * @param runs list of decorations
+     * @param left left coordinate
+     * @param right right coordinate
+     * @param top top coordinate
+     * @param color color value
      * @param shadow shadow flag
      */
-    private static void addDecoration(List<Decoration> runs, float left, float right, float top, int color, boolean shadow) {
+    private static void addDecoration(List<Decoration> runs, float left, float right, float top, int color,
+            boolean shadow) {
         if (!runs.isEmpty()) {
             Decoration previous = runs.getLast();
             if (previous.top() == top && previous.color() == color && previous.shadow() == shadow
@@ -162,11 +190,13 @@ final class PixelFontBackend {
      * @param runs list of decorations to render
      */
     private static void drawDecorations(List<Decoration> runs) {
-        for (Decoration run : runs) decorations.append(stream -> {
-            if (run.shadow()) stream.rect(run.left() + 1, run.top() + 1, run.right() - run.left(), 1,
-                    run.color() & 0xFF000000 | (run.color() & 0xFCFCFC) >> 2);
-            stream.rect(run.left(), run.top(), run.right() - run.left(), 1, run.color());
-        });
+        for (Decoration run : runs)
+            decorations.append(stream -> {
+                if (run.shadow())
+                    stream.rect(run.left() + 1, run.top() + 1, run.right() - run.left(), 1,
+                            ThemeText.shadow(run.color()));
+                stream.rect(run.left(), run.top(), run.right() - run.left(), 1, run.color());
+            });
     }
 
     /**
@@ -183,11 +213,11 @@ final class PixelFontBackend {
             runtime = new SimpleTextRuntime((location, config) -> current.getFont(),
                     context -> new DefaultTextRenderer(context, new Tex2DArrayGlyphAtlas(1024, 1024), shaders, 1024),
                     context -> new DefaultTextProducer(context, context.getConfig().pixelSize(), 12f) {
-                        @Override public float calcLineHeight(String text, float fontSize) {
+                        @Override
+                        public float calcLineHeight(String text, float fontSize) {
                             return Math.round(super.calcLineHeight(text, fontSize));
                         }
-                    },
-                    shaders, underline, strike, current.getConfig(), current.getFontRl());
+                    }, shaders, underline, strike, current.getConfig(), current.getFontRl());
             source = current;
             decorations = underline;
         } catch (RuntimeException | Error failure) {
@@ -200,8 +230,11 @@ final class PixelFontBackend {
     /** Releases all pixel font runtime resources and buffers. */
     static void release() {
         if (runtime != null) {
-            try { runtime.close(); }
-            catch (Exception failure) { LogManager.getLogger("Avogadro Pixel Font").warn("Unable to release pixel-text buffers", failure); }
+            try {
+                runtime.close();
+            } catch (Exception failure) {
+                LogManager.getLogger("Avogadro Pixel Font").warn("Unable to release pixel-text buffers", failure);
+            }
         }
         runtime = null;
         decorations = null;
@@ -210,9 +243,11 @@ final class PixelFontBackend {
 
     /** Shader access implementation applying custom coordinate transformations and SDF enhancements. */
     private static final class TransformShaders extends ImmediateShaderAccess {
-        @Override public Shader makeShader(ResourceLocation location) {
+        @Override
+        public Shader makeShader(ResourceLocation location) {
             String path = location.getPath();
-            if (!path.endsWith(".vert") && !path.endsWith(".frag")) return super.makeShader(location);
+            if (!path.endsWith(".vert") && !path.endsWith(".frag"))
+                return super.makeShader(location);
             try (var resource = Minecraft.getMinecraft().getResourceManager().getResource(location)) {
                 String code = new String(resource.getInputStream().readAllBytes(), StandardCharsets.UTF_8)
                         .replaceFirst("(?m)(#version\\s+\\d+)\\s+core", "$1 compatibility");
@@ -221,10 +256,10 @@ final class PixelFontBackend {
                         throw new IllegalStateException("Missing Kirino vertex entry point: " + location);
                     code = code.replaceFirst("void\\s+main\\s*\\(\\s*\\)", "void avogadroVertex()");
                     boolean font = path.endsWith("simpletext_font.vert");
-                    if (font) code += "\nout vec2 avogadroGuiPosition;\n";
+                    if (font)
+                        code += "\nout vec2 avogadroGuiPosition;\n";
                     code += "\nvoid main() { avogadroVertex(); vec2 p = vec2((gl_Position.x + 1.0) * scaledRes.x * 0.5, "
-                            + "(1.0 - gl_Position.y) * scaledRes.y * 0.5); "
-                            + (font ? "avogadroGuiPosition = p; " : "")
+                            + "(1.0 - gl_Position.y) * scaledRes.y * 0.5); " + (font ? "avogadroGuiPosition = p; " : "")
                             + "gl_Position = gl_ModelViewProjectionMatrix * vec4(p, 0.0, 1.0); }\n";
                 } else if (path.endsWith("simpletext_font.frag")) {
                     code = code.replace("void main()", "in vec2 avogadroGuiPosition;\nvoid main()")
@@ -241,9 +276,11 @@ final class PixelFontBackend {
                             .replace("smoothstep(outerEdge - w, outerEdge + w, dist) : fill;",
                                     "(aligned ? step(outerEdge, dist) : smoothstep(outerEdge - w, outerEdge + w, dist)) : fill;");
                 }
-                Constructor<Shader> constructor = Shader.class.getDeclaredConstructor(String.class, String.class, ShaderType.class);
+                Constructor<Shader> constructor = Shader.class.getDeclaredConstructor(String.class, String.class,
+                        ShaderType.class);
                 constructor.setAccessible(true);
-                return constructor.newInstance(code, "avogadro:" + location, ShaderType.parse(path.endsWith(".vert") ? "vert" : "frag"));
+                return constructor.newInstance(code, "avogadro:" + location,
+                        ShaderType.parse(path.endsWith(".vert") ? "vert" : "frag"));
             } catch (ReflectiveOperationException | java.io.IOException failure) {
                 throw new IllegalStateException("Cannot prepare transformed Kirino shader " + location, failure);
             }
@@ -265,52 +302,70 @@ final class PixelFontBackend {
         private final long[] starts = new long[indices.length], sizes = new long[indices.length];
         private final int atlasTexture;
 
-        /** Constructs a new state capture instance. */
+        /** Creates a state capture instance. */
         private State() {
-            for (int i = 0; i < indices.length; i++) {
-                bindings[i] = GL30.glGetIntegeri(GL43.GL_SHADER_STORAGE_BUFFER_BINDING, indices[i]);
-                starts[i] = GL32.glGetInteger64i(GL43.GL_SHADER_STORAGE_BUFFER_START, indices[i]);
-                sizes[i] = GL32.glGetInteger64i(GL43.GL_SHADER_STORAGE_BUFFER_SIZE, indices[i]);
+            DemonicaRenderScope.begin();
+            try {
+                for (int i = 0; i < indices.length; i++) {
+                    bindings[i] = GL30.glGetIntegeri(GL43.GL_SHADER_STORAGE_BUFFER_BINDING, indices[i]);
+                    starts[i] = GL32.glGetInteger64i(GL43.GL_SHADER_STORAGE_BUFFER_START, indices[i]);
+                    sizes[i] = GL32.glGetInteger64i(GL43.GL_SHADER_STORAGE_BUFFER_SIZE, indices[i]);
+                }
+                GL13.glActiveTexture(GL13.GL_TEXTURE0 + 6);
+                atlasTexture = GL11.glGetInteger(GL30.GL_TEXTURE_BINDING_2D_ARRAY);
+                GL13.glActiveTexture(activeTexture);
+                GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_CURRENT_BIT);
+                GL11.glPushClientAttrib(GL11.GL_CLIENT_PIXEL_STORE_BIT);
+                GL11.glEnable(GL11.GL_BLEND);
+                GL11.glDisable(GL11.GL_ALPHA_TEST);
+                GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE,
+                        GL11.GL_ONE_MINUS_SRC_ALPHA);
+                GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, 0);
+                GL33.glBindSampler(6, 0);
+                GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
+                GL11.glPixelStorei(GL11.GL_UNPACK_ROW_LENGTH, 0);
+                GL11.glPixelStorei(GL12.GL_UNPACK_IMAGE_HEIGHT, 0);
+                GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, 0);
+                GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, 0);
+                GL11.glPixelStorei(GL12.GL_UNPACK_SKIP_IMAGES, 0);
+                GL11.glPixelStorei(GL11.GL_UNPACK_SWAP_BYTES, 0);
+                GL11.glPixelStorei(GL11.GL_UNPACK_LSB_FIRST, 0);
+            } catch (RuntimeException | Error failure) {
+                try {
+                    DemonicaRenderScope.end();
+                } catch (RuntimeException | Error cleanup) {
+                    failure.addSuppressed(cleanup);
+                }
+                throw failure;
             }
-            GL13.glActiveTexture(GL13.GL_TEXTURE0 + 6);
-            atlasTexture = GL11.glGetInteger(GL30.GL_TEXTURE_BINDING_2D_ARRAY);
-            GL13.glActiveTexture(activeTexture);
-            GL11.glPushAttrib(GL11.GL_ENABLE_BIT | GL11.GL_COLOR_BUFFER_BIT | GL11.GL_CURRENT_BIT);
-            GL11.glPushClientAttrib(GL11.GL_CLIENT_PIXEL_STORE_BIT);
-            GL11.glEnable(GL11.GL_BLEND);
-            GL11.glDisable(GL11.GL_ALPHA_TEST);
-            GL14.glBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, 0);
-            GL33.glBindSampler(6, 0);
-            GL11.glPixelStorei(GL11.GL_UNPACK_ALIGNMENT, 1);
-            GL11.glPixelStorei(GL11.GL_UNPACK_ROW_LENGTH, 0);
-            GL11.glPixelStorei(GL12.GL_UNPACK_IMAGE_HEIGHT, 0);
-            GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_PIXELS, 0);
-            GL11.glPixelStorei(GL11.GL_UNPACK_SKIP_ROWS, 0);
-            GL11.glPixelStorei(GL12.GL_UNPACK_SKIP_IMAGES, 0);
-            GL11.glPixelStorei(GL11.GL_UNPACK_SWAP_BYTES, 0);
-            GL11.glPixelStorei(GL11.GL_UNPACK_LSB_FIRST, 0);
         }
 
         /** Restores previously captured OpenGL states upon closing. */
-        @Override public void close() {
-            GL20.glUseProgram(program);
-            GL30.glBindVertexArray(vao);
-            GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, array);
-            GL15.glBindBuffer(GL40.GL_DRAW_INDIRECT_BUFFER, indirect);
-            for (int i = 0; i < indices.length; i++) {
-                if (bindings[i] != 0 && sizes[i] > 0)
-                    GL30.glBindBufferRange(GL43.GL_SHADER_STORAGE_BUFFER, indices[i], bindings[i], starts[i], sizes[i]);
-                else GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, indices[i], bindings[i]);
+        @Override
+        public void close() {
+            try {
+                GL20.glUseProgram(program);
+                GL30.glBindVertexArray(vao);
+                GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, array);
+                GL15.glBindBuffer(GL40.GL_DRAW_INDIRECT_BUFFER, indirect);
+                for (int i = 0; i < indices.length; i++) {
+                    if (bindings[i] != 0 && sizes[i] > 0)
+                        GL30.glBindBufferRange(GL43.GL_SHADER_STORAGE_BUFFER, indices[i], bindings[i], starts[i],
+                                sizes[i]);
+                    else
+                        GL30.glBindBufferBase(GL43.GL_SHADER_STORAGE_BUFFER, indices[i], bindings[i]);
+                }
+                GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, storage);
+                GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, unpack);
+                GL13.glActiveTexture(GL13.GL_TEXTURE0 + 6);
+                GL11.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, atlasTexture);
+                GL33.glBindSampler(6, sampler);
+                GL13.glActiveTexture(activeTexture);
+                GL11.glPopClientAttrib();
+                GL11.glPopAttrib();
+            } finally {
+                DemonicaRenderScope.end();
             }
-            GL15.glBindBuffer(GL43.GL_SHADER_STORAGE_BUFFER, storage);
-            GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, unpack);
-            GL13.glActiveTexture(GL13.GL_TEXTURE0 + 6);
-            GL11.glBindTexture(GL30.GL_TEXTURE_2D_ARRAY, atlasTexture);
-            GL33.glBindSampler(6, sampler);
-            GL13.glActiveTexture(activeTexture);
-            GL11.glPopClientAttrib();
-            GL11.glPopAttrib();
         }
     }
 }

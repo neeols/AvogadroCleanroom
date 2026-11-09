@@ -1,16 +1,27 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.*;
-import io.github.wurtzitane.avogadro.molecule.BondType;
-import io.github.wurtzitane.avogadro.molecule.StructureRecipe;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.*;
 import java.util.*;
 import java.util.concurrent.CancellationException;
 
+import com.google.gson.*;
+
+import io.github.wurtzitane.avogadro.molecule.BondType;
+import io.github.wurtzitane.avogadro.molecule.StructureRecipe;
+
 /**
- * Bounded, authored assembly tree shared by finite structures and polymer families.
+ * A recipe for placing and connecting copies of molecule fragments.
+ *
+ * <p>
+ * Give each part a name, choose its position, repeat it if needed, and add bonds through named attachment points. An
+ * attachment point is a name for an atom that can be connected to another part. Parts keep the positions you supply;
+ * making a bond does not move them.
+ *
+ * <p>
+ * Call {@link #build()} for a fixed-size structure. For adjustable counts, branch chances, or random crosslinks, put
+ * the recipe in a {@link PolymerNetworkDefinition}.
  */
 public final class StructureAssembly {
 
@@ -33,10 +44,10 @@ public final class StructureAssembly {
     private final Map<String, String> parameterKinds = new LinkedHashMap<>();
 
     /** Standard 3x4 identity affine transformation matrix. */
-    private static final double[][] IDENTITY = {{1,0,0,0},{0,1,0,0},{0,0,1,0}};
+    private static final double[][] IDENTITY = {{1, 0, 0, 0}, {0, 1, 0, 0}, {0, 0, 1, 0}};
 
     /**
-     * Constructs a new {@link StructureAssembly} from a JSON recipe object.
+     * Creates a {@link StructureAssembly} from a JSON recipe object.
      *
      * @param recipe the {@link JsonObject} recipe
      * @throws IllegalArgumentException if the recipe is null, exceeds depth/entry limits, or has invalid syntax
@@ -57,7 +68,7 @@ public final class StructureAssembly {
     /**
      * Creates a new assembly builder.
      *
-     * @return a new {@link Builder} instance
+     * @return a new {@link Builder}
      */
     public static Builder builder() {
         return new Builder();
@@ -67,7 +78,7 @@ public final class StructureAssembly {
      * Creates a structure assembly from a JSON object.
      *
      * @param json the {@link JsonObject} recipe
-     * @return a new {@link StructureAssembly} instance
+     * @return a new {@link StructureAssembly}
      */
     public static StructureAssembly fromJson(JsonObject json) {
         return new StructureAssembly(json);
@@ -83,7 +94,7 @@ public final class StructureAssembly {
     }
 
     /**
-     * Retrieves an immutable map of parameter names to their declared kinds.
+     * Returns an immutable map of parameter names to their declared kinds.
      *
      * @return map of parameter kinds
      */
@@ -92,9 +103,14 @@ public final class StructureAssembly {
     }
 
     /**
-     * Builds and expands the assembly with default parameters into a structure fragment.
+     * Expands a finite assembly with literal counts and probabilities, using seed zero.
+     *
+     * <p>
+     * Named parameters require a {@link PolymerNetworkDefinition}; this method does not supply parameter values or
+     * network defaults.
      *
      * @return the expanded {@link StructureFragment}
+     * @throws IllegalArgumentException if the assembly references a named parameter or exceeds expansion limits
      */
     public StructureFragment build() {
         return expand(new NetworkPreviewRequest(Map.of(), Map.of(), 0)).fragment();
@@ -112,20 +128,21 @@ public final class StructureAssembly {
         context.validatePaths();
         context.group(recipe, "", IDENTITY, 0);
         context.connect();
-        return new Expansion(new StructureFragment(context.atoms, context.bonds, null, List.of(),
-                context.attachments, context.configurations, context.capacities), Map.copyOf(context.stats));
+        return new Expansion(new StructureFragment(context.atoms, context.bonds, null, List.of(), context.attachments,
+                context.configurations, context.capacities), Map.copyOf(context.stats));
     }
 
     /**
      * Represents the result of an assembly expansion, including the generated fragment and diagnostic statistics.
      *
-     * @param fragment    the generated {@link StructureFragment}
+     * @param fragment the generated {@link StructureFragment}
      * @param diagnostics map of diagnostic metrics
      */
-    record Expansion(StructureFragment fragment, Map<String, Integer> diagnostics) {}
+    record Expansion(StructureFragment fragment, Map<String, Integer> diagnostics) {
+    }
 
     /**
-     * Builder class for constructing assembly trees programmatically.
+     * Adds named parts, repeats, and connections to an assembly recipe.
      */
     public static final class Builder {
         private final JsonObject json = new JsonObject();
@@ -143,9 +160,9 @@ public final class StructureAssembly {
         /**
          * Adds a part fragment node with an identity transform.
          *
-         * @param name     the node name
+         * @param name the node name
          * @param fragment the {@link StructureFragment} part
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder part(String name, StructureFragment fragment) {
             return part(name, fragment, IDENTITY);
@@ -154,10 +171,10 @@ public final class StructureAssembly {
         /**
          * Adds a part fragment node with a specified affine transform matrix.
          *
-         * @param name      the node name
-         * @param fragment  the {@link StructureFragment} part
+         * @param name the node name
+         * @param fragment the {@link StructureFragment} part
          * @param transform the 3x4 affine transform matrix
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder part(String name, StructureFragment fragment, double[][] transform) {
             JsonObject node = node(name, "fragment", transform);
@@ -169,10 +186,10 @@ public final class StructureAssembly {
         /**
          * Adds a nested group assembly node with a specified transform.
          *
-         * @param name      the node name
-         * @param assembly  the nested {@link StructureAssembly} body
+         * @param name the node name
+         * @param assembly the nested {@link StructureAssembly} body
          * @param transform the 3x4 affine transform matrix
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder group(String name, StructureAssembly assembly, double[][] transform) {
             JsonObject node = node(name, "group", transform);
@@ -184,11 +201,11 @@ public final class StructureAssembly {
         /**
          * Adds a repeat loop node with a fixed integer count.
          *
-         * @param name  the node name
-         * @param body  the repeated {@link StructureAssembly} body
+         * @param name the node name
+         * @param body the repeated {@link StructureAssembly} body
          * @param count the repetition count
-         * @param step  the step transform matrix between iterations
-         * @return this builder instance for chaining
+         * @param step the step transform matrix between iterations
+         * @return this builder
          */
         public Builder repeat(String name, StructureAssembly body, int count, double[][] step) {
             return repeat(name, body, new JsonPrimitive(count), step);
@@ -197,11 +214,11 @@ public final class StructureAssembly {
         /**
          * Adds a repeat loop node driven by a parameter string name.
          *
-         * @param name           the node name
-         * @param body           the repeated {@link StructureAssembly} body
+         * @param name the node name
+         * @param body the repeated {@link StructureAssembly} body
          * @param countParameter the parameter name string governing count
-         * @param step           the step transform matrix between iterations
-         * @return this builder instance for chaining
+         * @param step the step transform matrix between iterations
+         * @return this builder
          */
         public Builder repeat(String name, StructureAssembly body, String countParameter, double[][] step) {
             return repeat(name, body, new JsonPrimitive(countParameter), step);
@@ -210,11 +227,11 @@ public final class StructureAssembly {
         /**
          * Internal helper to add a repeat loop node with a JSON element count.
          *
-         * @param name  the node name
-         * @param body  the body assembly
+         * @param name the node name
+         * @param body the body assembly
          * @param count the count element
-         * @param step  the step transform matrix
-         * @return this builder instance for chaining
+         * @param step the step transform matrix
+         * @return this builder
          */
         private Builder repeat(String name, StructureAssembly body, JsonElement count, double[][] step) {
             JsonObject node = node(name, "repeat", IDENTITY);
@@ -228,11 +245,11 @@ public final class StructureAssembly {
         /**
          * Configures the last repeat's neighbor links; out-of-bound neighbors are omitted.
          *
-         * @param from   source attachment path
-         * @param to     target attachment path
+         * @param from source attachment path
+         * @param to target attachment path
          * @param offset repetition step offset
-         * @param type   the {@link BondType}
-         * @return this builder instance for chaining
+         * @param type the {@link BondType}
+         * @return this builder
          */
         public Builder neighbor(String from, String to, int offset, BondType type) {
             JsonObject node = lastRepeat();
@@ -250,7 +267,7 @@ public final class StructureAssembly {
          *
          * @param head the head assembly
          * @param tail the tail assembly
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder endGroups(StructureAssembly head, StructureAssembly tail) {
             JsonObject node = lastRepeat();
@@ -260,10 +277,10 @@ public final class StructureAssembly {
         }
 
         /**
-         * Applies an additional transform to the last added node.
+         * Sets the transform of the last added node, replacing any transform previously assigned to it.
          *
          * @param transform the transform matrix
-         * @return this builder instance for chaining
+         * @return this builder
          * @throws IllegalArgumentException if no node has been added yet
          */
         public Builder transformLast(double[][] transform) {
@@ -275,37 +292,41 @@ public final class StructureAssembly {
         }
 
         /**
-         * Adds a conditional choice node with a fixed probability.
+         * Chooses between two groups each time this part appears. For example, include a branch with a chance of 0.3,
+         * or a cap otherwise.
          *
-         * @param name        the node name
-         * @param ruleId      the rule identifier for random sampling
+         * @param name the node name
+         * @param ruleId the rule identifier for random sampling
          * @param probability the probability value (0.0 to 1.0)
-         * @param present     assembly executed if condition is met
-         * @param absent      assembly executed if condition is not met
-         * @return this builder instance for chaining
+         * @param present the fragment or group to include when selected
+         * @param absent the replacement to include when not selected; may be empty
+         * @return this builder
          */
-        public Builder choice(String name, String ruleId, double probability, StructureAssembly present, StructureAssembly absent) {
+        public Builder choice(String name, String ruleId, double probability, StructureAssembly present,
+                StructureAssembly absent) {
             return choice(name, ruleId, new JsonPrimitive(probability), present, absent);
         }
 
         /**
-         * Adds a conditional choice node governed by a parameter name string.
+         * Chooses between two groups using a named chance setting from the network definition.
          *
-         * @param name                 the node name
-         * @param ruleId               the rule identifier
+         * @param name the node name
+         * @param ruleId the rule identifier
          * @param probabilityParameter the parameter name string
-         * @param present              assembly executed if condition is met
-         * @param absent               assembly executed if condition is not met
-         * @return this builder instance for chaining
+         * @param present the fragment or group to include when selected
+         * @param absent the replacement to include when not selected; may be empty
+         * @return this builder
          */
-        public Builder choice(String name, String ruleId, String probabilityParameter, StructureAssembly present, StructureAssembly absent) {
+        public Builder choice(String name, String ruleId, String probabilityParameter, StructureAssembly present,
+                StructureAssembly absent) {
             return choice(name, ruleId, new JsonPrimitive(probabilityParameter), present, absent);
         }
 
         /**
          * Internal helper to add a choice node.
          */
-        private Builder choice(String name, String ruleId, JsonElement probability, StructureAssembly present, StructureAssembly absent) {
+        private Builder choice(String name, String ruleId, JsonElement probability, StructureAssembly present,
+                StructureAssembly absent) {
             JsonObject node = node(name, "choice", IDENTITY);
             node.addProperty("rule_id", ruleId);
             node.add("probability", probability);
@@ -316,12 +337,12 @@ public final class StructureAssembly {
         }
 
         /**
-         * Adds a deterministic link between two attachment paths.
+         * Adds a bond between named attachment points. The bond does not move either fragment.
          *
          * @param from source path
-         * @param to   target path
+         * @param to target path
          * @param type the {@link BondType}
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder link(String from, String to, BondType type) {
             links.add(edge(from, to, type));
@@ -331,37 +352,40 @@ public final class StructureAssembly {
         /**
          * Adds a random link rule with a fixed probability.
          *
-         * @param ruleId      the rule identifier
-         * @param from        source path expression
-         * @param to          target path expression
-         * @param pairing     pairing mode ("paired", "broadcast", "cartesian")
+         * @param ruleId the rule identifier
+         * @param from source path expression
+         * @param to target path expression
+         * @param pairing pairing mode ("paired", "broadcast", "cartesian")
          * @param probability probability value
-         * @param type        the {@link BondType}
-         * @return this builder instance for chaining
+         * @param type the {@link BondType}
+         * @return this builder
          */
-        public Builder randomLinks(String ruleId, String from, String to, String pairing, double probability, BondType type) {
+        public Builder randomLinks(String ruleId, String from, String to, String pairing, double probability,
+                BondType type) {
             return randomLinks(ruleId, from, to, pairing, new JsonPrimitive(probability), type);
         }
 
         /**
          * Adds a random link rule governed by a parameter name string.
          *
-         * @param ruleId               the rule identifier
-         * @param from                 source path expression
-         * @param to                   target path expression
-         * @param pairing              pairing mode
+         * @param ruleId the rule identifier
+         * @param from source path expression
+         * @param to target path expression
+         * @param pairing pairing mode
          * @param probabilityParameter parameter name string
-         * @param type                 the {@link BondType}
-         * @return this builder instance for chaining
+         * @param type the {@link BondType}
+         * @return this builder
          */
-        public Builder randomLinks(String ruleId, String from, String to, String pairing, String probabilityParameter, BondType type) {
+        public Builder randomLinks(String ruleId, String from, String to, String pairing, String probabilityParameter,
+                BondType type) {
             return randomLinks(ruleId, from, to, pairing, new JsonPrimitive(probabilityParameter), type);
         }
 
         /**
          * Internal helper to add random links.
          */
-        private Builder randomLinks(String ruleId, String from, String to, String pairing, JsonElement probability, BondType type) {
+        private Builder randomLinks(String ruleId, String from, String to, String pairing, JsonElement probability,
+                BondType type) {
             JsonObject edge = edge(from, to, type);
             edge.addProperty("rule_id", ruleId);
             edge.addProperty("pairing", pairing);
@@ -373,14 +397,14 @@ public final class StructureAssembly {
         /**
          * Builds and returns the immutable {@link StructureAssembly}.
          *
-         * @return a new {@link StructureAssembly} instance
+         * @return a new {@link StructureAssembly}
          */
         public StructureAssembly build() {
             return new StructureAssembly(json);
         }
 
         /**
-         * Retrieves the last added repeat node, validating that it is indeed a repeat node.
+         * Returns the last added repeat node, validating that it is indeed a repeat node.
          *
          * @return the repeat {@link JsonObject}
          */
@@ -593,7 +617,8 @@ public final class StructureAssembly {
      * Extracts a non-blank string property from a JSON object.
      */
     static String string(JsonObject o, String key) {
-        if (o == null || !o.has(key) || !o.get(key).isJsonPrimitive() || !o.get(key).getAsJsonPrimitive(key).isString() || o.get(key).getAsString().isBlank()) {
+        if (o == null || !o.has(key) || !o.get(key).isJsonPrimitive() || !o.get(key).getAsJsonPrimitive().isString()
+                || o.get(key).getAsString().isBlank()) {
             throw bad("Missing string " + key);
         }
         return o.get(key).getAsString();
@@ -612,24 +637,26 @@ public final class StructureAssembly {
     /**
      * Represents a link or connection rule between assembly attachment paths.
      *
-     * @param from   source path expression
-     * @param to     target path expression
-     * @param type   the {@link BondType}
+     * @param from source path expression
+     * @param to target path expression
+     * @param type the {@link BondType}
      * @param random optional JSON object for random link configuration
-     * @param scope  the scoping path prefix
+     * @param scope the scoping path prefix
      */
-    private record Link(String from, String to, BondType type, JsonObject random, String scope) {}
+    private record Link(String from, String to, BondType type, JsonObject random, String scope) {
+    }
 
     /**
      * Represents a candidate random crosslink connection.
      *
-     * @param from      source atom index
-     * @param to        target atom index
-     * @param type      the {@link BondType}
-     * @param identity  string identity hash for determinism
-     * @param priority  sampling priority double
+     * @param from source atom index
+     * @param to target atom index
+     * @param type the {@link BondType}
+     * @param identity string identity hash for determinism
+     * @param priority sampling priority double
      */
-    private record Candidate(int from, int to, BondType type, String identity, double priority) {}
+    private record Candidate(int from, int to, BondType type, String identity, double priority) {
+    }
 
     /**
      * Context class managing assembly expansion, traversal, and connection resolution.
@@ -682,14 +709,15 @@ public final class StructureAssembly {
         int candidateCount;
 
         /**
-         * Constructs a new expansion context for the specified preview request,
-         * initializing all diagnostic statistics counters to zero.
+         * Creates a expansion context for the specified preview request, initializing all diagnostic statistics
+         * counters to zero.
          *
          * @param request the {@link NetworkPreviewRequest} providing parameters and seed
          */
         Context(NetworkPreviewRequest request) {
             this.request = request;
-            for (String k : List.of("eligible_branches", "selected_branches", "eligible_crosslinks", "passing_crosslinks", "accepted_crosslinks", "capacity_blocked", "omitted_links")) {
+            for (String k : List.of("eligible_branches", "selected_branches", "eligible_crosslinks",
+                    "passing_crosslinks", "accepted_crosslinks", "capacity_blocked", "omitted_links")) {
                 stats.put(k, 0);
             }
         }
@@ -697,7 +725,7 @@ public final class StructureAssembly {
         /**
          * Increments a specific diagnostic statistic counter by one.
          *
-         5         * @param key the statistics key string
+         * 5 * @param key the statistics key string
          */
         void add(String key) {
             stats.merge(key, 1, Integer::sum);
@@ -706,10 +734,10 @@ public final class StructureAssembly {
         /**
          * Recursively traverses and expands an assembly node group under a given transform and path prefix.
          *
-         * @param group     the group {@link JsonObject}
-         * @param prefix    the path prefix string
+         * @param group the group {@link JsonObject}
+         * @param prefix the path prefix string
          * @param transform the 3x4 affine transform matrix
-         * @param depth     the current recursion depth
+         * @param depth the current recursion depth
          */
         void group(JsonObject group, String prefix, double[][] transform, int depth) {
             cancelled();
@@ -719,13 +747,15 @@ public final class StructureAssembly {
             for (JsonElement e : group.getAsJsonArray("nodes")) {
                 JsonObject node = e.getAsJsonObject();
                 String path = join(prefix, string(node, "name"));
-                double[][] local = multiply(transform, node.has("transform") ? matrix(node.getAsJsonArray("transform")) : IDENTITY);
+                double[][] local = multiply(transform,
+                        node.has("transform") ? matrix(node.getAsJsonArray("transform")) : IDENTITY);
                 switch (string(node, "kind")) {
                     case "fragment" -> append(fragments.get(node).affine(local), path);
                     case "group" -> group(node.getAsJsonObject("body"), path, local, depth + 1);
                     case "choice" -> {
                         add("eligible_branches");
-                        boolean selected = sample(request.seed(), "branch", string(node, "rule_id"), path) < probability(node.get("probability"));
+                        boolean selected = sample(request.seed(), "branch", string(node, "rule_id"),
+                                path) < probability(node.get("probability"));
                         if (selected) {
                             add("selected_branches");
                         }
@@ -743,7 +773,9 @@ public final class StructureAssembly {
                                 JsonObject l = edge.getAsJsonObject();
                                 int target = i + integer(l.get("offset"), -64, 64);
                                 if (target >= 0 && target < count) {
-                                    links.add(new Link(join(path + "[" + i + "]", string(l, "from")), join(path + "[" + target + "]", string(l, "to")), BondType.valueOf(string(l, "type")), null, path));
+                                    links.add(new Link(join(path + "[" + i + "]", string(l, "from")),
+                                            join(path + "[" + target + "]", string(l, "to")),
+                                            BondType.valueOf(string(l, "type")), null, path));
                                 }
                             }
                             if (i == 0 && node.has("head")) {
@@ -769,12 +801,13 @@ public final class StructureAssembly {
         /**
          * Adds an expanded link rule to the active links list.
          *
-         * @param edge   the edge {@link JsonObject}
+         * @param edge the edge {@link JsonObject}
          * @param prefix the path prefix
          * @param random {@code true} if stochastic random link, {@code false} otherwise
          */
         void link(JsonObject edge, String prefix, boolean random) {
-            links.add(new Link(join(prefix, string(edge, "from")), join(prefix, string(edge, "to")), BondType.valueOf(string(edge, "type")), random ? edge : null, prefix));
+            links.add(new Link(join(prefix, string(edge, "from")), join(prefix, string(edge, "to")),
+                    BondType.valueOf(string(edge, "type")), random ? edge : null, prefix));
             if (links.size() > 65536) {
                 throw bad("Too many expanded link rules");
             }
@@ -804,7 +837,9 @@ public final class StructureAssembly {
          * @return the resolved probability double value
          */
         double probability(JsonElement value) {
-            Double p = value.getAsJsonPrimitive().isString() ? request.probabilities().get(value.getAsString()) : value.getAsDouble();
+            Double p = value.getAsJsonPrimitive().isString()
+                    ? request.probabilities().get(value.getAsString())
+                    : value.getAsDouble();
             if (p == null || !Double.isFinite(p) || p < 0 || p > 1) {
                 throw bad("Unknown or invalid probability: " + value);
             }
@@ -812,10 +847,10 @@ public final class StructureAssembly {
         }
 
         /**
-         * Appends a structure fragment into the context with positional and index offsets,
-         * recording atoms, bonds, attachments, configurations, and capacities.
+         * Appends a structure fragment into the context with positional and index offsets, recording atoms, bonds,
+         * attachments, configurations, and capacities.
          *
-         * @param f    the {@link StructureFragment} to append
+         * @param f the {@link StructureFragment} to append
          * @param path the path prefix string
          */
         void append(StructureFragment f, String path) {
@@ -836,8 +871,8 @@ public final class StructureAssembly {
         }
 
         /**
-         * Processes all deterministic links and stochastic random crosslinks,
-         * sampling probabilities deterministically and enforcing capacity constraints.
+         * Processes all deterministic links and stochastic random crosslinks, sampling probabilities deterministically
+         * and enforcing capacity constraints.
          */
         void connect() {
             Set<Long> edges = new HashSet<>();
@@ -871,7 +906,8 @@ public final class StructureAssembly {
                         String identity = ai.compareTo(bi) < 0 ? ai + "|" + bi : bi + "|" + ai;
                         if (sample(request.seed(), "crosslink", join(l.scope(), rule), identity) < probability) {
                             add("passing_crosslinks");
-                            candidates.add(new Candidate(a, b, l.type(), identity, sample(request.seed(), "crosslink-order", join(l.scope(), rule), identity)));
+                            candidates.add(new Candidate(a, b, l.type(), identity,
+                                    sample(request.seed(), "crosslink-order", join(l.scope(), rule), identity)));
                         }
                     }
                 }
@@ -880,7 +916,8 @@ public final class StructureAssembly {
             Map<Integer, Integer> used = new HashMap<>();
             for (Candidate c : candidates) {
                 cancelled();
-                if (used.getOrDefault(c.from(), 0) >= capacities.get(c.from()) || used.getOrDefault(c.to(), 0) >= capacities.get(c.to())) {
+                if (used.getOrDefault(c.from(), 0) >= capacities.get(c.from())
+                        || used.getOrDefault(c.to(), 0) >= capacities.get(c.to())) {
                     add("capacity_blocked");
                     continue;
                 }
@@ -896,9 +933,9 @@ public final class StructureAssembly {
         /**
          * Adds a bond between two atom indices, validating against duplicate edges and bond limits.
          *
-         * @param a     first atom index
-         * @param b     second atom index
-         * @param type  the {@link BondType}
+         * @param a first atom index
+         * @param b second atom index
+         * @param type the {@link BondType}
          * @param edges set tracking existing bonded pairs
          */
         void bond(int a, int b, BondType type, Set<Long> edges) {
@@ -913,7 +950,8 @@ public final class StructureAssembly {
 
         /**
          * Enumerates declared attachment slots for a link rule based on the specified pairing mode.
-         * <p>Enumerate declared slots before discarding absent choices, so pairing never shifts.
+         * <p>
+         * Enumerate declared slots before discarding absent choices, so pairing never shifts.
          *
          * @param link the {@link Link} rule
          * @param mode the pairing mode ("paired", "broadcast", "cartesian")
@@ -956,7 +994,7 @@ public final class StructureAssembly {
          * Adds a resolved atom pair to the results list if both attachment paths exist in the current realization.
          *
          * @param result the target pair list
-         * @param first  first attachment path string
+         * @param first first attachment path string
          * @param second second attachment path string
          */
         void addPair(List<int[]> result, String first, String second) {
@@ -966,7 +1004,7 @@ public final class StructureAssembly {
                 add("omitted_links");
                 return;
             }
-            result.add(new int[] { a, b });
+            result.add(new int[]{a, b});
         }
 
         /**
@@ -989,7 +1027,7 @@ public final class StructureAssembly {
          * Checks whether an attachment path matches an expression selector supporting wildcards and indices.
          *
          * @param expression the selector expression
-         * @param path       the actual attachment path
+         * @param path the actual attachment path
          * @return {@code true} if matching, {@code false} otherwise
          */
         boolean matches(String expression, String path) {
@@ -1027,7 +1065,7 @@ public final class StructureAssembly {
         /**
          * Recursively declares all potential attachment paths and link rules across all realization branches.
          *
-         * @     group  the group {@link JsonObject}
+         * @param group the group {@link JsonObject}
          * @param prefix the path prefix string
          */
         void declare(JsonObject group, String prefix) {
@@ -1112,7 +1150,8 @@ public final class StructureAssembly {
                     try {
                         int index = Integer.parseInt(part.substring(bracket + 1, part.length() - 1));
                         repeatCounts.merge(join(prefix, part.substring(0, bracket)), index + 1, Math::max);
-                    } catch (NumberFormatException ignored) {}
+                    } catch (NumberFormatException ignored) {
+                    }
                 }
                 prefix = join(prefix, part);
             }
@@ -1212,7 +1251,7 @@ public final class StructureAssembly {
      * @return 3x4 double array
      */
     public static double[][] translation(double x, double y, double z) {
-        return new double[][]{{1,0,0,x},{0,1,0,y},{0,0,1,z}};
+        return new double[][]{{1, 0, 0, x}, {0, 1, 0, y}, {0, 0, 1, z}};
     }
 
     /**

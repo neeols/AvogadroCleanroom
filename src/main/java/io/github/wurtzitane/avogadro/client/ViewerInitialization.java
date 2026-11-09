@@ -1,6 +1,7 @@
 package io.github.wurtzitane.avogadro.client;
 
 import io.github.wurtzitane.avogadro.Avogadro;
+
 import org.joml.Matrix4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.Display;
@@ -9,7 +10,6 @@ import org.lwjgl.opengl.GL11;
 /** Resolves first-use UI dependencies during loading, before an examiner is opened. */
 final class ViewerInitialization {
 
-    /** Private constructor to prevent instantiation of utility class. */
     private ViewerInitialization() {}
 
     /** Preloads and initializes viewer dependencies, UI classes, and matrix bridges asynchronously. */
@@ -19,14 +19,11 @@ final class ViewerInitialization {
             try {
                 // Loading bytecode is safe here; GUI construction and GL stay on
                 // the client thread. Only the two CPU-only initializers run below.
-                for (String type : new String[]{
-                        "com.cleanroommc.modularui.screen.ModularPanel",
+                for (String type : new String[]{"com.cleanroommc.modularui.screen.ModularPanel",
                         "com.cleanroommc.modularui.screen.ModularScreen",
-                        "com.cleanroommc.modularui.screen.RichTooltip",
-                        "com.cleanroommc.modularui.widget.WidgetTree",
+                        "com.cleanroommc.modularui.screen.RichTooltip", "com.cleanroommc.modularui.widget.WidgetTree",
                         "com.cleanroommc.modularui.widget.InternalWidgetTree",
-                        "com.cleanroommc.modularui.drawable.GuiDraw",
-                        "com.cleanroommc.modularui.api.drawable.IKey",
+                        "com.cleanroommc.modularui.drawable.GuiDraw", "com.cleanroommc.modularui.api.drawable.IKey",
                         MoleculeExaminer.class.getName()}) {
                     Class.forName(type, false, loader);
                 }
@@ -45,8 +42,11 @@ final class ViewerInitialization {
             var identity = BufferUtils.createFloatBuffer(16);
             new Matrix4f().get(identity);
             GL11.glPushMatrix();
-            try { GL11.glMultMatrixf(identity); }
-            finally { GL11.glPopMatrix(); }
+            try {
+                GL11.glMultMatrixf(identity);
+            } finally {
+                GL11.glPopMatrix();
+            }
         }
     }
 }

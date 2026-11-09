@@ -44,13 +44,14 @@ public final class MoleculeRotation {
     /**
      * Starts a mouse drag interaction for rotation.
      *
-     * @param mouseX       current mouse X coordinate
-     * @param mouseY       current mouse Y coordinate
+     * @param mouseX current mouse X coordinate
+     * @param mouseY current mouse Y coordinate
      * @param automaticYaw current automatic yaw angle
-     * @param now          current timestamp
+     * @param now current timestamp
      */
     public void start(int mouseX, int mouseY, float automaticYaw, long now) {
-        if (frame.active != null && frame.active != this) cancelActiveDrag();
+        if (frame.active != null && frame.active != this)
+            cancelActiveDrag();
         yaw = yaw(automaticYaw, now);
         pitch = pitch(now);
         dragging = true;
@@ -66,7 +67,8 @@ public final class MoleculeRotation {
      * @param mouseY current mouse Y coordinate
      */
     public void drag(int mouseX, int mouseY) {
-        if (!dragging) return;
+        if (!dragging)
+            return;
         yaw = wrap(yaw + (mouseX - lastX) * DEGREES_PER_PIXEL);
         pitch = Math.clamp(pitch + (mouseY - lastY) * DEGREES_PER_PIXEL, -89f, 89f);
         lastX = mouseX;
@@ -77,30 +79,33 @@ public final class MoleculeRotation {
      * Releases the active mouse drag interaction.
      *
      * @param automaticYaw current automatic yaw angle
-     * @param now          current timestamp
+     * @param now current timestamp
      */
     public void release(float automaticYaw, long now) {
-        if (!dragging) return;
+        if (!dragging)
+            return;
         dragging = false;
         yawOffset = wrap(yaw - automaticYaw);
 
-        if (frame.active == this) frame.active = null;
+        if (frame.active == this)
+            frame.active = null;
     }
 
     /**
      * Computes the current yaw angle.
      *
      * @param automaticYaw current automatic yaw angle
-     * @param now          current timestamp
+     * @param now current timestamp
      * @return computed yaw angle in degrees
      */
     public float yaw(float automaticYaw, long now) {
-        if (dragging || paused) return yaw;
+        if (dragging || paused)
+            return yaw;
         return automaticYaw + yawOffset;
     }
 
     /**
-     * Retrieves the current pitch angle.
+     * Returns the current pitch angle.
      *
      * @param now current timestamp
      * @return current pitch angle in degrees
@@ -123,7 +128,9 @@ public final class MoleculeRotation {
      *
      * @return {@code true} if paused, {@code false} otherwise
      */
-    public boolean isPaused() { return paused; }
+    public boolean isPaused() {
+        return paused;
+    }
 
     /** Freeze the displayed pose; resume automatic spin from that exact pose. */
     public void togglePaused(float automaticYaw, long now) {
@@ -144,12 +151,14 @@ public final class MoleculeRotation {
         paused = false;
         yawOffset = 0;
         pitch = DEFAULT_PITCH;
-        if (frame.active == this) frame.active = null;
+        if (frame.active == this)
+            frame.active = null;
     }
 
     /** Cancels any active mouse drag rotation. */
     public static void cancelActiveDrag() {
-        if (frame.active == null) return;
+        if (frame.active == null)
+            return;
         frame.active.reset();
     }
 
@@ -160,12 +169,14 @@ public final class MoleculeRotation {
 
     /** Marks the current rotation instance as rendered in this frame. */
     public void rendered() {
-        if (frame.active == this) frame.activeDrawn = true;
+        if (frame.active == this)
+            frame.activeDrawn = true;
     }
 
     /** Concludes the frame, cancelling active drags if they were not rendered. */
     public static void endFrame() {
-        if (frame.active != null && !frame.activeDrawn) cancelActiveDrag();
+        if (frame.active != null && !frame.activeDrawn)
+            cancelActiveDrag();
     }
 
     /** Wraps an angle in degrees to the range [-180, 180). */

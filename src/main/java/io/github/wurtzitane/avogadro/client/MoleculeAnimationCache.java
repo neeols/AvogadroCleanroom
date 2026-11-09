@@ -1,15 +1,18 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.nio.ByteBuffer;
+
 import io.github.wurtzitane.avogadro.Avogadro;
 import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
-import net.minecraft.client.renderer.OpenGlHelper;
-import org.lwjgl.opengl.*;
 
-import java.nio.ByteBuffer;
+import net.minecraft.client.renderer.OpenGlHelper;
+
+import org.lwjgl.opengl.*;
 
 /**
  * Manages fair, lazy full-geometry animation previews with complete-rotation admission and memory limits.
- * <p>Fair, lazy full-geometry previews with complete-rotation admission and a 64 MiB limit.
+ * <p>
+ * Fair, lazy full-geometry previews with complete-rotation admission and a 64 MiB limit.
  */
 final class MoleculeAnimationCache {
 
@@ -46,7 +49,6 @@ final class MoleculeAnimationCache {
     /** Flag indicating whether pre-rendered animation caching has failed and become unavailable. */
     private static boolean unavailable;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeAnimationCache() {}
 
     /** Begins a new animation rendering frame. */
@@ -62,7 +64,8 @@ final class MoleculeAnimationCache {
 
     /**
      * Ends the current animation frame and processes pending preview captures.
-     * <p>Capture after visible draws, so the first preview cannot monopolize generation.
+     * <p>
+     * Capture after visible draws, so the first preview cannot monopolize generation.
      */
     static void endFrame() {
         try {
@@ -112,7 +115,7 @@ final class MoleculeAnimationCache {
      * Calculates physical resolution accounting for GUI pixel scale.
      *
      * @param logical logical size in pixels
-     * @param scale   GUI scale factor
+     * @param scale GUI scale factor
      * @return physical texture resolution in pixels
      */
     static int physicalResolution(int logical, float scale) {
@@ -127,15 +130,16 @@ final class MoleculeAnimationCache {
      * Renders or queues a pre-rendered molecule animation frame.
      *
      * @param molecule molecule structure
-     * @param x        x coordinate position
-     * @param y        y coordinate position
-     * @param size     render size
-     * @param yaw      yaw rotation angle
-     * @param cubic    whether cubic crystal rendering is enabled
-     * @param palette  element palette snapshot
+     * @param x x coordinate position
+     * @param y y coordinate position
+     * @param size render size
+     * @param yaw yaw rotation angle
+     * @param cubic whether cubic crystal rendering is enabled
+     * @param palette element palette snapshot
      * @return {@code true} if drawn successfully, {@code false} otherwise
      */
-    static boolean draw(MoleculeStructure molecule, int x, int y, int size, float yaw, boolean cubic, ElementPalette.Snapshot palette) {
+    static boolean draw(MoleculeStructure molecule, int x, int y, int size, float yaw, boolean cubic,
+            ElementPalette.Snapshot palette) {
         checkContext();
         if (unavailable || !OpenGlHelper.framebufferSupported || !Float.isFinite(GuiClip.pixelScale)) {
             return false;
@@ -149,7 +153,8 @@ final class MoleculeAnimationCache {
         Entry entry = null;
         for (Entry candidate : entries) {
             if (candidate != null && candidate.molecule == molecule && candidate.cubic == cubic
-                    && candidate.palette == palette.revision() && candidate.resolution == resolution && candidate.size == size) {
+                    && candidate.palette == palette.revision() && candidate.resolution == resolution
+                    && candidate.size == size) {
                 entry = candidate;
                 break;
             }
@@ -233,7 +238,8 @@ final class MoleculeAnimationCache {
         } catch (RuntimeException failure) {
             clear();
             unavailable = true;
-            Avogadro.LOGGER.warn("Pre-rendered molecule previews unavailable; using live geometry: {}", failure.getMessage());
+            Avogadro.LOGGER.warn("Pre-rendered molecule previews unavailable; using live geometry: {}",
+                    failure.getMessage());
             return false;
         } finally {
             FrameWorkBudget.recordAnimation(System.nanoTime() - started);
@@ -267,8 +273,8 @@ final class MoleculeAnimationCache {
                     free = i;
                     continue;
                 }
-                if (renderFrame - candidate.requestedAt >= RETAIN_FRAMES &&
-                        (victim < 0 || candidate.used < entries[victim].used)) {
+                if (renderFrame - candidate.requestedAt >= RETAIN_FRAMES
+                        && (victim < 0 || candidate.used < entries[victim].used)) {
                     victim = i;
                 }
             }
@@ -311,9 +317,12 @@ final class MoleculeAnimationCache {
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_S, GL12.GL_CLAMP_TO_EDGE);
             GL11.glTexParameteri(GL11.GL_TEXTURE_2D, GL11.GL_TEXTURE_WRAP_T, GL12.GL_CLAMP_TO_EDGE);
             GL15.glBindBuffer(GL21.GL_PIXEL_UNPACK_BUFFER, 0);
-            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, entry.resolution, entry.resolution, 0, GL11.GL_RGBA, GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
-            OpenGlHelper.glFramebufferTexture2D(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, texture, 0);
-            if (OpenGlHelper.glCheckFramebufferStatus(OpenGlHelper.GL_FRAMEBUFFER) != OpenGlHelper.GL_FRAMEBUFFER_COMPLETE) {
+            GL11.glTexImage2D(GL11.GL_TEXTURE_2D, 0, GL11.GL_RGBA8, entry.resolution, entry.resolution, 0, GL11.GL_RGBA,
+                    GL11.GL_UNSIGNED_BYTE, (ByteBuffer) null);
+            OpenGlHelper.glFramebufferTexture2D(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_COLOR_ATTACHMENT0,
+                    GL11.GL_TEXTURE_2D, texture, 0);
+            if (OpenGlHelper
+                    .glCheckFramebufferStatus(OpenGlHelper.GL_FRAMEBUFFER) != OpenGlHelper.GL_FRAMEBUFFER_COMPLETE) {
                 throw new IllegalStateException("Cannot create molecule animation framebuffer");
             }
             GL11.glViewport(0, 0, entry.resolution, entry.resolution);
@@ -348,7 +357,8 @@ final class MoleculeAnimationCache {
         } finally {
             if (captureTarget != null) {
                 OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, captureTarget.framebuffer);
-                OpenGlHelper.glFramebufferTexture2D(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_COLOR_ATTACHMENT0, GL11.GL_TEXTURE_2D, 0, 0);
+                OpenGlHelper.glFramebufferTexture2D(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_COLOR_ATTACHMENT0,
+                        GL11.GL_TEXTURE_2D, 0, 0);
             }
             if (texture != 0) {
                 GL11.glDeleteTextures(texture);
@@ -461,16 +471,17 @@ final class MoleculeAnimationCache {
         int pendingFrame = -1;
 
         /**
-         * Constructs a new animation entry.
+         * Creates a animation entry.
          *
-         * @param molecule    molecule structure
-         * @param cubic       whether cubic rendering is enabled
-         * @param palette     element palette snapshot
-         * @param resolution  physical render resolution
-         * @param size        logical render size
+         * @param molecule molecule structure
+         * @param cubic whether cubic rendering is enabled
+         * @param palette element palette snapshot
+         * @param resolution physical render resolution
+         * @param size logical render size
          * @param reservation memory reservation cost
          */
-        Entry(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette, int resolution, int size, long reservation) {
+        Entry(MoleculeStructure molecule, boolean cubic, ElementPalette.Snapshot palette, int resolution, int size,
+                long reservation) {
             this.molecule = molecule;
             this.cubic = cubic;
             this.palette = palette.revision();
@@ -494,8 +505,7 @@ final class MoleculeAnimationCache {
         while (bytes + cost > MAX_BYTES) {
             int slot = -1;
             for (int i = 0; i < scratch.length; i++) {
-                if (scratch[i] != null && scratch[i] != keep
-                        && (slot < 0 || scratch[i].used < scratch[slot].used)) {
+                if (scratch[i] != null && scratch[i] != keep && (slot < 0 || scratch[i].used < scratch[slot].used)) {
                     slot = i;
                 }
             }
@@ -506,7 +516,7 @@ final class MoleculeAnimationCache {
         }
     }
 
-    /** Retrieves or allocates a scratch target for the given resolution. */
+    /** Returns or allocates a scratch target for the given resolution. */
     private static Scratch target(int resolution) {
         int slot = 0;
         for (int i = 0; i < scratch.length; i++) {
@@ -527,9 +537,11 @@ final class MoleculeAnimationCache {
             target.framebuffer = OpenGlHelper.glGenFramebuffers();
             target.depth = OpenGlHelper.glGenRenderbuffers();
             OpenGlHelper.glBindRenderbuffer(OpenGlHelper.GL_RENDERBUFFER, target.depth);
-            OpenGlHelper.glRenderbufferStorage(OpenGlHelper.GL_RENDERBUFFER, GL14.GL_DEPTH_COMPONENT24, resolution, resolution);
+            OpenGlHelper.glRenderbufferStorage(OpenGlHelper.GL_RENDERBUFFER, GL14.GL_DEPTH_COMPONENT24, resolution,
+                    resolution);
             OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, target.framebuffer);
-            OpenGlHelper.glFramebufferRenderbuffer(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_DEPTH_ATTACHMENT, OpenGlHelper.GL_RENDERBUFFER, target.depth);
+            OpenGlHelper.glFramebufferRenderbuffer(OpenGlHelper.GL_FRAMEBUFFER, OpenGlHelper.GL_DEPTH_ATTACHMENT,
+                    OpenGlHelper.GL_RENDERBUFFER, target.depth);
             bytes += cost;
             target.accounted = true;
             target.used = ++clock;
@@ -568,7 +580,7 @@ final class MoleculeAnimationCache {
         boolean accounted;
 
         /**
-         * Constructs a new scratch target.
+         * Creates a scratch target.
          *
          * @param resolution target resolution
          */
@@ -586,10 +598,10 @@ final class MoleculeAnimationCache {
         final long cost;
 
         /**
-         * Constructs a new animation frame record.
+         * Creates a animation frame record.
          *
-         * @parent entry   parent animation entry
-         * @param index   frame index
+         * @param entry parent animation entry
+         * @param index frame index
          * @param texture OpenGL texture ID
          */
         Frame(Entry entry, int index, int texture) {

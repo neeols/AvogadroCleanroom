@@ -2,6 +2,7 @@ package io.github.wurtzitane.avogadro.network;
 
 import io.github.wurtzitane.avogadro.item.PeriodicTableItem;
 import io.netty.buffer.ByteBuf;
+
 import net.minecraft.entity.player.EntityPlayerMP;
 import net.minecraft.item.ItemStack;
 import net.minecraft.util.EnumHand;
@@ -19,7 +20,6 @@ public final class PeriodicTableNetwork {
     /** Simple network wrapper channel instance for periodic table network messages. */
     private static final SimpleNetworkWrapper CHANNEL = NetworkRegistry.INSTANCE.newSimpleChannel("avogadro_table");
 
-    /** Private constructor to prevent instantiation of utility class. */
     private PeriodicTableNetwork() {}
 
     /** Registers network message handlers and packet channels on the server side. */
@@ -30,9 +30,9 @@ public final class PeriodicTableNetwork {
     /**
      * Sends a resize request packet to the server for the held periodic table item.
      *
-     * @param hand         active player hand
+     * @param hand active player hand
      * @param selectedSlot selected hotbar slot index
-     * @param direction    resize direction (-1 or 1)
+     * @param direction resize direction (-1 or 1)
      */
     public static void requestResize(EnumHand hand, int selectedSlot, int direction) {
         if (hand != null && selectedSlot >= 0 && selectedSlot < 9 && (direction == -1 || direction == 1))
@@ -42,27 +42,31 @@ public final class PeriodicTableNetwork {
     /**
      * Resizes the held periodic table item based on player input, validating hands, hotbar slots, and sneaking state.
      *
-     * @param player       target player entity
-     * @param hand         active player hand
+     * @param player target player entity
+     * @param hand active player hand
      * @param selectedSlot selected hotbar slot index
-     * @param direction    resize direction (-1 or 1)
+     * @param direction resize direction (-1 or 1)
      * @return {@code true} if resize was successful, {@code false} otherwise
      */
     public static boolean resizeHeld(EntityPlayerMP player, EnumHand hand, int selectedSlot, int direction) {
-        if (player == null || hand == null || player.isDead || !player.isSneaking()
-                || selectedSlot < 0 || selectedSlot >= 9 || player.inventory.currentItem != selectedSlot
-                || (direction != -1 && direction != 1)) return false;
+        if (player == null || hand == null || player.isDead || !player.isSneaking() || selectedSlot < 0
+                || selectedSlot >= 9 || player.inventory.currentItem != selectedSlot
+                || (direction != -1 && direction != 1))
+            return false;
         ItemStack main = player.getHeldItemMainhand();
-        if (hand == EnumHand.OFF_HAND && !main.isEmpty() && main.getItem() == PeriodicTableItem.INSTANCE) return false;
+        if (hand == EnumHand.OFF_HAND && !main.isEmpty() && main.getItem() == PeriodicTableItem.INSTANCE)
+            return false;
         ItemStack held = player.getHeldItem(hand);
-        if (held.isEmpty() || held.getItem() != PeriodicTableItem.INSTANCE) return false;
+        if (held.isEmpty() || held.getItem() != PeriodicTableItem.INSTANCE)
+            return false;
         int oldWidth = PeriodicTableItem.width(held);
         int width = PeriodicTableItem.boundedWidth(oldWidth + direction);
         if (width != oldWidth) {
             PeriodicTableItem.setWidth(held, width);
             player.inventory.markDirty();
             player.inventoryContainer.detectAndSendChanges();
-            if (player.openContainer != player.inventoryContainer) player.openContainer.detectAndSendChanges();
+            if (player.openContainer != player.inventoryContainer)
+                player.openContainer.detectAndSendChanges();
         }
         player.sendStatusMessage(new TextComponentTranslation("avogadro.periodic_table.size", width,
                 PeriodicTableItem.heightForWidth(width)), true);
@@ -90,9 +94,9 @@ public final class PeriodicTableNetwork {
         /**
          * Constructs a resize request with specified hand, slot, and direction.
          *
-         * @param hand         target player hand
+         * @param hand target player hand
          * @param selectedSlot selected hotbar slot index
-         * @param direction    resize direction (-1 or 1)
+         * @param direction resize direction (-1 or 1)
          */
         public ResizeRequest(EnumHand hand, int selectedSlot, int direction) {
             this.hand = hand;
@@ -121,7 +125,8 @@ public final class PeriodicTableNetwork {
         @Override
         public void fromBytes(ByteBuf buffer) {
             valid = false;
-            if (buffer.readableBytes() != 3) return;
+            if (buffer.readableBytes() != 3)
+                return;
             int encodedHand = buffer.readUnsignedByte();
             selectedSlot = buffer.readUnsignedByte();
             direction = buffer.readByte();
@@ -142,10 +147,11 @@ public final class PeriodicTableNetwork {
          */
         @Override
         public IMessage onMessage(ResizeRequest message, MessageContext context) {
-            if (!message.valid) return null;
+            if (!message.valid)
+                return null;
             EntityPlayerMP player = context.getServerHandler().player;
-            player.getServerWorld().addScheduledTask(() ->
-                    resizeHeld(player, message.hand, message.selectedSlot, message.direction));
+            player.getServerWorld()
+                    .addScheduledTask(() -> resizeHeld(player, message.hand, message.selectedSlot, message.direction));
             return null;
         }
     }

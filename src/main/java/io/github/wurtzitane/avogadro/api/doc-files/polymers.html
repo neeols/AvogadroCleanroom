@@ -1,0 +1,1122 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><title>Chains, networks, and crystals</title></head><body>
+<div class="av-guide">
+<nav class="av-breadcrumb" aria-label="Guide navigation"><a href="../../../../../../index.html">Avogadro API</a><a href="examples.html">All examples</a><a href="../package-summary.html">Common reference</a><a href="../client/package-summary.html">Client reference</a></nav>
+<p class="av-kicker">Avogadro guide · Minecraft 1.12.2 / Cleanroom</p>
+<h1>Chains, networks, and crystals</h1><p class="av-lead">A polymer chain repeats a piece. A network also connects chains or branches. A crystal repeats a unit cell. You supply the pieces, their positions, and every connection.</p>
+<div class="av-language"><span class="av-language-controls">Example language</span><noscript>Java, Groovy, and JSON variants are all shown below. Enable JavaScript to choose one.</noscript><span class="av-step"> Your choice applies across the guides.</span></div>
+<details><summary>Imports and complete companion files</summary><p>Examples are methods inside the downloadable companion classes. Copy the methods you need into your own class and keep the imports at the top. <code>GuideModels</code> contains the reusable chemical recipes; <code>GuideTasks</code> contains the operations. These files are documentation examples, not built-in library content.</p><p><a href="GuideModels.java">Java model recipes</a> · <a href="GuideTasks.java">Java operations</a> · <a href="ModelRecipes.groovy">Complete Groovy model script</a> · <a href="ClientRecipes.groovy.txt">Groovy client helpers</a></p><p>The complete Groovy model script can be saved as <code>groovy/postInit/avogadro_examples.groovy</code>. It includes the reusable <code>GuideModels</code> class and registers all ten chemical examples through the reloadable script registry. The separate client helper download is a reference for client integrations: keep it out of common postInit scripts and dedicated-server entry points. Java users should likewise copy common operations into their common class and keep screen/export operations in a client class.</p><pre><code class="language-java">import io.github.wurtzitane.avogadro.api.*;
+import io.github.wurtzitane.avogadro.molecule.*;
+// Client code only:
+import io.github.wurtzitane.avogadro.api.client.*;
+import io.github.wurtzitane.avogadro.client.export.*;
+import java.util.List;
+import java.util.Map;</code></pre></details><h2 id="polymers-choose">Choose the smallest tool that fits</h2><div class="av-reference" data-reference="geometry"><div data-language="java groovy"><table><caption>Choose the smallest tool that fits</caption><thead><tr><th scope="col">You need</th><th scope="col">Use</th><th scope="col">Formula / mass means</th></tr></thead><tbody><tr><td>One fixed arrangement</td><td><code>StructureAssembly</code></td><td>The actual finite atoms</td></tr><tr><td>One linear chain with two end groups</td><td><code>PolymerDefinition</code></td><td>A selected finite chain; not a bulk polymer molecular weight</td></tr><tr><td>Adjustable branches/crosslinks or seeded choices</td><td><code>PolymerNetworkDefinition</code></td><td>The selected realization; registered values describe the default preview</td></tr><tr><td>A crystal cell and finite copies</td><td><code>CrystalCell</code> / <code>CrystalGeometry</code></td><td>Distinguish the formula unit from a finite cluster</td></tr></tbody></table></div><div data-language="json"><table><caption>Choose the smallest tool that fits</caption><thead><tr><th scope="col">You need</th><th scope="col">JSON geometry source</th><th scope="col">Formula / mass means</th></tr></thead><tbody><tr><td>One fixed arrangement</td><td><code>structure.assembly</code></td><td>The actual finite atoms.</td></tr><tr><td>One linear chain with two end groups</td><td><code>polymer</code></td><td>A selected finite chain, not a bulk polymer molecular weight.</td></tr><tr><td>Adjustable branches/crosslinks or seeded choices</td><td><code>polymer_network</code></td><td>The selected model; registered values describe the default preview.</td></tr><tr><td>A crystal cell and finite copies</td><td><code>crystal</code> plus its authored <code>structure</code></td><td>Distinguish the formula unit from a finite cluster.</td></tr></tbody></table></div></div><h2 id="polymers-peg">Make a PEG chain with real end groups</h2><div class="av-example" data-example="peg"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static PolymerDefinition peg() {
+    // HO–(CH2–CH2–O)n–H. Caps supply both terminal hydrogens and the extra oxygen.
+    var unit = new StructureBuilder().atom(&quot;C&quot;, 0, 0, 0)
+            .atom(&quot;C&quot;, 1.5, 0, 0).atom(&quot;O&quot;, 2.9, .2, 0)
+            .atom(&quot;H&quot;, -.3, .8, .65).atom(&quot;H&quot;, -.3, -.8, -.65)
+            .atom(&quot;H&quot;, 1.7, .8, -.65).atom(&quot;H&quot;, 1.7, -.8, .65)
+            .bond(0, 1).bond(1, 2).bond(0, 3).bond(0, 4).bond(1, 5).bond(1, 6)
+            .attachment(&quot;head&quot;, 0).attachment(&quot;tail&quot;, 2).build();
+    var head = new StructureBuilder().atom(&quot;O&quot;, -1.4, -.2, 0)
+            .atom(&quot;H&quot;, -2.2, .2, 0).bond(0, 1).attachment(&quot;end&quot;, 0).build();
+    var tail = new StructureBuilder().atom(&quot;H&quot;, 3.8, .2, 0).attachment(&quot;end&quot;, 0).build();
+    return PolymerDefinition.usingAttachments(unit, &quot;head&quot;, &quot;tail&quot;,
+            new PolymerDefinition.Vector(4.3, 0, 0), BondType.SINGLE,
+            PolymerDefinition.Cap.usingAttachment(head, &quot;end&quot;, BondType.SINGLE),
+            PolymerDefinition.Cap.usingAttachment(tail, &quot;end&quot;, BondType.SINGLE), 4);
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">// Load the complete PEG molecule JSON with GroovyScript.
+mods.avogadro.molecules.register(
+    io.github.wurtzitane.avogadro.api.MoleculeSpec.fromJson(&#x27;guide:peg&#x27;, new File(&#x27;scripts/examples/peg.json&#x27;).text))</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Polyethylene glycol&quot;,
+  &quot;polymer&quot;: {
+    &quot;repeat_unit&quot;: {
+      &quot;atoms&quot;: [
+        {
+          &quot;e&quot;: &quot;C&quot;,
+          &quot;x&quot;: 0.0,
+          &quot;y&quot;: 0.0,
+          &quot;z&quot;: 0.0
+        },
+        {
+          &quot;e&quot;: &quot;C&quot;,
+          &quot;x&quot;: 1.5,
+          &quot;y&quot;: 0.0,
+          &quot;z&quot;: 0.0
+        },
+        {
+          &quot;e&quot;: &quot;O&quot;,
+          &quot;x&quot;: 2.9,
+          &quot;y&quot;: 0.2,
+          &quot;z&quot;: 0.0
+        },
+        {
+          &quot;e&quot;: &quot;H&quot;,
+          &quot;x&quot;: -0.3,
+          &quot;y&quot;: 0.8,
+          &quot;z&quot;: 0.65
+        },
+        {
+          &quot;e&quot;: &quot;H&quot;,
+          &quot;x&quot;: -0.3,
+          &quot;y&quot;: -0.8,
+          &quot;z&quot;: -0.65
+        },
+        {
+          &quot;e&quot;: &quot;H&quot;,
+          &quot;x&quot;: 1.7,
+          &quot;y&quot;: 0.8,
+          &quot;z&quot;: -0.65
+        },
+        {
+          &quot;e&quot;: &quot;H&quot;,
+          &quot;x&quot;: 1.7,
+          &quot;y&quot;: -0.8,
+          &quot;z&quot;: 0.65
+        }
+      ],
+      &quot;bonds&quot;: [
+        [
+          0,
+          1,
+          &quot;SINGLE&quot;
+        ],
+        [
+          1,
+          2,
+          &quot;SINGLE&quot;
+        ],
+        [
+          0,
+          3,
+          &quot;SINGLE&quot;
+        ],
+        [
+          0,
+          4,
+          &quot;SINGLE&quot;
+        ],
+        [
+          1,
+          5,
+          &quot;SINGLE&quot;
+        ],
+        [
+          1,
+          6,
+          &quot;SINGLE&quot;
+        ]
+      ],
+      &quot;attachments&quot;: {
+        &quot;head&quot;: 0,
+        &quot;tail&quot;: 2
+      }
+    },
+    &quot;head&quot;: 0,
+    &quot;tail&quot;: 2,
+    &quot;translation&quot;: [
+      4.3,
+      0.0,
+      0.0
+    ],
+    &quot;link_type&quot;: &quot;SINGLE&quot;,
+    &quot;head_cap&quot;: {
+      &quot;structure&quot;: {
+        &quot;atoms&quot;: [
+          {
+            &quot;e&quot;: &quot;O&quot;,
+            &quot;x&quot;: -1.4,
+            &quot;y&quot;: -0.2,
+            &quot;z&quot;: 0.0
+          },
+          {
+            &quot;e&quot;: &quot;H&quot;,
+            &quot;x&quot;: -2.2,
+            &quot;y&quot;: 0.2,
+            &quot;z&quot;: 0.0
+          }
+        ],
+        &quot;bonds&quot;: [
+          [
+            0,
+            1,
+            &quot;SINGLE&quot;
+          ]
+        ],
+        &quot;attachments&quot;: {
+          &quot;end&quot;: 0
+        }
+      },
+      &quot;attachment&quot;: 0,
+      &quot;bond_type&quot;: &quot;SINGLE&quot;
+    },
+    &quot;tail_cap&quot;: {
+      &quot;structure&quot;: {
+        &quot;atoms&quot;: [
+          {
+            &quot;e&quot;: &quot;H&quot;,
+            &quot;x&quot;: 3.8,
+            &quot;y&quot;: 0.2,
+            &quot;z&quot;: 0.0
+          }
+        ],
+        &quot;bonds&quot;: [],
+        &quot;attachments&quot;: {
+          &quot;end&quot;: 0
+        }
+      },
+      &quot;attachment&quot;: 0,
+      &quot;bond_type&quot;: &quot;SINGLE&quot;
+    },
+    &quot;preview_units&quot;: 4
+  },
+  &quot;inspection&quot;: {
+    &quot;classification&quot;: &quot;polymer&quot;
+  }
+}</code></pre></div></div><p><a href="peg.json">Complete PEG JSON definition</a>. <code>PolymerGeometry.chainFragment(GuideModels.peg(), 4)</code> returns a finite fragment.</p><div class="av-result"><strong>Expected result</strong> At n = 4: C8H18O5, 31 atoms. The end groups matter: repeating C2H4O alone would miss H2O.</div><figure><a href="peg.png"><img src="peg.png" alt="Four PEG repeat units, with an OH group at one end and H at the other."></a><figcaption>Four PEG repeat units, with an OH group at one end and H at the other. <a href="peg.png">Full size</a></figcaption></figure><h2 id="polymers-network">What a polymer network looks like</h2><p>In this idealized model, two 1,4-polyisoprene chains can be joined by single sulfur bridges. Each eligible position explicitly chooses either one shared sulfur atom or two separate H caps. The model does not remove hydrogens implicitly and does not simulate vulcanization, stereochemistry, elasticity, or chemical stability.</p><figure><a href="network-comparison.png"><img src="network-comparison.png" alt="The same authored repeat frames at 0% and 100% bridge chance. Sulfur atoms connect the two chains; without a bridge, H caps fill both sites."></a><figcaption>The same authored repeat frames at 0% and 100% bridge chance. Sulfur atoms connect the two chains; without a bridge, H caps fill both sites. <a href="network-comparison.png">Full size</a></figcaption></figure><div class="av-example" data-example="rubber-unit"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureFragment rubberUnit() {
+    // 1,4-polyisoprene repeat with one deliberately open site at C4.
+    // A separate choice supplies either H or a shared sulfur bridge there.
+    return new StructureBuilder()
+            .atom(&quot;C&quot;, 0, 0, 0).atom(&quot;C&quot;, 1.5, 0, 0)
+            .atom(&quot;C&quot;, 2.8, .4, 0).atom(&quot;C&quot;, 4.2, .4, 0).atom(&quot;C&quot;, 1.5, -1.5, 0)
+            .atom(&quot;H&quot;, -.4, .7, .7).atom(&quot;H&quot;, -.4, .7, -.7)
+            .atom(&quot;H&quot;, 2.9, 1.4, 0).atom(&quot;H&quot;, 4.4, .4, 1)
+            .atom(&quot;H&quot;, .5, -1.9, 0).atom(&quot;H&quot;, 2, -1.9, .8).atom(&quot;H&quot;, 2, -1.9, -.8)
+            .bond(0, 1).bond(1, 2, BondType.DOUBLE).bond(2, 3).bond(1, 4)
+            .bond(0, 5).bond(0, 6).bond(2, 7).bond(3, 8)
+            .bond(4, 9).bond(4, 10).bond(4, 11)
+            .attachment(&quot;head&quot;, 0).attachment(&quot;tail&quot;, 3).attachment(&quot;cross&quot;, 3).build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static StructureFragment rubberUnit() {
+    // 1,4-polyisoprene repeat with one deliberately open site at C4.
+    // A separate choice supplies either H or a shared sulfur bridge there.
+    return new StructureBuilder()
+            .atom(&quot;C&quot;, 0, 0, 0).atom(&quot;C&quot;, 1.5, 0, 0)
+            .atom(&quot;C&quot;, 2.8, .4, 0).atom(&quot;C&quot;, 4.2, .4, 0).atom(&quot;C&quot;, 1.5, -1.5, 0)
+            .atom(&quot;H&quot;, -.4, .7, .7).atom(&quot;H&quot;, -.4, .7, -.7)
+            .atom(&quot;H&quot;, 2.9, 1.4, 0).atom(&quot;H&quot;, 4.4, .4, 1)
+            .atom(&quot;H&quot;, .5, -1.9, 0).atom(&quot;H&quot;, 2, -1.9, .8).atom(&quot;H&quot;, 2, -1.9, -.8)
+            .bond(0, 1).bond(1, 2, BondType.DOUBLE).bond(2, 3).bond(1, 4)
+            .bond(0, 5).bond(0, 6).bond(2, 7).bond(3, 8)
+            .bond(4, 9).bond(4, 10).bond(4, 11)
+            .attachment(&quot;head&quot;, 0).attachment(&quot;tail&quot;, 3).attachment(&quot;cross&quot;, 3).build();
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-example" data-example="rubber"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static PolymerNetworkDefinition rubber() {
+    var sulfur = new StructureBuilder().atom(&quot;S&quot;, 4.2, 2.2, 0)
+            .attachment(&quot;left&quot;, 0).attachment(&quot;right&quot;, 0).build();
+    var hydrogens = new StructureBuilder().atom(&quot;H&quot;, 4.2, 1.4, 0)
+            .atom(&quot;H&quot;, 4.2, 3.0, 0).attachment(&quot;left&quot;, 0).attachment(&quot;right&quot;, 1).build();
+    var pair = StructureAssembly.builder()
+            .part(&quot;left&quot;, rubberUnit()).part(&quot;right&quot;, rubberUnit().translate(0, 3.6, 0))
+            .choice(&quot;bridge&quot;, &quot;sulfur_bridge&quot;, &quot;bridgeChance&quot;,
+                    StructureAssembly.builder().part(&quot;connector&quot;, sulfur).build(),
+                    StructureAssembly.builder().part(&quot;connector&quot;, hydrogens).build())
+            .link(&quot;left/cross&quot;, &quot;bridge/connector/left&quot;, BondType.SINGLE)
+            .link(&quot;right/cross&quot;, &quot;bridge/connector/right&quot;, BondType.SINGLE).build();
+    var head = new StructureBuilder().atom(&quot;H&quot;, -1, 0, 0).atom(&quot;H&quot;, -1, 3.6, 0)
+            .attachment(&quot;left&quot;, 0).attachment(&quot;right&quot;, 1).build();
+    var tail = new StructureBuilder().atom(&quot;H&quot;, 5.2, .4, 0).atom(&quot;H&quot;, 5.2, 4, 0)
+            .attachment(&quot;left&quot;, 0).attachment(&quot;right&quot;, 1).build();
+    var assembly = StructureAssembly.builder()
+            .repeat(&quot;pairs&quot;, pair, &quot;length&quot;, StructureAssembly.translation(5.7, 0, 0))
+            .neighbor(&quot;left/tail&quot;, &quot;left/head&quot;, 1, BondType.SINGLE)
+            .neighbor(&quot;right/tail&quot;, &quot;right/head&quot;, 1, BondType.SINGLE)
+            .endGroups(StructureAssembly.builder().part(&quot;cap&quot;, head).build(),
+                    StructureAssembly.builder().part(&quot;cap&quot;, tail).build())
+            .link(&quot;pairs/head/cap/left&quot;, &quot;pairs[first]/left/head&quot;, BondType.SINGLE)
+            .link(&quot;pairs/head/cap/right&quot;, &quot;pairs[first]/right/head&quot;, BondType.SINGLE)
+            .link(&quot;pairs[last]/left/tail&quot;, &quot;pairs/tail/cap/left&quot;, BondType.SINGLE)
+            .link(&quot;pairs[last]/right/tail&quot;, &quot;pairs/tail/cap/right&quot;, BondType.SINGLE).build();
+    return new PolymerNetworkDefinition(List.of(
+            PolymerNetworkDefinition.Parameter.count(&quot;length&quot;, 1, 16, 4),
+            PolymerNetworkDefinition.Parameter.probability(&quot;bridgeChance&quot;, .5)), assembly, 42L);
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">// The JSON recipe contains every fragment, cap, transform, and link.
+mods.avogadro.molecules.register(
+    io.github.wurtzitane.avogadro.api.MoleculeSpec.fromJson(&#x27;guide:rubber&#x27;, new File(&#x27;scripts/examples/rubber.json&#x27;).text))</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Sulfur-linked polyisoprene&quot;,
+  &quot;polymer_network&quot;: {
+    &quot;random_version&quot;: 1,
+    &quot;seed&quot;: &quot;42&quot;,
+    &quot;parameters&quot;: [
+      {
+        &quot;name&quot;: &quot;length&quot;,
+        &quot;label&quot;: &quot;length&quot;,
+        &quot;kind&quot;: &quot;count&quot;,
+        &quot;min&quot;: 1.0,
+        &quot;max&quot;: 16.0,
+        &quot;default&quot;: 4.0
+      },
+      {
+        &quot;name&quot;: &quot;bridgeChance&quot;,
+        &quot;label&quot;: &quot;bridgeChance&quot;,
+        &quot;kind&quot;: &quot;probability&quot;,
+        &quot;min&quot;: 0.0,
+        &quot;max&quot;: 1.0,
+        &quot;default&quot;: 0.5
+      }
+    ],
+    &quot;assembly&quot;: {
+      &quot;nodes&quot;: [
+        {
+          &quot;name&quot;: &quot;pairs&quot;,
+          &quot;kind&quot;: &quot;repeat&quot;,
+          &quot;transform&quot;: [
+            [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0,
+              0.0
+            ]
+          ],
+          &quot;body&quot;: {
+            &quot;nodes&quot;: [
+              {
+                &quot;name&quot;: &quot;left&quot;,
+                &quot;kind&quot;: &quot;fragment&quot;,
+                &quot;transform&quot;: [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                &quot;structure&quot;: {
+                  &quot;atoms&quot;: [
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 0.0,
+                      &quot;y&quot;: 0.0,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 1.5,
+                      &quot;y&quot;: 0.0,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 2.8,
+                      &quot;y&quot;: 0.4,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 4.2,
+                      &quot;y&quot;: 0.4,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 1.5,
+                      &quot;y&quot;: -1.5,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: -0.4,
+                      &quot;y&quot;: 0.7,
+                      &quot;z&quot;: 0.7
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: -0.4,
+                      &quot;y&quot;: 0.7,
+                      &quot;z&quot;: -0.7
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 2.9,
+                      &quot;y&quot;: 1.4,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 4.4,
+                      &quot;y&quot;: 0.4,
+                      &quot;z&quot;: 1.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 0.5,
+                      &quot;y&quot;: -1.9,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 2.0,
+                      &quot;y&quot;: -1.9,
+                      &quot;z&quot;: 0.8
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 2.0,
+                      &quot;y&quot;: -1.9,
+                      &quot;z&quot;: -0.8
+                    }
+                  ],
+                  &quot;bonds&quot;: [
+                    [
+                      0,
+                      1,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      1,
+                      2,
+                      &quot;DOUBLE&quot;
+                    ],
+                    [
+                      2,
+                      3,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      1,
+                      4,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      0,
+                      5,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      0,
+                      6,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      2,
+                      7,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      3,
+                      8,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      4,
+                      9,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      4,
+                      10,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      4,
+                      11,
+                      &quot;SINGLE&quot;
+                    ]
+                  ],
+                  &quot;attachments&quot;: {
+                    &quot;head&quot;: 0,
+                    &quot;tail&quot;: 3,
+                    &quot;cross&quot;: 3
+                  }
+                }
+              },
+              {
+                &quot;name&quot;: &quot;right&quot;,
+                &quot;kind&quot;: &quot;fragment&quot;,
+                &quot;transform&quot;: [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                &quot;structure&quot;: {
+                  &quot;atoms&quot;: [
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 0.0,
+                      &quot;y&quot;: 3.6,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 1.5,
+                      &quot;y&quot;: 3.6,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 2.8,
+                      &quot;y&quot;: 4.0,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 4.2,
+                      &quot;y&quot;: 4.0,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;C&quot;,
+                      &quot;x&quot;: 1.5,
+                      &quot;y&quot;: 2.1,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: -0.4,
+                      &quot;y&quot;: 4.3,
+                      &quot;z&quot;: 0.7
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: -0.4,
+                      &quot;y&quot;: 4.3,
+                      &quot;z&quot;: -0.7
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 2.9,
+                      &quot;y&quot;: 5.0,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 4.4,
+                      &quot;y&quot;: 4.0,
+                      &quot;z&quot;: 1.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 0.5,
+                      &quot;y&quot;: 1.7000000000000002,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 2.0,
+                      &quot;y&quot;: 1.7000000000000002,
+                      &quot;z&quot;: 0.8
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 2.0,
+                      &quot;y&quot;: 1.7000000000000002,
+                      &quot;z&quot;: -0.8
+                    }
+                  ],
+                  &quot;bonds&quot;: [
+                    [
+                      0,
+                      1,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      1,
+                      2,
+                      &quot;DOUBLE&quot;
+                    ],
+                    [
+                      2,
+                      3,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      1,
+                      4,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      0,
+                      5,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      0,
+                      6,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      2,
+                      7,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      3,
+                      8,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      4,
+                      9,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      4,
+                      10,
+                      &quot;SINGLE&quot;
+                    ],
+                    [
+                      4,
+                      11,
+                      &quot;SINGLE&quot;
+                    ]
+                  ],
+                  &quot;attachments&quot;: {
+                    &quot;head&quot;: 0,
+                    &quot;tail&quot;: 3,
+                    &quot;cross&quot;: 3
+                  }
+                }
+              },
+              {
+                &quot;name&quot;: &quot;bridge&quot;,
+                &quot;kind&quot;: &quot;choice&quot;,
+                &quot;transform&quot;: [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                &quot;rule_id&quot;: &quot;sulfur_bridge&quot;,
+                &quot;probability&quot;: &quot;bridgeChance&quot;,
+                &quot;present&quot;: {
+                  &quot;nodes&quot;: [
+                    {
+                      &quot;name&quot;: &quot;connector&quot;,
+                      &quot;kind&quot;: &quot;fragment&quot;,
+                      &quot;transform&quot;: [
+                        [
+                          1.0,
+                          0.0,
+                          0.0,
+                          0.0
+                        ],
+                        [
+                          0.0,
+                          1.0,
+                          0.0,
+                          0.0
+                        ],
+                        [
+                          0.0,
+                          0.0,
+                          1.0,
+                          0.0
+                        ]
+                      ],
+                      &quot;structure&quot;: {
+                        &quot;atoms&quot;: [
+                          {
+                            &quot;e&quot;: &quot;S&quot;,
+                            &quot;x&quot;: 4.2,
+                            &quot;y&quot;: 2.2,
+                            &quot;z&quot;: 0.0
+                          }
+                        ],
+                        &quot;bonds&quot;: [],
+                        &quot;attachments&quot;: {
+                          &quot;left&quot;: 0,
+                          &quot;right&quot;: 0
+                        }
+                      }
+                    }
+                  ],
+                  &quot;links&quot;: [],
+                  &quot;random_links&quot;: []
+                },
+                &quot;absent&quot;: {
+                  &quot;nodes&quot;: [
+                    {
+                      &quot;name&quot;: &quot;connector&quot;,
+                      &quot;kind&quot;: &quot;fragment&quot;,
+                      &quot;transform&quot;: [
+                        [
+                          1.0,
+                          0.0,
+                          0.0,
+                          0.0
+                        ],
+                        [
+                          0.0,
+                          1.0,
+                          0.0,
+                          0.0
+                        ],
+                        [
+                          0.0,
+                          0.0,
+                          1.0,
+                          0.0
+                        ]
+                      ],
+                      &quot;structure&quot;: {
+                        &quot;atoms&quot;: [
+                          {
+                            &quot;e&quot;: &quot;H&quot;,
+                            &quot;x&quot;: 4.2,
+                            &quot;y&quot;: 1.4,
+                            &quot;z&quot;: 0.0
+                          },
+                          {
+                            &quot;e&quot;: &quot;H&quot;,
+                            &quot;x&quot;: 4.2,
+                            &quot;y&quot;: 3.0,
+                            &quot;z&quot;: 0.0
+                          }
+                        ],
+                        &quot;bonds&quot;: [],
+                        &quot;attachments&quot;: {
+                          &quot;left&quot;: 0,
+                          &quot;right&quot;: 1
+                        }
+                      }
+                    }
+                  ],
+                  &quot;links&quot;: [],
+                  &quot;random_links&quot;: []
+                }
+              }
+            ],
+            &quot;links&quot;: [
+              {
+                &quot;from&quot;: &quot;left/cross&quot;,
+                &quot;to&quot;: &quot;bridge/connector/left&quot;,
+                &quot;type&quot;: &quot;SINGLE&quot;
+              },
+              {
+                &quot;from&quot;: &quot;right/cross&quot;,
+                &quot;to&quot;: &quot;bridge/connector/right&quot;,
+                &quot;type&quot;: &quot;SINGLE&quot;
+              }
+            ],
+            &quot;random_links&quot;: []
+          },
+          &quot;count&quot;: &quot;length&quot;,
+          &quot;step&quot;: [
+            [
+              1.0,
+              0.0,
+              0.0,
+              5.7
+            ],
+            [
+              0.0,
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0,
+              0.0
+            ]
+          ],
+          &quot;neighbor_links&quot;: [
+            {
+              &quot;from&quot;: &quot;left/tail&quot;,
+              &quot;to&quot;: &quot;left/head&quot;,
+              &quot;type&quot;: &quot;SINGLE&quot;,
+              &quot;offset&quot;: 1
+            },
+            {
+              &quot;from&quot;: &quot;right/tail&quot;,
+              &quot;to&quot;: &quot;right/head&quot;,
+              &quot;type&quot;: &quot;SINGLE&quot;,
+              &quot;offset&quot;: 1
+            }
+          ],
+          &quot;head&quot;: {
+            &quot;nodes&quot;: [
+              {
+                &quot;name&quot;: &quot;cap&quot;,
+                &quot;kind&quot;: &quot;fragment&quot;,
+                &quot;transform&quot;: [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                &quot;structure&quot;: {
+                  &quot;atoms&quot;: [
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: -1.0,
+                      &quot;y&quot;: 0.0,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: -1.0,
+                      &quot;y&quot;: 3.6,
+                      &quot;z&quot;: 0.0
+                    }
+                  ],
+                  &quot;bonds&quot;: [],
+                  &quot;attachments&quot;: {
+                    &quot;left&quot;: 0,
+                    &quot;right&quot;: 1
+                  }
+                }
+              }
+            ],
+            &quot;links&quot;: [],
+            &quot;random_links&quot;: []
+          },
+          &quot;tail&quot;: {
+            &quot;nodes&quot;: [
+              {
+                &quot;name&quot;: &quot;cap&quot;,
+                &quot;kind&quot;: &quot;fragment&quot;,
+                &quot;transform&quot;: [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                &quot;structure&quot;: {
+                  &quot;atoms&quot;: [
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 5.2,
+                      &quot;y&quot;: 0.4,
+                      &quot;z&quot;: 0.0
+                    },
+                    {
+                      &quot;e&quot;: &quot;H&quot;,
+                      &quot;x&quot;: 5.2,
+                      &quot;y&quot;: 4.0,
+                      &quot;z&quot;: 0.0
+                    }
+                  ],
+                  &quot;bonds&quot;: [],
+                  &quot;attachments&quot;: {
+                    &quot;left&quot;: 0,
+                    &quot;right&quot;: 1
+                  }
+                }
+              }
+            ],
+            &quot;links&quot;: [],
+            &quot;random_links&quot;: []
+          }
+        }
+      ],
+      &quot;links&quot;: [
+        {
+          &quot;from&quot;: &quot;pairs/head/cap/left&quot;,
+          &quot;to&quot;: &quot;pairs[first]/left/head&quot;,
+          &quot;type&quot;: &quot;SINGLE&quot;
+        },
+        {
+          &quot;from&quot;: &quot;pairs/head/cap/right&quot;,
+          &quot;to&quot;: &quot;pairs[first]/right/head&quot;,
+          &quot;type&quot;: &quot;SINGLE&quot;
+        },
+        {
+          &quot;from&quot;: &quot;pairs[last]/left/tail&quot;,
+          &quot;to&quot;: &quot;pairs/tail/cap/left&quot;,
+          &quot;type&quot;: &quot;SINGLE&quot;
+        },
+        {
+          &quot;from&quot;: &quot;pairs[last]/right/tail&quot;,
+          &quot;to&quot;: &quot;pairs/tail/cap/right&quot;,
+          &quot;type&quot;: &quot;SINGLE&quot;
+        }
+      ],
+      &quot;random_links&quot;: []
+    }
+  },
+  &quot;inspection&quot;: {
+    &quot;classification&quot;: &quot;polymer&quot;
+  }
+}</code></pre></div></div><p><a href="rubber.json">Complete network definition as JSON</a>. This recipe has a count parameter <code>length</code> and probability parameter <code>bridgeChance</code>.</p><div class="av-example" data-example="realization"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static PolymerPreview realization(int length, double chance, long seed) {
+    // Seed controls the choices, not the authored atom positions.
+    return rubber().preview(new NetworkPreviewRequest(
+            Map.of(&quot;length&quot;, length), Map.of(&quot;bridgeChance&quot;, chance), seed));
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static PolymerPreview realization(int length, double chance, long seed) {
+    // Seed controls the choices, not the authored atom positions.
+    return rubber().preview(new NetworkPreviewRequest(
+            Map.of(&quot;length&quot;, length), Map.of(&quot;bridgeChance&quot;, chance), seed));
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-result"><strong>Expected result</strong> For length n and k selected sulfur bridges: C(10n)H(16n+4−2k)S(k), omitting S when k = 0. Each C has total bond order 4, H has 1, and bridging S has 2.</div><div class="av-tip"><strong>Tip</strong> Changing the seed changes which eligible occurrences are selected. It does not randomize coordinates or produce a relaxed polymer conformation. Keep rule IDs and instance names stable if you want stable seeded results.</div><h2 id="polymers-paths">Read attachment paths and repeat frames</h2><div class="av-reference" data-reference="paths"><div data-language="java groovy"><table><caption>Read attachment paths and repeat frames</caption><thead><tr><th scope="col">Path / setting</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>pairs[0]/left/head</code></td><td>Head atom of the first left repeat</td></tr><tr><td><code>pairs[first]</code> / <code>pairs[last]</code></td><td>First / last repeat without hard-coding the count</td></tr><tr><td><code>pairs[*]/left/cross</code></td><td>All matching left-side sites in stable instance order</td></tr><tr><td>Equal-length endpoint selections</td><td>Pair corresponding endpoints</td></tr><tr><td>One endpoint and several endpoints</td><td>Broadcast the single endpoint</td></tr><tr><td>Other unequal lengths</td><td>Validation failure; no silent zip/truncation</td></tr><tr><td><code>neighbor(from, to, offset, type)</code></td><td>Repeat-relative links; skip links crossing an open boundary</td></tr><tr><td>Parent → node → repeat-step → body</td><td>Order in which authored transforms apply</td></tr><tr><td>End-group coordinates</td><td>Relative to the first / last repeat frame</td></tr><tr><td>Nested repeats/groups</td><td>Use the same rules for a backbone, branch, or finite repeated motif</td></tr></tbody></table></div><div data-language="json"><table><caption>Read attachment paths and repeat frames</caption><thead><tr><th scope="col">JSON path / field</th><th scope="col">Meaning</th></tr></thead><tbody><tr><td><code>pairs[0]/left/head</code></td><td>Head atom of the first left repeat; use attachment paths in from/to fields.</td></tr><tr><td><code>pairs[first]</code> / <code>pairs[last]</code></td><td>First / last repeat without hard-coding its count.</td></tr><tr><td><code>pairs[*]/left/cross</code></td><td>All matching left-side sites in stable instance order.</td></tr><tr><td><code>links[].from / links[].to</code></td><td>Equal-length selections pair corresponding atoms. A singleton broadcasts; other unequal lengths fail.</td></tr><tr><td>Repeat node <code>neighbor_links[]</code></td><td>Each entry has from, to, offset, and type. Links crossing an open repeat boundary are skipped.</td></tr><tr><td>Node <code>transform</code>, repeat <code>step</code>, and <code>body</code></td><td>Transforms apply in parent → node → repeat-step → body order.</td></tr><tr><td>Repeat node <code>head / tail</code></td><td>End-group assemblies use the first / last repeat frame.</td></tr><tr><td>Nested <code>body.nodes[]</code></td><td>The same rules work for backbones, branches, and finite motifs.</td></tr></tbody></table></div></div><h2 id="polymers-random">Random links and shared capacities</h2><p>Choices can replace a complete branch with an explicit absent alternative. Random links instead sample an authored pool of endpoint pairs. The small real-species example below joins two hydroxyl radicals into hydrogen peroxide at probability 1; lower probabilities intentionally leave reactive radicals. It is not an example of finished water.</p><div class="av-example" data-example="random-links"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static PolymerNetworkDefinition reactiveSites() {
+    // Two authored hydroxyl radicals. At p=1 they form H–O–O–H.
+    // At p=0 they remain radicals, not two water molecules.
+    var left = new StructureBuilder().atom(&quot;O&quot;, -.7, 0, 0).atom(&quot;H&quot;, -1.1, .85, 0)
+            .bond(0, 1).attachment(&quot;site&quot;, 0).attachment(&quot;alias&quot;, 0).randomLinkCapacity(0, 1).build();
+    var right = new StructureBuilder().atom(&quot;O&quot;, .7, 0, 0).atom(&quot;H&quot;, 1.1, -.85, 0)
+            .bond(0, 1).attachment(&quot;site&quot;, 0).randomLinkCapacity(0, 1).build();
+    var assembly = StructureAssembly.builder().part(&quot;left&quot;, left).part(&quot;right&quot;, right)
+            .randomLinks(&quot;peroxide_bond&quot;, &quot;left/site&quot;, &quot;right/site&quot;, &quot;paired&quot;, &quot;chance&quot;, BondType.SINGLE)
+            .build();
+    return new PolymerNetworkDefinition(List.of(
+            PolymerNetworkDefinition.Parameter.probability(&quot;chance&quot;, 1)), assembly, 42L);
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static PolymerNetworkDefinition reactiveSites() {
+    // Two authored hydroxyl radicals. At p=1 they form H–O–O–H.
+    // At p=0 they remain radicals, not two water molecules.
+    def left = new StructureBuilder().atom(&quot;O&quot;, -.7, 0, 0).atom(&quot;H&quot;, -1.1, .85, 0)
+            .bond(0, 1).attachment(&quot;site&quot;, 0).attachment(&quot;alias&quot;, 0).randomLinkCapacity(0, 1).build();
+    def right = new StructureBuilder().atom(&quot;O&quot;, .7, 0, 0).atom(&quot;H&quot;, 1.1, -.85, 0)
+            .bond(0, 1).attachment(&quot;site&quot;, 0).randomLinkCapacity(0, 1).build();
+    def assembly = StructureAssembly.builder().part(&quot;left&quot;, left).part(&quot;right&quot;, right)
+            .randomLinks(&quot;peroxide_bond&quot;, &quot;left/site&quot;, &quot;right/site&quot;, &quot;paired&quot;, &quot;chance&quot;, BondType.SINGLE)
+            .build();
+    return new PolymerNetworkDefinition(List.of(
+            PolymerNetworkDefinition.Parameter.probability(&quot;chance&quot;, 1)), assembly, 42L);
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-reference" data-reference="random"><div data-language="java groovy"><table><caption>Random links and shared capacities</caption><thead><tr><th scope="col">Pool / rule</th><th scope="col">Behavior</th></tr></thead><tbody><tr><td><code>paired</code></td><td>Corresponding endpoints; equal selection lengths required</td></tr><tr><td><code>broadcast</code></td><td>One endpoint against a selection</td></tr><tr><td><code>cartesian</code></td><td>Every authored endpoint on one side against every endpoint on the other</td></tr><tr><td><code>randomLinkCapacity(atom, count)</code></td><td>Additional random links allowed at that atom; attachment aliases share the same capacity</td></tr><tr><td>Probability then capacity</td><td>Sample candidates by chance, process passing candidates in seeded order, reject those exceeding capacity</td></tr><tr><td>Diagnostics</td><td>Read actual branch/link counts and capacity exclusions from <code>preview.diagnostics()</code></td></tr><tr><td>Density</td><td>A chance is not a guarantee of an exact final link count</td></tr><tr><td>Reproduction</td><td>Versioned SHA-256 sampling of seed, rule ID, phase, and stable instance paths; version 1; 64-bit seed stored as a decimal string</td></tr></tbody></table></div><div data-language="json"><table><caption>Random links and shared capacities</caption><thead><tr><th scope="col">JSON field / value</th><th scope="col">Behavior</th></tr></thead><tbody><tr><td><code>random_links[].pairing: "paired"</code></td><td>Corresponding endpoints; selections must have equal lengths.</td></tr><tr><td><code>pairing: "broadcast"</code></td><td>One endpoint against a selection.</td></tr><tr><td><code>pairing: "cartesian"</code></td><td>Every selected endpoint on one side against every selected endpoint on the other.</td></tr><tr><td>Fragment <code>random_link_capacities</code></td><td>An object mapping local atom indices to additional-link capacities. Attachment aliases share their atom’s capacity.</td></tr><tr><td><code>probability</code></td><td>A number from 0 to 1 or a declared probability parameter name. Passing candidates are processed in seeded order, subject to capacities.</td></tr><tr><td>Result counters</td><td>These are calculated when the recipe expands, not authored JSON fields. Runtime code can read them through PolymerPreview.</td></tr><tr><td><code>random_version: 1</code> and <code>seed: "42"</code></td><td>Store the signed 64-bit seed as a decimal string. Keep rule IDs and instance paths stable for reproducible choices.</td></tr></tbody></table></div></div><h2 id="polymers-viewer">Adjust and export the selected realization</h2><div class="av-example" data-example="open-network"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static void openNetwork(MoleculeDef network) {
+    // Client code only. The ordinary molecule entry point also routes networks here.
+    io.github.wurtzitane.avogadro.client.PolymerNetworkExaminer.open(network);
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static void openNetwork(MoleculeDef network) {
+    // Client code only. The ordinary molecule entry point also routes networks here.
+    io.github.wurtzitane.avogadro.client.PolymerNetworkExaminer.open(network);
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><figure><a href="network-viewer.png"><img src="network-viewer.png" alt="The unified network examiner, with session-local controls and the same camera, surfaces, fonts, and window host as the other viewers."></a><figcaption>The unified network examiner, with session-local controls and the same camera, surfaces, fonts, and window host as the other viewers. <a href="network-viewer.png">Full size</a></figcaption></figure><p>The polymer examiner exposes counts, probabilities, seed entry, next seed, and reset. Changes stay in that viewing session. It keeps camera/pause state and the last successful model while the next one prepares; a failed or superseded request must not replace a valid preview. Formula and mass stay below the model. The sidebar contains only its settings. Integrations can read atom/bond and random-pattern counts from the successful <code>PolymerPreview</code>; the viewer does not list internal expansion counters.</p><p>Export that <code>PolymerPreview</code>, rather than rebuilding defaults: see <a href="exports.html#exports-network">exact network exports</a>. A saved sidecar retains the parameters, algorithm version, and seed. Template-local atomic overrides repeat with each instance. Flattened network-wide atom overrides are rejected because indices change with counts.</p><div class="av-tip"><strong>Translate control labels.</strong> Set a parameter’s <code>label</code> to a language key and add that key to your language file. Literal labels work too. Unlabeled <code>length</code> and <code>bridgeChance</code> controls use Avogadro’s “Chain length” and “Bridge chance” entries. Changing a display label keeps the parameter identifier and saved settings intact.</div><h2 id="polymers-limits">Network limits</h2><table><caption>Network limits</caption><thead><tr><th scope="col">Limit</th><th scope="col">Maximum / rule</th></tr></thead><tbody><tr><td>Expanded atoms / bonds</td><td>4,096 / 8,192</td></tr><tr><td>Declared parameters</td><td>8 total</td></tr><tr><td>One repeat count</td><td>1–64, also within its parameter bounds</td></tr><tr><td>Template nodes / nesting</td><td>64 / 16</td></tr><tr><td>Candidate endpoint pairs</td><td>65,536 per preview</td></tr><tr><td>Defaults</td><td>Must build a valid preview</td></tr><tr><td>An oversized requested realization</td><td>Rejected; never truncated or reseeded</td></tr></tbody></table><h2 id="polymers-crystal">Repeat a sodium chloride cell</h2><div class="av-example" data-example="nacl"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static StructureFragment saltBasis() {
+    // Conventional rock-salt cell, a = 5.64 Å. No covalent Na–Cl bonds.
+    var basis = new StructureBuilder();
+    double a = 5.64;
+    double[][] sodium = {{0,0,0}, {0,.5,.5}, {.5,0,.5}, {.5,.5,0}};
+    double[][] chlorine = {{.5,.5,.5}, {.5,0,0}, {0,.5,0}, {0,0,.5}};
+    for (double[] p : sodium) {
+        int atom = basis.addAtom(&quot;Na&quot;, p[0]*a, p[1]*a, p[2]*a);
+        basis.atomConfiguration(atom, new AtomicConfiguration(11, 12, 1, List.of(2,8)));
+    }
+    for (double[] p : chlorine) {
+        int atom = basis.addAtom(&quot;Cl&quot;, p[0]*a, p[1]*a, p[2]*a);
+        basis.atomConfiguration(atom, new AtomicConfiguration(17, 18, -1, List.of(2,8,8)));
+    }
+    return basis.build();
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">// No covalent Na–Cl bonds. Preserve the supplied Na+ and Cl− examiner data.
+mods.avogadro.molecules.register(
+    io.github.wurtzitane.avogadro.api.MoleculeSpec.fromJson(&#x27;guide:salt&#x27;, new File(&#x27;scripts/examples/salt.json&#x27;).text))</code></pre></div><div data-language="json"><p class="av-step">JSON · one definition per file unless a different destination is shown.</p><pre><code class="language-json">{
+  &quot;name&quot;: &quot;Sodium chloride&quot;,
+  &quot;structure&quot;: {
+    &quot;atoms&quot;: [
+      {
+        &quot;e&quot;: &quot;Na&quot;,
+        &quot;x&quot;: 0.0,
+        &quot;y&quot;: 0.0,
+        &quot;z&quot;: 0.0,
+        &quot;nuclear&quot;: {
+          &quot;atomic_number&quot;: 11,
+          &quot;neutrons&quot;: 12,
+          &quot;charge&quot;: 1,
+          &quot;electron_shells&quot;: [
+            2,
+            8
+          ]
+        }
+      },
+      {
+        &quot;e&quot;: &quot;Na&quot;,
+        &quot;x&quot;: 0.0,
+        &quot;y&quot;: 2.82,
+        &quot;z&quot;: 2.82,
+        &quot;nuclear&quot;: {
+          &quot;atomic_number&quot;: 11,
+          &quot;neutrons&quot;: 12,
+          &quot;charge&quot;: 1,
+          &quot;electron_shells&quot;: [
+            2,
+            8
+          ]
+        }
+      },
+      {
+        &quot;e&quot;: &quot;Na&quot;,
+        &quot;x&quot;: 2.82,
+        &quot;y&quot;: 0.0,
+        &quot;z&quot;: 2.82,
+        &quot;nuclear&quot;: {
+          &quot;atomic_number&quot;: 11,
+          &quot;neutrons&quot;: 12,
+          &quot;charge&quot;: 1,
+          &quot;electron_shells&quot;: [
+            2,
+            8
+          ]
+        }
+      },
+      {
+        &quot;e&quot;: &quot;Na&quot;,
+        &quot;x&quot;: 2.82,
+        &quot;y&quot;: 2.82,
+        &quot;z&quot;: 0.0,
+        &quot;nuclear&quot;: {
+          &quot;atomic_number&quot;: 11,
+          &quot;neutrons&quot;: 12,
+          &quot;charge&quot;: 1,
+          &quot;electron_shells&quot;: [
+            2,
+            8
+          ]
+        }
+      },
+      {
+        &quot;e&quot;: &quot;Cl&quot;,
+        &quot;x&quot;: 2.82,
+        &quot;y&quot;: 2.82,
+        &quot;z&quot;: 2.82,
+        &quot;nuclear&quot;: {
+          &quot;atomic_number&quot;: 17,
+          &quot;neutrons&quot;: 18,
+          &quot;charge&quot;: -1,
+          &quot;electron_shells&quot;: [
+            2,
+            8,
+            8
+          ]
+        }
+      },
+      {
+        &quot;e&quot;: &quot;Cl&quot;,
+        &quot;x&quot;: 2.82,
+        &quot;y&quot;: 0.0,
+        &quot;z&quot;: 0.0,
+        &quot;nuclear&quot;: {
+          &quot;atomic_number&quot;: 17,
+          &quot;neutrons&quot;: 18,
+          &quot;charge&quot;: -1,
+          &quot;electron_shells&quot;: [
+            2,
+            8,
+            8
+          ]
+        }
+      },
+      {
+        &quot;e&quot;: &quot;Cl&quot;,
+        &quot;x&quot;: 0.0,
+        &quot;y&quot;: 2.82,
+        &quot;z&quot;: 0.0,
+        &quot;nuclear&quot;: {
+          &quot;atomic_number&quot;: 17,
+          &quot;neutrons&quot;: 18,
+          &quot;charge&quot;: -1,
+          &quot;electron_shells&quot;: [
+            2,
+            8,
+            8
+          ]
+        }
+      },
+      {
+        &quot;e&quot;: &quot;Cl&quot;,
+        &quot;x&quot;: 0.0,
+        &quot;y&quot;: 0.0,
+        &quot;z&quot;: 2.82,
+        &quot;nuclear&quot;: {
+          &quot;atomic_number&quot;: 17,
+          &quot;neutrons&quot;: 18,
+          &quot;charge&quot;: -1,
+          &quot;electron_shells&quot;: [
+            2,
+            8,
+            8
+          ]
+        }
+      }
+    ],
+    &quot;bonds&quot;: []
+  },
+  &quot;crystal&quot;: {
+    &quot;a&quot;: 5.64,
+    &quot;b&quot;: 5.64,
+    &quot;c&quot;: 5.64,
+    &quot;alpha&quot;: 90.0,
+    &quot;beta&quot;: 90.0,
+    &quot;gamma&quot;: 90.0,
+    &quot;origin_x&quot;: 0.0,
+    &quot;origin_y&quot;: 0.0,
+    &quot;origin_z&quot;: 0.0
+  },
+  &quot;inspection&quot;: {
+    &quot;classification&quot;: &quot;crystal&quot;
+  },
+  &quot;formula&quot;: &quot;NaCl&quot;
+}</code></pre></div></div><p><a href="salt.json">Complete sodium chloride JSON</a>. The conventional cell contains four Na and four Cl positions; its composition reduces to NaCl. <code>crystalCell</code> stores cell dimensions and angles. <code>CrystalGeometry.repeat</code> makes a finite viewing cluster.</p><div class="av-example" data-example="crystal"><div data-language="java"><p class="av-step">Java · method inside your host class; imports and full files below.</p><pre><code class="language-java">public static MoleculeStructure saltCube() {
+    // 3 cells on each axis: 27 conventional cells, 216 ions.
+    return CrystalGeometry.repeat(GuideModels.saltBasis().toStructure(&quot;guide:salt_basis&quot;),
+            new CrystalCell(5.64, 5.64, 5.64, 90, 90, 90), 3, false);
+}</code></pre></div><div data-language="groovy"><p class="av-step">Groovy · same API; place methods in your script or client helper as described.</p><pre><code class="language-groovy">static MoleculeStructure saltCube() {
+    // 3 cells on each axis: 27 conventional cells, 216 ions.
+    return CrystalGeometry.repeat(GuideModels.saltBasis().toStructure(&quot;guide:salt_basis&quot;),
+            new CrystalCell(5.64, 5.64, 5.64, 90, 90, 90), 3, false);
+}</code></pre></div><div data-language="json"><div class="av-tip">This operation runs in code. JSON stores definitions and recipes; it cannot call this method or handle events. Select <button type="button" data-choose-language="java">Java</button> or <button type="button" data-choose-language="groovy">Groovy</button> for the working example.</div></div></div><div class="av-result"><strong>Expected result</strong> 3 × 3 × 3 conventional cells: 108 Na and 108 Cl, 216 atoms total. No ordinary covalent bonds are drawn between ions.</div><figure><a href="salt.png"><img src="salt.png" alt="A sodium chloride conventional cell. Use the finite-repeat method above for a larger cluster."></a><figcaption>A sodium chloride conventional cell. Use the finite-repeat method above for a larger cluster. <a href="salt.png">Full size</a></figcaption></figure><div class="av-tip"><strong>Tip</strong> For lower-level periodic fragments use <code>cell(vectors)</code>, <code>link(from,to,offset,type)</code>, and <code>repeat(counts,wrap)</code>. Cell links must be authored chemical bonds when you intend to draw bonds; ionic neighbors are not automatically covalent connections. <code>wrapCylinder</code> wraps an authored periodic sheet; it does not optimize a nanotube.</div><h2 id="polymers-sources">References for these models</h2><p class="av-sources"><a href="https://www.inchem.org/documents/icsc/icsc/eics1517.htm">ICSC: PEG formula</a> · <a href="https://goldbook.iupac.org/terms/view/VT07153/html">IUPAC: vulcanization and sulfide crosslinks</a> · <a href="https://lampz.tugraz.at/~hadley/ss1/crystalstructure/structures/nacl/nacl.php">TU Graz: rock-salt cell positions</a>.</p><nav class="av-pager" aria-label="Guide pages"><a href="matching.html">← Items and fluids</a><a href="atoms.html">Atom details →</a></nav>
+</div></body></html>

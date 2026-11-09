@@ -1,10 +1,5 @@
 package io.github.wurtzitane.avogadro.client;
 
-import io.github.wurtzitane.avogadro.api.CrystalCell;
-import io.github.wurtzitane.avogadro.api.CrystalGeometry;
-import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
-import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
-
 import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
@@ -16,9 +11,15 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
+import io.github.wurtzitane.avogadro.api.CrystalCell;
+import io.github.wurtzitane.avogadro.api.CrystalGeometry;
+import io.github.wurtzitane.avogadro.molecule.MoleculeDef;
+import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
+
 /**
  * Caches CPU-only lattice geometry results and outline previews.
- * <p>CPU-only lattice results. Keeping their identity also preserves resident GPU geometry.
+ * <p>
+ * CPU-only lattice results. Keeping their identity also preserves resident GPU geometry.
  */
 final class CrystalPreviewCache {
 
@@ -40,21 +41,23 @@ final class CrystalPreviewCache {
     /**
      * Record representing a cache key for crystal preview lookup.
      *
-     * @source  source molecule structure
-     * @cell    crystal cell configuration
-     * @count   repetition count per axis
-     * @bonds   whether local bonds are enabled
+     * @param source source molecule structure
+     * @param cell crystal cell configuration
+     * @param count repetition count per axis
+     * @param bonds whether local bonds are enabled
      */
-    private record Key(MoleculeStructure source, CrystalCell cell, int count, boolean bonds) {}
+    private record Key(MoleculeStructure source, CrystalCell cell, int count, boolean bonds) {
+    }
 
     /**
      * Record representing prepared crystal preview data.
      *
-     * @geometry repeated molecule structure geometry
-     * @outline  crystal outline renderer
-     * @fit      fit scale factor
+     * @param geometry repeated molecule structure geometry
+     * @param outline crystal outline renderer
+     * @param fit fit scale factor
      */
-    record Prepared(MoleculeStructure geometry, CrystalOutline outline, float fit) {}
+    record Prepared(MoleculeStructure geometry, CrystalOutline outline, float fit) {
+    }
 
     /**
      * Represents a pending asynchronous preparation task.
@@ -70,16 +73,15 @@ final class CrystalPreviewCache {
         }
     }
 
-    /** Private constructor to prevent instantiation of utility class. */
     private CrystalPreviewCache() {}
 
     /**
      * Finds a prepared crystal preview from the cache synchronously.
      *
-     * @source source molecule structure
-     * @cell   crystal cell configuration
-     * @count  repetition count per axis
-     * @bonds  whether local bonds are enabled
+     * @param source source molecule structure
+     * @param cell crystal cell configuration
+     * @param count repetition count per axis
+     * @param bonds whether local bonds are enabled
      * @return prepared crystal preview, or {@code null} if not cached
      */
     static synchronized Prepared find(MoleculeStructure source, CrystalCell cell, int count, boolean bonds) {
@@ -88,12 +90,13 @@ final class CrystalPreviewCache {
 
     /**
      * Prepares crystal geometry and outlines.
-     * <p>Called by a preparation worker, never by the drawing thread on a miss.
+     * <p>
+     * Called by a preparation worker, never by the drawing thread on a miss.
      *
-     * @source source molecule structure
-     * @cell   crystal cell configuration
-     * @count  repetition count per axis
-     * @bonds  whether local bonds are enabled
+     * @param source source molecule structure
+     * @param cell crystal cell configuration
+     * @param count repetition count per axis
+     * @param bonds whether local bonds are enabled
      * @return prepared crystal preview instance
      */
     static Prepared prepare(MoleculeStructure source, CrystalCell cell, int count, boolean bonds) {
@@ -212,7 +215,8 @@ final class CrystalPreviewCache {
 
     /**
      * Retains cache entries for specified definitions during resource reloads.
-     * <p>Unchanged immutable definitions survive a font/palette reload; replaced geometry does not.
+     * <p>
+     * Unchanged immutable definitions survive a font/palette reload; replaced geometry does not.
      *
      * @param definitions collection of active molecule definitions
      */

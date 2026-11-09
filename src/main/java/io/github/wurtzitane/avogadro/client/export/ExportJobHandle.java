@@ -1,12 +1,12 @@
 package io.github.wurtzitane.avogadro.client.export;
 
-import io.github.wurtzitane.avogadro.api.client.ExportJob;
-
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+
+import io.github.wurtzitane.avogadro.api.client.ExportJob;
 
 /**
  * Synchronizes job observation separately from the encoder's publication lock.
@@ -19,7 +19,7 @@ final class ExportJobHandle implements ExportJob {
     /** Handler invoked if a completion listener throws an uncaught exception. */
     private final Consumer<Throwable> listenerFailure;
 
-    /** Supplier evaluating whether the export job should be canceled. */
+    /** Attempts to cancel this job and returns whether the request was accepted. */
     private final BooleanSupplier cancel;
 
     /** List of registered completion listeners awaiting job termination. */
@@ -32,15 +32,16 @@ final class ExportJobHandle implements ExportJob {
     private volatile Result result;
 
     /**
-     * Constructs a new {@link ExportJobHandle} for tracking export progress and listeners.
+     * Creates a {@link ExportJobHandle} for tracking export progress and listeners.
      *
-     * @param frames          the total number of frames to export
-     * @param dispatch        the task dispatch consumer
-     * @param cancel          the cancellation supplier
+     * @param frames the total number of frames to export
+     * @param dispatch the task dispatch consumer
+     * @param cancel the cancellation supplier
      * @param listenerFailure the listener exception handler consumer
      * @throws NullPointerException if any required functional parameter is null
      */
-    ExportJobHandle(int frames, Consumer<Runnable> dispatch, BooleanSupplier cancel, Consumer<Throwable> listenerFailure) {
+    ExportJobHandle(int frames, Consumer<Runnable> dispatch, BooleanSupplier cancel,
+            Consumer<Throwable> listenerFailure) {
         this.dispatch = Objects.requireNonNull(dispatch);
         this.cancel = Objects.requireNonNull(cancel);
         this.listenerFailure = Objects.requireNonNull(listenerFailure);
@@ -92,9 +93,9 @@ final class ExportJobHandle implements ExportJob {
     /**
      * Updates the current progress state, captured frames count, and encoded frames count.
      *
-     * @images   state     the new export {@link State}
-     * @param captured  number of frames captured so far
-     * @param encoded   number of frames encoded so far
+     * @param state the new export {@link State}
+     * @param captured number of frames captured so far
+     * @param encoded number of frames encoded so far
      */
     synchronized void update(State state, int captured, int encoded) {
         if (result == null) {
@@ -107,7 +108,7 @@ final class ExportJobHandle implements ExportJob {
      *
      * @param terminal the terminal {@link Result} of the export
      * @param captured final captured frames count
-     * @param encoded  final encoded frames count
+     * @param encoded final encoded frames count
      */
     void complete(Result terminal, int captured, int encoded) {
         List<Consumer<Result>> pending;

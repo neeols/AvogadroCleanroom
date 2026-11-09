@@ -1,0 +1,934 @@
+{
+  "text.primary": {
+    "name": "Main text",
+    "group": "text"
+  },
+  "text.muted": {
+    "name": "Secondary text",
+    "group": "text"
+  },
+  "text.accent": {
+    "name": "Accent text",
+    "group": "text"
+  },
+  "text.warning": {
+    "name": "Warning text",
+    "group": "text"
+  },
+  "text.error": {
+    "name": "Validation errors",
+    "group": "text"
+  },
+  "text.disabled": {
+    "name": "Disabled labels",
+    "group": "text"
+  },
+  "window.background": {
+    "name": "Window background",
+    "group": "window"
+  },
+  "window.border": {
+    "name": "Window outline",
+    "group": "window"
+  },
+  "frame.background": {
+    "name": "Frame background",
+    "group": "frame"
+  },
+  "frame.border": {
+    "name": "Frame outline",
+    "group": "frame"
+  },
+  "surface.background": {
+    "name": "Inset surfaces",
+    "group": "surface"
+  },
+  "rule": {
+    "name": "Section dividers",
+    "group": "rule"
+  },
+  "viewport.background": {
+    "name": "Model viewport background",
+    "group": "viewport"
+  },
+  "viewport.border": {
+    "name": "Model viewport outline",
+    "group": "viewport"
+  },
+  "button.background": {
+    "name": "Button background",
+    "group": "button"
+  },
+  "button.border": {
+    "name": "Button outline",
+    "group": "button"
+  },
+  "button.text": {
+    "name": "Button labels",
+    "group": "button"
+  },
+  "button.hover.background": {
+    "name": "Hovered button background",
+    "group": "button"
+  },
+  "button.hover.border": {
+    "name": "Hovered button outline",
+    "group": "button"
+  },
+  "button.hover.text": {
+    "name": "Hovered button labels",
+    "group": "button"
+  },
+  "button.selected.background": {
+    "name": "Selected button background",
+    "group": "button"
+  },
+  "button.selected.border": {
+    "name": "Selected button outline",
+    "group": "button"
+  },
+  "button.selected.text": {
+    "name": "Selected button labels",
+    "group": "button"
+  },
+  "button.disabled.background": {
+    "name": "Disabled button background",
+    "group": "button"
+  },
+  "button.disabled.border": {
+    "name": "Disabled button outline",
+    "group": "button"
+  },
+  "button.disabled.text": {
+    "name": "Disabled button labels",
+    "group": "button"
+  },
+  "input.background": {
+    "name": "Input background",
+    "group": "input"
+  },
+  "input.border": {
+    "name": "Input outline",
+    "group": "input"
+  },
+  "input.text": {
+    "name": "Input text",
+    "group": "input"
+  },
+  "input.focus.border": {
+    "name": "Focused input outline",
+    "group": "input"
+  },
+  "input.error.border": {
+    "name": "Invalid input outline",
+    "group": "input"
+  },
+  "input.cursor": {
+    "name": "Input cursor",
+    "group": "input"
+  },
+  "input.selection": {
+    "name": "Selected input text background",
+    "group": "input"
+  },
+  "scrollbar.track": {
+    "name": "Scrollbar track",
+    "group": "scrollbar"
+  },
+  "scrollbar.thumb": {
+    "name": "Scrollbar thumb",
+    "group": "scrollbar"
+  },
+  "notice.background": {
+    "name": "Notice background",
+    "group": "notice"
+  },
+  "notice.border": {
+    "name": "Notice outline",
+    "group": "notice"
+  },
+  "notice.text": {
+    "name": "Notice text",
+    "group": "notice"
+  },
+  "icon.primary": {
+    "name": "Element property icons",
+    "group": "icon"
+  },
+  "tile.unknown": {
+    "name": "Unspecified element tile",
+    "group": "tile"
+  },
+  "tile.lightText": {
+    "name": "Text on dark element tiles",
+    "group": "tile"
+  },
+  "tile.darkText": {
+    "name": "Text on light element tiles",
+    "group": "tile"
+  },
+  "recipe.text.primary": {
+    "name": "Recipe name",
+    "group": "recipe"
+  },
+  "recipe.text.secondary": {
+    "name": "Recipe formula",
+    "group": "recipe"
+  },
+  "recipe.background": {
+    "name": "Recipe canvas",
+    "group": "recipe"
+  },
+  "tooltip.background": {
+    "name": "Tooltip background",
+    "group": "tooltip"
+  },
+  "tooltip.border.top": {
+    "name": "Tooltip top border",
+    "group": "tooltip"
+  },
+  "tooltip.border.bottom": {
+    "name": "Tooltip bottom border",
+    "group": "tooltip"
+  },
+  "atom.electron": {
+    "name": "Electron particles",
+    "group": "atom"
+  },
+  "atom.proton": {
+    "name": "Proton particles",
+    "group": "atom"
+  },
+  "atom.neutron": {
+    "name": "Neutron particles",
+    "group": "atom"
+  },
+  "atom.nucleus.glow": {
+    "name": "Nucleus glow",
+    "group": "atom"
+  },
+  "atom.cluster": {
+    "name": "Unresolved nuclear cluster",
+    "group": "atom"
+  },
+  "crystal.notice.background": {
+    "name": "Crystal preparation notice",
+    "group": "crystal"
+  },
+  "export.text.dark": {
+    "name": "Export labels on light backgrounds",
+    "group": "export"
+  },
+  "export.text.light": {
+    "name": "Export labels on dark backgrounds",
+    "group": "export"
+  },
+  "text.title": {
+    "name": "Menu titles",
+    "group": "text"
+  },
+  "text.shadow": {
+    "name": "Text shadows",
+    "group": "text"
+  },
+  "atom.orbit": {
+    "name": "Electron orbit lines",
+    "group": "atom"
+  },
+  "table.grid": {
+    "name": "Periodic table grid",
+    "group": "table"
+  },
+  "text.format.0": {
+    "name": "Formatted text: Black",
+    "group": "text"
+  },
+  "text.format.1": {
+    "name": "Formatted text: Dark blue",
+    "group": "text"
+  },
+  "text.format.2": {
+    "name": "Formatted text: Dark green",
+    "group": "text"
+  },
+  "text.format.3": {
+    "name": "Formatted text: Dark aqua",
+    "group": "text"
+  },
+  "text.format.4": {
+    "name": "Formatted text: Dark red",
+    "group": "text"
+  },
+  "text.format.5": {
+    "name": "Formatted text: Dark purple",
+    "group": "text"
+  },
+  "text.format.6": {
+    "name": "Formatted text: Gold",
+    "group": "text"
+  },
+  "text.format.7": {
+    "name": "Formatted text: Gray",
+    "group": "text"
+  },
+  "text.format.8": {
+    "name": "Formatted text: Dark gray",
+    "group": "text"
+  },
+  "text.format.9": {
+    "name": "Formatted text: Blue",
+    "group": "text"
+  },
+  "text.format.a": {
+    "name": "Formatted text: Green",
+    "group": "text"
+  },
+  "text.format.b": {
+    "name": "Formatted text: Aqua",
+    "group": "text"
+  },
+  "text.format.c": {
+    "name": "Formatted text: Red",
+    "group": "text"
+  },
+  "text.format.d": {
+    "name": "Formatted text: Light purple",
+    "group": "text"
+  },
+  "text.format.e": {
+    "name": "Formatted text: Yellow",
+    "group": "text"
+  },
+  "text.format.f": {
+    "name": "Formatted text: White",
+    "group": "text"
+  },
+  "element.H": {
+    "name": "Element tile: Hydrogen (H)",
+    "group": "element"
+  },
+  "element.He": {
+    "name": "Element tile: Helium (He)",
+    "group": "element"
+  },
+  "element.Li": {
+    "name": "Element tile: Lithium (Li)",
+    "group": "element"
+  },
+  "element.Be": {
+    "name": "Element tile: Beryllium (Be)",
+    "group": "element"
+  },
+  "element.B": {
+    "name": "Element tile: Boron (B)",
+    "group": "element"
+  },
+  "element.C": {
+    "name": "Element tile: Carbon (C)",
+    "group": "element"
+  },
+  "element.N": {
+    "name": "Element tile: Nitrogen (N)",
+    "group": "element"
+  },
+  "element.O": {
+    "name": "Element tile: Oxygen (O)",
+    "group": "element"
+  },
+  "element.F": {
+    "name": "Element tile: Fluorine (F)",
+    "group": "element"
+  },
+  "element.Ne": {
+    "name": "Element tile: Neon (Ne)",
+    "group": "element"
+  },
+  "element.Na": {
+    "name": "Element tile: Sodium (Na)",
+    "group": "element"
+  },
+  "element.Mg": {
+    "name": "Element tile: Magnesium (Mg)",
+    "group": "element"
+  },
+  "element.Al": {
+    "name": "Element tile: Aluminum (Al)",
+    "group": "element"
+  },
+  "element.Si": {
+    "name": "Element tile: Silicon (Si)",
+    "group": "element"
+  },
+  "element.P": {
+    "name": "Element tile: Phosphorus (P)",
+    "group": "element"
+  },
+  "element.S": {
+    "name": "Element tile: Sulfur (S)",
+    "group": "element"
+  },
+  "element.Cl": {
+    "name": "Element tile: Chlorine (Cl)",
+    "group": "element"
+  },
+  "element.Ar": {
+    "name": "Element tile: Argon (Ar)",
+    "group": "element"
+  },
+  "element.K": {
+    "name": "Element tile: Potassium (K)",
+    "group": "element"
+  },
+  "element.Ca": {
+    "name": "Element tile: Calcium (Ca)",
+    "group": "element"
+  },
+  "element.Sc": {
+    "name": "Element tile: Scandium (Sc)",
+    "group": "element"
+  },
+  "element.Ti": {
+    "name": "Element tile: Titanium (Ti)",
+    "group": "element"
+  },
+  "element.V": {
+    "name": "Element tile: Vanadium (V)",
+    "group": "element"
+  },
+  "element.Cr": {
+    "name": "Element tile: Chromium (Cr)",
+    "group": "element"
+  },
+  "element.Mn": {
+    "name": "Element tile: Manganese (Mn)",
+    "group": "element"
+  },
+  "element.Fe": {
+    "name": "Element tile: Iron (Fe)",
+    "group": "element"
+  },
+  "element.Co": {
+    "name": "Element tile: Cobalt (Co)",
+    "group": "element"
+  },
+  "element.Ni": {
+    "name": "Element tile: Nickel (Ni)",
+    "group": "element"
+  },
+  "element.Cu": {
+    "name": "Element tile: Copper (Cu)",
+    "group": "element"
+  },
+  "element.Zn": {
+    "name": "Element tile: Zinc (Zn)",
+    "group": "element"
+  },
+  "element.Ga": {
+    "name": "Element tile: Gallium (Ga)",
+    "group": "element"
+  },
+  "element.Ge": {
+    "name": "Element tile: Germanium (Ge)",
+    "group": "element"
+  },
+  "element.As": {
+    "name": "Element tile: Arsenic (As)",
+    "group": "element"
+  },
+  "element.Se": {
+    "name": "Element tile: Selenium (Se)",
+    "group": "element"
+  },
+  "element.Br": {
+    "name": "Element tile: Bromine (Br)",
+    "group": "element"
+  },
+  "element.Kr": {
+    "name": "Element tile: Krypton (Kr)",
+    "group": "element"
+  },
+  "element.Rb": {
+    "name": "Element tile: Rubidium (Rb)",
+    "group": "element"
+  },
+  "element.Sr": {
+    "name": "Element tile: Strontium (Sr)",
+    "group": "element"
+  },
+  "element.Y": {
+    "name": "Element tile: Yttrium (Y)",
+    "group": "element"
+  },
+  "element.Zr": {
+    "name": "Element tile: Zirconium (Zr)",
+    "group": "element"
+  },
+  "element.Nb": {
+    "name": "Element tile: Niobium (Nb)",
+    "group": "element"
+  },
+  "element.Mo": {
+    "name": "Element tile: Molybdenum (Mo)",
+    "group": "element"
+  },
+  "element.Tc": {
+    "name": "Element tile: Technetium (Tc)",
+    "group": "element"
+  },
+  "element.Ru": {
+    "name": "Element tile: Ruthenium (Ru)",
+    "group": "element"
+  },
+  "element.Rh": {
+    "name": "Element tile: Rhodium (Rh)",
+    "group": "element"
+  },
+  "element.Pd": {
+    "name": "Element tile: Palladium (Pd)",
+    "group": "element"
+  },
+  "element.Ag": {
+    "name": "Element tile: Silver (Ag)",
+    "group": "element"
+  },
+  "element.Cd": {
+    "name": "Element tile: Cadmium (Cd)",
+    "group": "element"
+  },
+  "element.In": {
+    "name": "Element tile: Indium (In)",
+    "group": "element"
+  },
+  "element.Sn": {
+    "name": "Element tile: Tin (Sn)",
+    "group": "element"
+  },
+  "element.Sb": {
+    "name": "Element tile: Antimony (Sb)",
+    "group": "element"
+  },
+  "element.Te": {
+    "name": "Element tile: Tellurium (Te)",
+    "group": "element"
+  },
+  "element.I": {
+    "name": "Element tile: Iodine (I)",
+    "group": "element"
+  },
+  "element.Xe": {
+    "name": "Element tile: Xenon (Xe)",
+    "group": "element"
+  },
+  "element.Cs": {
+    "name": "Element tile: Cesium (Cs)",
+    "group": "element"
+  },
+  "element.Ba": {
+    "name": "Element tile: Barium (Ba)",
+    "group": "element"
+  },
+  "element.La": {
+    "name": "Element tile: Lanthanum (La)",
+    "group": "element"
+  },
+  "element.Ce": {
+    "name": "Element tile: Cerium (Ce)",
+    "group": "element"
+  },
+  "element.Pr": {
+    "name": "Element tile: Praseodymium (Pr)",
+    "group": "element"
+  },
+  "element.Nd": {
+    "name": "Element tile: Neodymium (Nd)",
+    "group": "element"
+  },
+  "element.Pm": {
+    "name": "Element tile: Promethium (Pm)",
+    "group": "element"
+  },
+  "element.Sm": {
+    "name": "Element tile: Samarium (Sm)",
+    "group": "element"
+  },
+  "element.Eu": {
+    "name": "Element tile: Europium (Eu)",
+    "group": "element"
+  },
+  "element.Gd": {
+    "name": "Element tile: Gadolinium (Gd)",
+    "group": "element"
+  },
+  "element.Tb": {
+    "name": "Element tile: Terbium (Tb)",
+    "group": "element"
+  },
+  "element.Dy": {
+    "name": "Element tile: Dysprosium (Dy)",
+    "group": "element"
+  },
+  "element.Ho": {
+    "name": "Element tile: Holmium (Ho)",
+    "group": "element"
+  },
+  "element.Er": {
+    "name": "Element tile: Erbium (Er)",
+    "group": "element"
+  },
+  "element.Tm": {
+    "name": "Element tile: Thulium (Tm)",
+    "group": "element"
+  },
+  "element.Yb": {
+    "name": "Element tile: Ytterbium (Yb)",
+    "group": "element"
+  },
+  "element.Lu": {
+    "name": "Element tile: Lutetium (Lu)",
+    "group": "element"
+  },
+  "element.Hf": {
+    "name": "Element tile: Hafnium (Hf)",
+    "group": "element"
+  },
+  "element.Ta": {
+    "name": "Element tile: Tantalum (Ta)",
+    "group": "element"
+  },
+  "element.W": {
+    "name": "Element tile: Tungsten (W)",
+    "group": "element"
+  },
+  "element.Re": {
+    "name": "Element tile: Rhenium (Re)",
+    "group": "element"
+  },
+  "element.Os": {
+    "name": "Element tile: Osmium (Os)",
+    "group": "element"
+  },
+  "element.Ir": {
+    "name": "Element tile: Iridium (Ir)",
+    "group": "element"
+  },
+  "element.Pt": {
+    "name": "Element tile: Platinum (Pt)",
+    "group": "element"
+  },
+  "element.Au": {
+    "name": "Element tile: Gold (Au)",
+    "group": "element"
+  },
+  "element.Hg": {
+    "name": "Element tile: Mercury (Hg)",
+    "group": "element"
+  },
+  "element.Tl": {
+    "name": "Element tile: Thallium (Tl)",
+    "group": "element"
+  },
+  "element.Pb": {
+    "name": "Element tile: Lead (Pb)",
+    "group": "element"
+  },
+  "element.Bi": {
+    "name": "Element tile: Bismuth (Bi)",
+    "group": "element"
+  },
+  "element.Po": {
+    "name": "Element tile: Polonium (Po)",
+    "group": "element"
+  },
+  "element.At": {
+    "name": "Element tile: Astatine (At)",
+    "group": "element"
+  },
+  "element.Rn": {
+    "name": "Element tile: Radon (Rn)",
+    "group": "element"
+  },
+  "element.Fr": {
+    "name": "Element tile: Francium (Fr)",
+    "group": "element"
+  },
+  "element.Ra": {
+    "name": "Element tile: Radium (Ra)",
+    "group": "element"
+  },
+  "element.Ac": {
+    "name": "Element tile: Actinium (Ac)",
+    "group": "element"
+  },
+  "element.Th": {
+    "name": "Element tile: Thorium (Th)",
+    "group": "element"
+  },
+  "element.Pa": {
+    "name": "Element tile: Protactinium (Pa)",
+    "group": "element"
+  },
+  "element.U": {
+    "name": "Element tile: Uranium (U)",
+    "group": "element"
+  },
+  "element.Np": {
+    "name": "Element tile: Neptunium (Np)",
+    "group": "element"
+  },
+  "element.Pu": {
+    "name": "Element tile: Plutonium (Pu)",
+    "group": "element"
+  },
+  "element.Am": {
+    "name": "Element tile: Americium (Am)",
+    "group": "element"
+  },
+  "element.Cm": {
+    "name": "Element tile: Curium (Cm)",
+    "group": "element"
+  },
+  "element.Bk": {
+    "name": "Element tile: Berkelium (Bk)",
+    "group": "element"
+  },
+  "element.Cf": {
+    "name": "Element tile: Californium (Cf)",
+    "group": "element"
+  },
+  "element.Es": {
+    "name": "Element tile: Einsteinium (Es)",
+    "group": "element"
+  },
+  "element.Fm": {
+    "name": "Element tile: Fermium (Fm)",
+    "group": "element"
+  },
+  "element.Md": {
+    "name": "Element tile: Mendelevium (Md)",
+    "group": "element"
+  },
+  "element.No": {
+    "name": "Element tile: Nobelium (No)",
+    "group": "element"
+  },
+  "element.Lr": {
+    "name": "Element tile: Lawrencium (Lr)",
+    "group": "element"
+  },
+  "element.Rf": {
+    "name": "Element tile: Rutherfordium (Rf)",
+    "group": "element"
+  },
+  "element.Db": {
+    "name": "Element tile: Dubnium (Db)",
+    "group": "element"
+  },
+  "element.Sg": {
+    "name": "Element tile: Seaborgium (Sg)",
+    "group": "element"
+  },
+  "element.Bh": {
+    "name": "Element tile: Bohrium (Bh)",
+    "group": "element"
+  },
+  "element.Hs": {
+    "name": "Element tile: Hassium (Hs)",
+    "group": "element"
+  },
+  "element.Mt": {
+    "name": "Element tile: Meitnerium (Mt)",
+    "group": "element"
+  },
+  "element.Ds": {
+    "name": "Element tile: Darmstadtium (Ds)",
+    "group": "element"
+  },
+  "element.Rg": {
+    "name": "Element tile: Roentgenium (Rg)",
+    "group": "element"
+  },
+  "element.Cn": {
+    "name": "Element tile: Copernicium (Cn)",
+    "group": "element"
+  },
+  "element.Nh": {
+    "name": "Element tile: Nihonium (Nh)",
+    "group": "element"
+  },
+  "element.Fl": {
+    "name": "Element tile: Flerovium (Fl)",
+    "group": "element"
+  },
+  "element.Mc": {
+    "name": "Element tile: Moscovium (Mc)",
+    "group": "element"
+  },
+  "element.Lv": {
+    "name": "Element tile: Livermorium (Lv)",
+    "group": "element"
+  },
+  "element.Ts": {
+    "name": "Element tile: Tennessine (Ts)",
+    "group": "element"
+  },
+  "element.Og": {
+    "name": "Element tile: Oganesson (Og)",
+    "group": "element"
+  },
+  "table.category.alkali": {
+    "name": "Alkali legend swatch",
+    "group": "table"
+  },
+  "table.category.alkaline": {
+    "name": "Alkaline legend swatch",
+    "group": "table"
+  },
+  "table.category.transition": {
+    "name": "Transition legend swatch",
+    "group": "table"
+  },
+  "table.category.metal": {
+    "name": "Metal legend swatch",
+    "group": "table"
+  },
+  "table.category.metalloid": {
+    "name": "Metalloid legend swatch",
+    "group": "table"
+  },
+  "table.category.nonmetal": {
+    "name": "Nonmetal legend swatch",
+    "group": "table"
+  },
+  "table.category.halogen": {
+    "name": "Halogen legend swatch",
+    "group": "table"
+  },
+  "table.category.noble": {
+    "name": "Noble legend swatch",
+    "group": "table"
+  },
+  "table.category.rare-earth": {
+    "name": "Rare earth legend swatch",
+    "group": "table"
+  },
+  "table.category.actinoid": {
+    "name": "Actinoid legend swatch",
+    "group": "table"
+  },
+  "info.icon": {
+    "name": "Info icon",
+    "group": "info"
+  },
+  "info.hover.icon": {
+    "name": "Info icon on hover",
+    "group": "info"
+  },
+  "info.symbol": {
+    "name": "Info symbol",
+    "group": "info"
+  },
+  "info.hover.symbol": {
+    "name": "Info symbol on hover",
+    "group": "info"
+  },
+  "recipe.label.background": {
+    "name": "Label backing when the molecule overlaps text (alpha controls translucency)",
+    "group": "recipe label"
+  },
+  "element.symbol.light": {
+    "name": "Element symbol on a dark tile",
+    "group": "element symbol"
+  },
+  "element.symbol.dark": {
+    "name": "Element symbol on a light tile",
+    "group": "element symbol"
+  },
+  "element.number.light": {
+    "name": "Atomic number on a dark tile",
+    "group": "atomic number"
+  },
+  "element.number.dark": {
+    "name": "Atomic number on a light tile",
+    "group": "atomic number"
+  },
+  "atom.label": {
+    "name": "External-group label on a molecule",
+    "group": "atom annotation"
+  },
+  "atom.radical": {
+    "name": "Unpaired-electron dots on a molecule",
+    "group": "atom annotation"
+  },
+  "tooltip.text": {
+    "name": "Tooltip text",
+    "group": "tooltip"
+  },
+  "tooltip.shadow": {
+    "name": "Tooltip text shadow",
+    "group": "tooltip"
+  },
+  "tooltip.format.0": {
+    "name": "Tooltip formatting color 0",
+    "group": "tooltip"
+  },
+  "tooltip.format.1": {
+    "name": "Tooltip formatting color 1",
+    "group": "tooltip"
+  },
+  "tooltip.format.2": {
+    "name": "Tooltip formatting color 2",
+    "group": "tooltip"
+  },
+  "tooltip.format.3": {
+    "name": "Tooltip formatting color 3",
+    "group": "tooltip"
+  },
+  "tooltip.format.4": {
+    "name": "Tooltip formatting color 4",
+    "group": "tooltip"
+  },
+  "tooltip.format.5": {
+    "name": "Tooltip formatting color 5",
+    "group": "tooltip"
+  },
+  "tooltip.format.6": {
+    "name": "Tooltip formatting color 6",
+    "group": "tooltip"
+  },
+  "tooltip.format.7": {
+    "name": "Tooltip formatting color 7",
+    "group": "tooltip"
+  },
+  "tooltip.format.8": {
+    "name": "Tooltip formatting color 8",
+    "group": "tooltip"
+  },
+  "tooltip.format.9": {
+    "name": "Tooltip formatting color 9",
+    "group": "tooltip"
+  },
+  "tooltip.format.a": {
+    "name": "Tooltip formatting color A",
+    "group": "tooltip"
+  },
+  "tooltip.format.b": {
+    "name": "Tooltip formatting color B",
+    "group": "tooltip"
+  },
+  "tooltip.format.c": {
+    "name": "Tooltip formatting color C",
+    "group": "tooltip"
+  },
+  "tooltip.format.d": {
+    "name": "Tooltip formatting color D",
+    "group": "tooltip"
+  },
+  "tooltip.format.e": {
+    "name": "Tooltip formatting color E",
+    "group": "tooltip"
+  },
+  "tooltip.format.f": {
+    "name": "Tooltip formatting color F",
+    "group": "tooltip"
+  }
+}

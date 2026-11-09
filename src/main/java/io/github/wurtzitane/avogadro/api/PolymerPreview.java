@@ -1,11 +1,17 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.JsonObject;
-import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
 import java.util.Map;
 
+import com.google.gson.JsonObject;
+
+import io.github.wurtzitane.avogadro.molecule.MoleculeStructure;
+
 /**
- * Immutable realized geometry and the exact request that produced it.
+ * One completed polymer-network model and the settings used to build it.
+ *
+ * <p>
+ * Use {@link #fragment()} to inspect or edit its atoms and bonds, {@link #formula()} for its finite formula, and
+ * {@link #reproduction()} to save enough information to build the same model again.
  */
 public final class PolymerPreview {
 
@@ -22,16 +28,15 @@ public final class PolymerPreview {
     private final JsonObject reproduction;
 
     /**
-     * Constructs a new {@link PolymerPreview} instance with realized geometry, request details,
-     * diagnostics, and reproduction data.
+     * Creates a {@link PolymerPreview} with realized geometry, request details, diagnostics, and reproduction data.
      *
-     * @param fragment     the realized {@link StructureFragment}
-     * @param request      the {@link NetworkPreviewRequest} used
-     * @param diagnostics  map of diagnostic metrics
+     * @param fragment the realized {@link StructureFragment}
+     * @param request the {@link NetworkPreviewRequest} used
+     * @param diagnostics map of diagnostic metrics
      * @param reproduction the reproduction {@link JsonObject}
      */
     PolymerPreview(StructureFragment fragment, NetworkPreviewRequest request, Map<String, Integer> diagnostics,
-                   JsonObject reproduction) {
+            JsonObject reproduction) {
         this.fragment = fragment;
         this.request = request;
         this.diagnostics = Map.copyOf(diagnostics);
@@ -39,9 +44,9 @@ public final class PolymerPreview {
     }
 
     /**
-     * Retrieves the realized structure fragment.
+     * Returns the realized structure fragment.
      *
-     * @return the {@link StructureFragment} instance
+     * @return the {@link StructureFragment}
      */
     public StructureFragment fragment() {
         return fragment;
@@ -57,16 +62,16 @@ public final class PolymerPreview {
     }
 
     /**
-     * Retrieves the exact network preview request that produced this preview.
+     * Returns the exact network preview request that produced this preview.
      *
-     * @return the {@link NetworkPreviewRequest} instance
+     * @return the {@link NetworkPreviewRequest}
      */
     public NetworkPreviewRequest request() {
         return request;
     }
 
     /**
-     * Retrieves diagnostic metrics and statistics collected during assembly.
+     * Returns diagnostic metrics and statistics collected during assembly.
      *
      * @return an immutable map of diagnostic key-value counts
      */
@@ -93,7 +98,7 @@ public final class PolymerPreview {
     }
 
     /**
-     * Retrieves a deep copy of the reproduction JSON object.
+     * Returns a deep copy of the reproduction JSON object.
      *
      * @return a new {@link JsonObject} containing reproduction metadata
      */

@@ -1,0 +1,679 @@
+{
+  "name": "Sulfur-linked polyisoprene",
+  "polymer_network": {
+    "random_version": 1,
+    "seed": "42",
+    "parameters": [
+      {
+        "name": "length",
+        "label": "length",
+        "kind": "count",
+        "min": 1.0,
+        "max": 16.0,
+        "default": 4.0
+      },
+      {
+        "name": "bridgeChance",
+        "label": "bridgeChance",
+        "kind": "probability",
+        "min": 0.0,
+        "max": 1.0,
+        "default": 0.5
+      }
+    ],
+    "assembly": {
+      "nodes": [
+        {
+          "name": "pairs",
+          "kind": "repeat",
+          "transform": [
+            [
+              1.0,
+              0.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0,
+              0.0
+            ]
+          ],
+          "body": {
+            "nodes": [
+              {
+                "name": "left",
+                "kind": "fragment",
+                "transform": [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                "structure": {
+                  "atoms": [
+                    {
+                      "e": "C",
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "C",
+                      "x": 1.5,
+                      "y": 0.0,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "C",
+                      "x": 2.8,
+                      "y": 0.4,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "C",
+                      "x": 4.2,
+                      "y": 0.4,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "C",
+                      "x": 1.5,
+                      "y": -1.5,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "H",
+                      "x": -0.4,
+                      "y": 0.7,
+                      "z": 0.7
+                    },
+                    {
+                      "e": "H",
+                      "x": -0.4,
+                      "y": 0.7,
+                      "z": -0.7
+                    },
+                    {
+                      "e": "H",
+                      "x": 2.9,
+                      "y": 1.4,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "H",
+                      "x": 4.4,
+                      "y": 0.4,
+                      "z": 1.0
+                    },
+                    {
+                      "e": "H",
+                      "x": 0.5,
+                      "y": -1.9,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "H",
+                      "x": 2.0,
+                      "y": -1.9,
+                      "z": 0.8
+                    },
+                    {
+                      "e": "H",
+                      "x": 2.0,
+                      "y": -1.9,
+                      "z": -0.8
+                    }
+                  ],
+                  "bonds": [
+                    [
+                      0,
+                      1,
+                      "SINGLE"
+                    ],
+                    [
+                      1,
+                      2,
+                      "DOUBLE"
+                    ],
+                    [
+                      2,
+                      3,
+                      "SINGLE"
+                    ],
+                    [
+                      1,
+                      4,
+                      "SINGLE"
+                    ],
+                    [
+                      0,
+                      5,
+                      "SINGLE"
+                    ],
+                    [
+                      0,
+                      6,
+                      "SINGLE"
+                    ],
+                    [
+                      2,
+                      7,
+                      "SINGLE"
+                    ],
+                    [
+                      3,
+                      8,
+                      "SINGLE"
+                    ],
+                    [
+                      4,
+                      9,
+                      "SINGLE"
+                    ],
+                    [
+                      4,
+                      10,
+                      "SINGLE"
+                    ],
+                    [
+                      4,
+                      11,
+                      "SINGLE"
+                    ]
+                  ],
+                  "attachments": {
+                    "head": 0,
+                    "tail": 3,
+                    "cross": 3
+                  }
+                }
+              },
+              {
+                "name": "right",
+                "kind": "fragment",
+                "transform": [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                "structure": {
+                  "atoms": [
+                    {
+                      "e": "C",
+                      "x": 0.0,
+                      "y": 3.6,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "C",
+                      "x": 1.5,
+                      "y": 3.6,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "C",
+                      "x": 2.8,
+                      "y": 4.0,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "C",
+                      "x": 4.2,
+                      "y": 4.0,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "C",
+                      "x": 1.5,
+                      "y": 2.1,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "H",
+                      "x": -0.4,
+                      "y": 4.3,
+                      "z": 0.7
+                    },
+                    {
+                      "e": "H",
+                      "x": -0.4,
+                      "y": 4.3,
+                      "z": -0.7
+                    },
+                    {
+                      "e": "H",
+                      "x": 2.9,
+                      "y": 5.0,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "H",
+                      "x": 4.4,
+                      "y": 4.0,
+                      "z": 1.0
+                    },
+                    {
+                      "e": "H",
+                      "x": 0.5,
+                      "y": 1.7000000000000002,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "H",
+                      "x": 2.0,
+                      "y": 1.7000000000000002,
+                      "z": 0.8
+                    },
+                    {
+                      "e": "H",
+                      "x": 2.0,
+                      "y": 1.7000000000000002,
+                      "z": -0.8
+                    }
+                  ],
+                  "bonds": [
+                    [
+                      0,
+                      1,
+                      "SINGLE"
+                    ],
+                    [
+                      1,
+                      2,
+                      "DOUBLE"
+                    ],
+                    [
+                      2,
+                      3,
+                      "SINGLE"
+                    ],
+                    [
+                      1,
+                      4,
+                      "SINGLE"
+                    ],
+                    [
+                      0,
+                      5,
+                      "SINGLE"
+                    ],
+                    [
+                      0,
+                      6,
+                      "SINGLE"
+                    ],
+                    [
+                      2,
+                      7,
+                      "SINGLE"
+                    ],
+                    [
+                      3,
+                      8,
+                      "SINGLE"
+                    ],
+                    [
+                      4,
+                      9,
+                      "SINGLE"
+                    ],
+                    [
+                      4,
+                      10,
+                      "SINGLE"
+                    ],
+                    [
+                      4,
+                      11,
+                      "SINGLE"
+                    ]
+                  ],
+                  "attachments": {
+                    "head": 0,
+                    "tail": 3,
+                    "cross": 3
+                  }
+                }
+              },
+              {
+                "name": "bridge",
+                "kind": "choice",
+                "transform": [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                "rule_id": "sulfur_bridge",
+                "probability": "bridgeChance",
+                "present": {
+                  "nodes": [
+                    {
+                      "name": "connector",
+                      "kind": "fragment",
+                      "transform": [
+                        [
+                          1.0,
+                          0.0,
+                          0.0,
+                          0.0
+                        ],
+                        [
+                          0.0,
+                          1.0,
+                          0.0,
+                          0.0
+                        ],
+                        [
+                          0.0,
+                          0.0,
+                          1.0,
+                          0.0
+                        ]
+                      ],
+                      "structure": {
+                        "atoms": [
+                          {
+                            "e": "S",
+                            "x": 4.2,
+                            "y": 2.2,
+                            "z": 0.0
+                          }
+                        ],
+                        "bonds": [],
+                        "attachments": {
+                          "left": 0,
+                          "right": 0
+                        }
+                      }
+                    }
+                  ],
+                  "links": [],
+                  "random_links": []
+                },
+                "absent": {
+                  "nodes": [
+                    {
+                      "name": "connector",
+                      "kind": "fragment",
+                      "transform": [
+                        [
+                          1.0,
+                          0.0,
+                          0.0,
+                          0.0
+                        ],
+                        [
+                          0.0,
+                          1.0,
+                          0.0,
+                          0.0
+                        ],
+                        [
+                          0.0,
+                          0.0,
+                          1.0,
+                          0.0
+                        ]
+                      ],
+                      "structure": {
+                        "atoms": [
+                          {
+                            "e": "H",
+                            "x": 4.2,
+                            "y": 1.4,
+                            "z": 0.0
+                          },
+                          {
+                            "e": "H",
+                            "x": 4.2,
+                            "y": 3.0,
+                            "z": 0.0
+                          }
+                        ],
+                        "bonds": [],
+                        "attachments": {
+                          "left": 0,
+                          "right": 1
+                        }
+                      }
+                    }
+                  ],
+                  "links": [],
+                  "random_links": []
+                }
+              }
+            ],
+            "links": [
+              {
+                "from": "left/cross",
+                "to": "bridge/connector/left",
+                "type": "SINGLE"
+              },
+              {
+                "from": "right/cross",
+                "to": "bridge/connector/right",
+                "type": "SINGLE"
+              }
+            ],
+            "random_links": []
+          },
+          "count": "length",
+          "step": [
+            [
+              1.0,
+              0.0,
+              0.0,
+              5.7
+            ],
+            [
+              0.0,
+              1.0,
+              0.0,
+              0.0
+            ],
+            [
+              0.0,
+              0.0,
+              1.0,
+              0.0
+            ]
+          ],
+          "neighbor_links": [
+            {
+              "from": "left/tail",
+              "to": "left/head",
+              "type": "SINGLE",
+              "offset": 1
+            },
+            {
+              "from": "right/tail",
+              "to": "right/head",
+              "type": "SINGLE",
+              "offset": 1
+            }
+          ],
+          "head": {
+            "nodes": [
+              {
+                "name": "cap",
+                "kind": "fragment",
+                "transform": [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                "structure": {
+                  "atoms": [
+                    {
+                      "e": "H",
+                      "x": -1.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "H",
+                      "x": -1.0,
+                      "y": 3.6,
+                      "z": 0.0
+                    }
+                  ],
+                  "bonds": [],
+                  "attachments": {
+                    "left": 0,
+                    "right": 1
+                  }
+                }
+              }
+            ],
+            "links": [],
+            "random_links": []
+          },
+          "tail": {
+            "nodes": [
+              {
+                "name": "cap",
+                "kind": "fragment",
+                "transform": [
+                  [
+                    1.0,
+                    0.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    1.0,
+                    0.0,
+                    0.0
+                  ],
+                  [
+                    0.0,
+                    0.0,
+                    1.0,
+                    0.0
+                  ]
+                ],
+                "structure": {
+                  "atoms": [
+                    {
+                      "e": "H",
+                      "x": 5.2,
+                      "y": 0.4,
+                      "z": 0.0
+                    },
+                    {
+                      "e": "H",
+                      "x": 5.2,
+                      "y": 4.0,
+                      "z": 0.0
+                    }
+                  ],
+                  "bonds": [],
+                  "attachments": {
+                    "left": 0,
+                    "right": 1
+                  }
+                }
+              }
+            ],
+            "links": [],
+            "random_links": []
+          }
+        }
+      ],
+      "links": [
+        {
+          "from": "pairs/head/cap/left",
+          "to": "pairs[first]/left/head",
+          "type": "SINGLE"
+        },
+        {
+          "from": "pairs/head/cap/right",
+          "to": "pairs[first]/right/head",
+          "type": "SINGLE"
+        },
+        {
+          "from": "pairs[last]/left/tail",
+          "to": "pairs/tail/cap/left",
+          "type": "SINGLE"
+        },
+        {
+          "from": "pairs[last]/right/tail",
+          "to": "pairs/tail/cap/right",
+          "type": "SINGLE"
+        }
+      ],
+      "random_links": []
+    }
+  },
+  "inspection": {
+    "classification": "polymer"
+  }
+}

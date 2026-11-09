@@ -7,7 +7,8 @@ import java.nio.ByteBuffer;
 
 /**
  * Represents owned bottom-up RGBA readback pixel buffers.
- * <p>Conversion happens only on an encoder worker.
+ * <p>
+ * Conversion happens only on an encoder worker.
  */
 final class MediaPixels {
 
@@ -21,10 +22,10 @@ final class MediaPixels {
     final boolean unpremultiply;
 
     /**
-     * Constructs a new {@link MediaPixels} buffer container with specified dimensions.
+     * Creates a {@link MediaPixels} buffer container with specified dimensions.
      *
-     * @param width         image width in pixels
-     * @param height        image height in pixels
+     * @param width image width in pixels
+     * @param height image height in pixels
      * @param unpremultiply {@code true} to unpremultiply alpha values
      */
     MediaPixels(int width, int height, boolean unpremultiply) {
@@ -37,7 +38,7 @@ final class MediaPixels {
     /**
      * Copies pixel data from a direct {@link ByteBuffer} source into the raw RGBA buffer.
      *
-     * @source source byte buffer
+     * @param source source byte buffer
      */
     void copyFrom(ByteBuffer source) {
         source.get(0, rgba);
@@ -68,7 +69,8 @@ final class MediaPixels {
 
     /**
      * Extracts an ARGB integer color from the source byte array index.
-     * <p>Exact original readback rounding, without allocating an intermediate ARGB image.
+     * <p>
+     * Exact original readback rounding, without allocating an intermediate ARGB image.
      *
      * @param source byte index offset in the RGBA array
      * @return ARGB packed integer color
@@ -87,7 +89,7 @@ final class MediaPixels {
     /**
      * Reads a specific row of pixels into an integer target array.
      *
-     * @param y      row index
+     * @param y row index
      * @param target target integer array
      */
     void readRow(int y, int[] target) {
@@ -98,8 +100,9 @@ final class MediaPixels {
     }
 
     /**
-     * Retrieves direct packed pixel integer data from a buffered image if compatible.
-     * <p>Only a contiguous, nontranslated, unpremultiplied ARGB raster is safe for direct access.
+     * Returns direct packed pixel integer data from a buffered image if compatible.
+     * <p>
+     * Only a contiguous, nontranslated, unpremultiplied ARGB raster is safe for direct access.
      *
      * @param image source buffered image
      * @return backing integer data array, or {@code null} if incompatible
@@ -111,9 +114,8 @@ final class MediaPixels {
                 || image.getRaster().getSampleModelTranslateY() != 0
                 || !(image.getRaster().getSampleModel() instanceof SinglePixelPackedSampleModel model)
                 || model.getScanlineStride() != image.getWidth()
-                || !(image.getRaster().getDataBuffer() instanceof DataBufferInt data)
-                || data.getOffset() != 0 || data.getNumBanks() != 1
-                || data.getSize() != image.getWidth() * image.getHeight()) {
+                || !(image.getRaster().getDataBuffer() instanceof DataBufferInt data) || data.getOffset() != 0
+                || data.getNumBanks() != 1 || data.getSize() != image.getWidth() * image.getHeight()) {
             return null;
         }
         return data.getData();

@@ -1,16 +1,17 @@
 package io.github.wurtzitane.avogadro.client;
 
+import java.nio.FloatBuffer;
+import java.nio.IntBuffer;
+
 import org.joml.Matrix4f;
 import org.joml.Vector4f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 
-import java.nio.FloatBuffer;
-import java.nio.IntBuffer;
-
 /**
  * Converts the current GUI coordinate system to framebuffer pixels, including GUI scale and scissor tests.
- * <p>Converts the current GUI coordinate system to framebuffer pixels, including GUI scale.
+ * <p>
+ * Converts the current GUI coordinate system to framebuffer pixels, including GUI scale.
  */
 final class GuiClip {
 
@@ -35,12 +36,10 @@ final class GuiClip {
     /** Calculated pixel scale factor. */
     static float pixelScale = 1;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private GuiClip() {}
 
     /**
-     * Intersects the current clip region with the specified GUI rectangle bounds,
-     * updating the OpenGL scissor box.
+     * Intersects the current clip region with the specified GUI rectangle bounds, updating the OpenGL scissor box.
      *
      * @param x0 left x coordinate
      * @param y0 top y coordinate

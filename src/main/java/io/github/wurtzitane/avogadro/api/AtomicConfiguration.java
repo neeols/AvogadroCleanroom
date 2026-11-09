@@ -1,31 +1,35 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonObject;
 import java.util.List;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
+
 /**
- * Represents explicit isotope and shell populations.
- * <p>Orbits are schematic.
+ * Describes one atom's nucleus, charge, and electron shells.
  *
- * @param atomicNumber    the atomic number (number of protons)
- * @param neutrons        the number of neutrons
- * @param charge          the net electrical charge
- * @param electronShells  an immutable list of electron counts per shell
+ * <p>
+ * For example, a neutral carbon-12 atom has 6 protons, 6 neutrons, and shell counts of 2 and 4. Electron paths in the
+ * viewer are schematic, rather than a simulation of electron motion.
+ *
+ * @param atomicNumber the atomic number (number of protons)
+ * @param neutrons the number of neutrons
+ * @param charge the net electrical charge
+ * @param electronShells an immutable list of electron counts per shell
  */
 public record AtomicConfiguration(int atomicNumber, int neutrons, int charge, List<Integer> electronShells) {
 
     /**
      * Compact constructor for {@link AtomicConfiguration} that validates physical and structural constraints.
      *
-     * @throws IllegalArgumentException if atomic numbers, neutron counts, charges, shell capacities,
-     *         or total electron populations are invalid or out of bounds
+     * @throws IllegalArgumentException if atomic numbers, neutron counts, charges, shell capacities, or total electron
+     *     populations are invalid or out of bounds
      */
     public AtomicConfiguration {
         electronShells = List.copyOf(electronShells);
         // The host may describe hypothetical nuclei. These finite resource limits are not a periodic-table catalog.
-        if (atomicNumber < 0 || atomicNumber > 1000 || neutrons < 0 || neutrons > 10000 ||
-                atomicNumber == 0 && (neutrons == 0 || charge != 0)) {
+        if (atomicNumber < 0 || atomicNumber > 1000 || neutrons < 0 || neutrons > 10000
+                || atomicNumber == 0 && (neutrons == 0 || charge != 0)) {
             throw new IllegalArgumentException("Invalid atomic number or neutron count");
         }
         if (electronShells.size() > 32 || electronShells.stream().anyMatch(n -> n < 0)) {
@@ -83,7 +87,7 @@ public record AtomicConfiguration(int atomicNumber, int neutrons, int charge, Li
      * Deserializes an atomic configuration from a JSON object.
      *
      * @param value the {@link JsonObject} to parse
-     * @return a new {@link AtomicConfiguration} instance
+     * @return a new {@link AtomicConfiguration}
      * @throws IllegalArgumentException if required fields are missing, invalid, or malformed
      */
     public static AtomicConfiguration fromJson(JsonObject value) {
@@ -99,12 +103,8 @@ public record AtomicConfiguration(int atomicNumber, int neutrons, int charge, Li
         for (var entry : value.getAsJsonArray("electron_shells")) {
             shells.add(integer(entry));
         }
-        return new AtomicConfiguration(
-                integer(value.get("atomic_number")),
-                integer(value.get("neutrons")),
-                value.has("charge") ? integer(value.get("charge")) : 0,
-                shells
-        );
+        return new AtomicConfiguration(integer(value.get("atomic_number")), integer(value.get("neutrons")),
+                value.has("charge") ? integer(value.get("charge")) : 0, shells);
     }
 
     /**

@@ -1,21 +1,25 @@
 package io.github.wurtzitane.avogadro.client;
 
-import io.github.wurtzitane.avogadro.api.AtomicConfiguration;
+import java.nio.FloatBuffer;
+import java.util.*;
+import java.util.concurrent.CancellationException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.Future;
+
 import io.github.wurtzitane.avogadro.Config;
+import io.github.wurtzitane.avogadro.api.AtomicConfiguration;
+import io.github.wurtzitane.avogadro.client.compat.DemonicaRenderScope;
 import io.github.wurtzitane.avogadro.molecule.*;
+
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.*;
-import java.nio.FloatBuffer;
-import java.util.*;
-import java.util.concurrent.Future;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.CancellationException;
 
 /**
  * Detailed examiner renderer.
- * <p>Shared sphere mesh, streamed instance transforms, no world renderer dependency.
+ * <p>
+ * Shared sphere mesh, streamed instance transforms, no world renderer dependency.
  */
 public final class AtomicInspectionRenderer implements AutoCloseable {
 
@@ -105,9 +109,10 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
 
     /**
      * Calculates the reveal target ratio based on zoom level.
-     * <p>Fade over one zoom unit after the configured threshold; viewport size does not affect it.
+     * <p>
+     * Fade over one zoom unit after the configured threshold; viewport size does not affect it.
      *
-     * @param zoom      current zoom level
+     * @param zoom current zoom level
      * @param startZoom starting reveal threshold zoom
      * @return interpolated reveal value between 0 and 1
      */
@@ -139,7 +144,7 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
     }
 
     /**
-     * Constructs a new {@link AtomicInspectionRenderer} for a molecule definition.
+     * Creates a {@link AtomicInspectionRenderer} for a molecule definition.
      *
      * @param definition molecule definition
      */
@@ -148,11 +153,12 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
     }
 
     /**
-     * Constructs a new {@link AtomicInspectionRenderer} with an optional element palette snapshot.
-     * <p>Export jobs retain their palette even if the user changes appearance mid-export.
+     * Creates a {@link AtomicInspectionRenderer} with an optional element palette snapshot.
+     * <p>
+     * Export jobs retain their palette even if the user changes appearance mid-export.
      *
      * @param definition molecule definition
-     * @param palette    element palette snapshot
+     * @param palette element palette snapshot
      */
     public AtomicInspectionRenderer(MoleculeDef definition, ElementPalette.Snapshot palette) {
         fixedPalette = palette;
@@ -177,7 +183,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
     /** Checks whether the GPU cache and inspection components are fully ready. */
     boolean isReady() {
         ElementPalette.Snapshot palette = fixedPalette == null ? ElementPalette.snapshot() : fixedPalette;
-        return rendered && (overview ? GpuMoleculeCache.isReady(definition.structure(), Config.CUBIC_ATOMS.get(), palette)
+        return rendered && (overview
+                ? GpuMoleculeCache.isReady(definition.structure(), Config.CUBIC_ATOMS.get(), palette)
                 : focused >= 0 || bonds.bonds().isEmpty() || GpuMoleculeCache.isReady(bonds, false, palette));
     }
 
@@ -193,8 +200,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
     }
 
     /** Renders the atomic inspection view with full animation parameters. */
-    public void render(int width, int height, MoleculeCamera camera, int focusedAtom,
-                       long animationNanos, float automaticYaw) {
+    public void render(int width, int height, MoleculeCamera camera, int focusedAtom, long animationNanos,
+            float automaticYaw) {
         if (width <= 0 || height <= 0) {
             return;
         }
@@ -209,11 +216,51 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
         float yaw = camera.yaw(automaticYaw, animationNanos);
         transform.translation(width / 2f + camera.panX(), height / 2f + camera.panY(), 100)
                 .scale(drawScale, -drawScale, drawScale / Math.max(1, camera.zoom()))
-                .rotateX((float) Math.toRadians(pitch))
-                .rotateY((float) Math.toRadians(yaw))
+                .rotateX((float) Math.toRadians(pitch)).rotateY((float) Math.toRadians(yaw))
                 .translate(-centerX, -centerY, -centerZ);
         moleculeReveal = focused < 0 && structure.atoms().size() > 1;
         revealZoom = camera.zoom();
+        renderPrepared(0, 0, width, height, animationNanos, yaw, pitch);
+    }
+
+    /**
+     * Draws a single atom using an existing molecule pose. Compact previews can share the solid ball's projection
+     * without resetting the camera or rebuilding atomic geometry when a modifier changes.
+     */
+    void renderPreview(Matrix4f pose, int left, int top, int right, int bottom, long animationNanos, float yaw,
+            float pitch) {
+        focused = 0;
+        transform.set(pose);
+        drawScale = transform.getScale(projected).x;
+        moleculeReveal = false;
+        revealZoom = 1;
+        renderPrepared(left, top, right, bottom, animationNanos, yaw, pitch);
+    }
+
+    /** Prepares immutable particle layouts on the geometry worker before the first compact draw. */
+    void preparePreview() {
+        for (int index = 0; index < definition.structure().atoms().size(); index++) {
+            GeometryPreparation.checkCancelled();
+            var configuration = model.configuration(index);
+            if (configuration != null) {
+                sharedNuclei.computeIfAbsent(configuration, NuclearGeometry::packing);
+                sharedElectrons.computeIfAbsent(configuration, ElectronCloud::new);
+            }
+        }
+    }
+
+    /** Radius of the outer cloud, or nuclear glow for atoms without electrons, in units of the atom radius. */
+    float previewRadiusRatio() {
+        var configuration = model.configuration(0);
+        float ratio = configuration != null && configuration.electrons() == 0
+                ? sharedNuclei.computeIfAbsent(configuration, NuclearGeometry::packing).radius() * 1.07f
+                : .96f;
+        return ratio > 0 ? ratio : .96f;
+    }
+
+    /** Shared draw pass for the full examiner and compact previews. */
+    private void renderPrepared(int left, int top, int right, int bottom, long animationNanos, float yaw, float pitch) {
+        var structure = definition.structure();
         boolean showParts = updateReveal(System.nanoTime());
         overview = moleculeReveal && !showParts;
         var palette = fixedPalette == null ? ElementPalette.snapshot() : fixedPalette;
@@ -226,180 +273,190 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
             Arrays.fill(detail, (byte) -2);
             envelopesDirty = true;
         }
-        GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
-        int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
-        int previousBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
-        int previousVao = GL.getCapabilities().OpenGL30 ? GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING) : 0;
-        int previousMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
-        GL11.glMatrixMode(GL11.GL_MODELVIEW);
-        GL11.glPushMatrix();
-        try {
-            if (!GuiClip.intersect(0, 0, width, height)) {
-                return;
-            }
-            GL11.glDisable(GL11.GL_TEXTURE_2D);
-            GL11.glDisable(GL11.GL_LIGHTING);
-            GL11.glDisable(GL11.GL_CULL_FACE);
-            GL11.glShadeModel(GL11.GL_SMOOTH);
-            GL11.glDisable(GL11.GL_ALPHA_TEST);
-            GL11.glEnable(GL11.GL_DEPTH_TEST);
-            GL11.glDepthFunc(GL11.GL_LEQUAL);
-            GL11.glDepthMask(true);
-            GL11.glEnable(GL11.GL_BLEND);
-            GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-            GL11.glClearDepth(1);
-            GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
-            if (moleculeReveal && !showParts) {
-                MoleculeRenderer.drawTransformed(structure, transform, Config.CUBIC_ATOMS.get());
-                // Clear previously prepared atomic detail when returning to the overview.
+        try (var scope = DemonicaRenderScope.open()) {
+            GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+            int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+            int previousBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
+            int previousVao = GL.getCapabilities().OpenGL30 ? GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING) : 0;
+            int previousMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+            GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            GL11.glPushMatrix();
+            try {
+                if (!GuiClip.intersect(left, top, right, bottom)) {
+                    return;
+                }
+                GL11.glDisable(GL11.GL_TEXTURE_2D);
+                GL11.glDisable(GL11.GL_LIGHTING);
+                GL11.glDisable(GL11.GL_CULL_FACE);
+                GL11.glShadeModel(GL11.GL_SMOOTH);
+                GL11.glDisable(GL11.GL_ALPHA_TEST);
+                GL11.glEnable(GL11.GL_DEPTH_TEST);
+                GL11.glDepthFunc(GL11.GL_LEQUAL);
+                GL11.glDepthMask(true);
+                GL11.glEnable(GL11.GL_BLEND);
+                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+                GL11.glClearDepth(1);
+                GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+                if (moleculeReveal && !showParts) {
+                    MoleculeRenderer.drawTransformed(structure, transform, Config.CUBIC_ATOMS.get());
+                    // Clear previously prepared atomic detail when returning to the overview.
+                    updateDetail();
+                    GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+                    rendered = true;
+                    return;
+                }
+                if (focused < 0 && !structure.bonds().isEmpty()) {
+                    // Reserve cloud silhouettes before drawing bonds. No background color or stencil attachment is needed.
+                    GL11.glColorMask(false, false, false, false);
+                    GL11.glDepthFunc(GL11.GL_ALWAYS);
+                    GL11.glDepthRange(0, 0);
+                    try {
+                        MoleculeRenderer.drawTransformed(model.cloudMask(), transform, false);
+                    } finally {
+                        GL11.glColorMask(true, true, true, true);
+                        GL11.glDepthRange(0, 1);
+                        GL11.glDepthFunc(GL11.GL_LEQUAL);
+                    }
+                    if (GpuMoleculeCache.isReady(model.cloudMask(), false, palette)) {
+                        MoleculeRenderer.drawTransformed(bonds, transform, false);
+                    }
+                }
+                // Keep atomic components in front of bond cylinders while retaining atom-to-atom depth.
+                GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+                matrix.clear();
+                transform.get(matrix);
+                GL11.glMultMatrixf(matrix);
+                ensureGpu();
                 updateDetail();
+                boolean[] visible = fixedVisibility == null ? visibility() : fixedVisibility;
+                if (!Arrays.equals(lastVisibility, visible)) {
+                    detailDirty = true;
+                    envelopesDirty = true;
+                    lastVisibility = visible.clone();
+                }
+                if (visible[0]) {
+                    drawParticles(nucleusParticles, nucleusInstances, detailDirty, false);
+                }
+                if (visible[1]) {
+                    drawOrbits();
+                }
+                boolean electronsDirty = detailDirty || electronTime != animationNanos;
+                if (electronsDirty) {
+                    particles.clear();
+                    for (int i = 0; i < structure.atoms().size(); i++) {
+                        if (detail[i] < 1) {
+                            continue;
+                        }
+                        var atom = structure.atoms().get(i);
+                        var configuration = model.configuration(i);
+                        if (configuration == null) {
+                            continue;
+                        }
+                        float r = atom.element().radius();
+                        ElectronCloud cloud = sharedElectrons.computeIfAbsent(configuration, ElectronCloud::new);
+                        cloud.update(animationNanos);
+                        for (int electron = 0; electron < cloud.positions.length; electron += 3) {
+                            particle(atom.x() + cloud.positions[electron] * r,
+                                    atom.y() + cloud.positions[electron + 1] * r,
+                                    atom.z() + cloud.positions[electron + 2] * r, r * .032f,
+                                    (UiThemes.color("atom.electron", 0xFFE480) & 0xFFFFFF), 1);
+                        }
+                    }
+                    particles.flip();
+                    electronTime = animationNanos;
+                }
+                if (visible[2]) {
+                    drawParticles(particles, instances, electronsDirty, false);
+                }
+                detailDirty = false;
+                // Transparent envelopes must follow opaque nuclei/electrons and be sorted back to front.
+                GL11.glDepthMask(false);
+                GL11.glEnable(GL11.GL_CULL_FACE);
+                GL11.glCullFace(GL11.GL_BACK);
+                boolean reorder = envelopesDirty || envelopeYaw != yaw || envelopePitch != pitch
+                        || envelopeFocus != focused;
+                if (reorder) {
+                    for (int i = 0; i < depth.length; i++) {
+                        var atom = structure.atoms().get(i);
+                        depth[i] = transform.transformPosition(projected.set(atom.x(), atom.y(), atom.z())).z;
+                    }
+                    order.sort(depthOrder);
+                    FloatBuffer electrons = particles;
+                    particles = envelopes;
+                    particles.clear();
+                    for (int i : order) {
+                        if (focused >= 0 && i != focused) {
+                            continue;
+                        }
+                        var atom = structure.atoms().get(i);
+                        // Both clouds follow the opaque particles. Keep the inner cloud
+                        // separate so hiding electron clouds still leaves a cohesive nucleus.
+                        if (visible[0] && (!moleculeReveal || reveal[i] > 0)) {
+                            particle(atom.x(), atom.y(), atom.z(), nucleusRadii[i] * 1.07f,
+                                    (UiThemes.color("atom.nucleus.glow", 0x8F9EBC) & 0xFFFFFF), .12f);
+                        }
+                        if (moleculeReveal) {
+                            if (reveal[i] < 1) {
+                                particle(atom.x(), atom.y(), atom.z(), atom.element().radius(), colors[i],
+                                        1 - reveal[i]);
+                            }
+                        } else if (visible[3]
+                                && (model.configuration(i) == null || model.configuration(i).electrons() > 0)) {
+                            particle(atom.x(), atom.y(), atom.z(), atom.element().radius() * .96f, colors[i], .09f);
+                        }
+                    }
+                    particles.flip();
+                    envelopes = particles;
+                    particles = electrons;
+                    envelopeYaw = yaw;
+                    envelopePitch = pitch;
+                    envelopeFocus = focused;
+                    envelopesDirty = false;
+                }
+                drawParticles(envelopes, envelopeInstances, reorder, true);
+                GL11.glDepthMask(true);
                 GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
                 rendered = true;
-                return;
-            }
-            if (focused < 0 && !structure.bonds().isEmpty()) {
-                // Reserve cloud silhouettes before drawing bonds. No background color or stencil attachment is needed.
-                GL11.glColorMask(false, false, false, false);
-                GL11.glDepthFunc(GL11.GL_ALWAYS);
-                GL11.glDepthRange(0, 0);
-                try {
-                    MoleculeRenderer.drawTransformed(model.cloudMask(), transform, false);
-                } finally {
-                    GL11.glColorMask(true, true, true, true);
-                    GL11.glDepthRange(0, 1);
-                    GL11.glDepthFunc(GL11.GL_LEQUAL);
+            } finally {
+                GL11.glPopMatrix();
+                GL11.glMatrixMode(previousMode);
+                if (GL.getCapabilities().OpenGL30) {
+                    GL30.glBindVertexArray(previousVao);
                 }
-                if (GpuMoleculeCache.isReady(model.cloudMask(), false, palette)) {
-                    MoleculeRenderer.drawTransformed(bonds, transform, false);
-                }
+                GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
+                GL20.glUseProgram(previousProgram);
+                GL11.glPopAttrib();
             }
-            // Keep atomic components in front of bond cylinders while retaining atom-to-atom depth.
-            GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
-            matrix.clear();
-            transform.get(matrix);
-            GL11.glMultMatrixf(matrix);
-            ensureGpu();
-            updateDetail();
-            boolean[] visible = fixedVisibility == null ? visibility() : fixedVisibility;
-            if (!Arrays.equals(lastVisibility, visible)) {
-                detailDirty = true;
-                envelopesDirty = true;
-                lastVisibility = visible.clone();
-            }
-            if (visible[0]) {
-                drawParticles(nucleusParticles, nucleusInstances, detailDirty, false);
-            }
-            if (visible[1]) {
-                drawOrbits();
-            }
-            boolean electronsDirty = detailDirty || electronTime != animationNanos;
-            if (electronsDirty) {
-                particles.clear();
-                for (int i = 0; i < structure.atoms().size(); i++) {
-                    if (detail[i] < 1) {
-                        continue;
-                    }
-                    var atom = structure.atoms().get(i);
-                    var configuration = model.configuration(i);
-                    if (configuration == null) {
-                        continue;
-                    }
-                    float r = atom.element().radius();
-                    ElectronCloud cloud = sharedElectrons.computeIfAbsent(configuration, ElectronCloud::new);
-                    cloud.update(animationNanos);
-                    for (int electron = 0; electron < cloud.positions.length; electron += 3) {
-                        particle(atom.x() + cloud.positions[electron] * r, atom.y() + cloud.positions[electron + 1] * r,
-                                atom.z() + cloud.positions[electron + 2] * r, r * .032f, 0xFFE480, 1);
-                    }
-                }
-                particles.flip();
-                electronTime = animationNanos;
-            }
-            if (visible[2]) {
-                drawParticles(particles, instances, electronsDirty, false);
-            }
-            detailDirty = false;
-            // Transparent envelopes must follow opaque nuclei/electrons and be sorted back to front.
-            GL11.glDepthMask(false);
-            GL11.glEnable(GL11.GL_CULL_FACE);
-            GL11.glCullFace(GL11.GL_BACK);
-            boolean reorder = envelopesDirty || envelopeYaw != yaw || envelopePitch != pitch || envelopeFocus != focused;
-            if (reorder) {
-                for (int i = 0; i < depth.length; i++) {
-                    var atom = structure.atoms().get(i);
-                    depth[i] = transform.transformPosition(projected.set(atom.x(), atom.y(), atom.z())).z;
-                }
-                order.sort(depthOrder);
-                FloatBuffer electrons = particles;
-                particles = envelopes;
-                particles.clear();
-                for (int i : order) {
-                    if (focused >= 0 && i != focused) {
-                        continue;
-                    }
-                    var atom = structure.atoms().get(i);
-                    // Both clouds follow the opaque particles. Keep the inner cloud
-                    // separate so hiding electron clouds still leaves a cohesive nucleus.
-                    if (visible[0] && (!moleculeReveal || reveal[i] > 0)) {
-                        particle(atom.x(), atom.y(), atom.z(), nucleusRadii[i] * 1.07f, 0x8F9EBC, .12f);
-                    }
-                    if (moleculeReveal) {
-                        if (reveal[i] < 1) {
-                            particle(atom.x(), atom.y(), atom.z(), atom.element().radius(), colors[i], 1 - reveal[i]);
-                        }
-                    } else if (visible[3] && (model.configuration(i) == null || model.configuration(i).electrons() > 0)) {
-                        particle(atom.x(), atom.y(), atom.z(), atom.element().radius() * .96f, colors[i], .09f);
-                    }
-                }
-                particles.flip();
-                envelopes = particles;
-                particles = electrons;
-                envelopeYaw = yaw;
-                envelopePitch = pitch;
-                envelopeFocus = focused;
-                envelopesDirty = false;
-            }
-            drawParticles(envelopes, envelopeInstances, reorder, true);
-            GL11.glDepthMask(true);
-            GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
-            rendered = true;
-        } finally {
-            GL11.glPopMatrix();
-            GL11.glMatrixMode(previousMode);
-            if (GL.getCapabilities().OpenGL30) {
-                GL30.glBindVertexArray(previousVao);
-            }
-            GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
-            GL20.glUseProgram(previousProgram);
-            GL11.glPopAttrib();
         }
     }
 
-    /** Retrieves the current visibility configuration array. */
+    /** Returns the current visibility configuration array. */
     private static boolean[] visibility() {
-        return new boolean[]{Config.ATOM_NUCLEUS.get(), Config.ATOM_ORBITS.get(), Config.ATOM_ELECTRONS.get(), Config.ATOM_CLOUD.get()};
+        return new boolean[]{Config.ATOM_NUCLEUS.get(), Config.ATOM_ORBITS.get(), Config.ATOM_ELECTRONS.get(),
+                Config.ATOM_CLOUD.get()};
     }
 
     /**
      * Initializes an export cursor for rendering frozen frames during media export.
-     * <p>An isolated export renderer holds one frozen frame while bounded draw ranges finish.
+     * <p>
+     * An isolated export renderer holds one frozen frame while bounded draw ranges finish.
      *
-     * @param width           viewport width
-     * @param height          viewport height
-     * @param camera          molecule camera
-     * @param focusedAtom     focused atom index
-     * @param animationNanos  animation time in nanoseconds
-     * @param automaticYaw    automatic yaw angle
-     * @return a new {@link ExportCursor} instance
+     * @param width viewport width
+     * @param height viewport height
+     * @param camera molecule camera
+     * @param focusedAtom focused atom index
+     * @param animationNanos animation time in nanoseconds
+     * @param automaticYaw automatic yaw angle
+     * @return a new {@link ExportCursor}
      */
-    public ExportCursor beginExport(int width, int height, MoleculeCamera camera, int focusedAtom,
-                                    long animationNanos, float automaticYaw) {
+    public ExportCursor beginExport(int width, int height, MoleculeCamera camera, int focusedAtom, long animationNanos,
+            float automaticYaw) {
         return beginExport(width, height, camera, focusedAtom, animationNanos, automaticYaw, 0);
     }
 
     /** Initializes an export cursor with animation loop settings. */
-    public ExportCursor beginExport(int width, int height, MoleculeCamera camera, int focusedAtom,
-                                    long animationNanos, float automaticYaw, double loopSeconds) {
+    public ExportCursor beginExport(int width, int height, MoleculeCamera camera, int focusedAtom, long animationNanos,
+            float automaticYaw, double loopSeconds) {
         if (!Double.isFinite(loopSeconds) || loopSeconds < 0) {
             throw new IllegalArgumentException("Invalid animation duration");
         }
@@ -421,9 +478,9 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
         private int phase, first;
         private boolean depthStarted, closed;
 
-        /** Constructs a new {@link ExportCursor}. */
-        private ExportCursor(int width, int height, MoleculeCamera camera, int focusedAtom,
-                             long animationNanos, float automaticYaw, double loopSeconds) {
+        /** Creates a {@link ExportCursor}. */
+        private ExportCursor(int width, int height, MoleculeCamera camera, int focusedAtom, long animationNanos,
+                float automaticYaw, double loopSeconds) {
             this.width = width;
             this.height = height;
             this.animationNanos = animationNanos;
@@ -438,14 +495,16 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
             pitch = camera.pitch(animationNanos);
             yaw = camera.yaw(automaticYaw, animationNanos);
             transform.translation(width / 2f + camera.panX(), height / 2f + camera.panY(), 100)
-                    .scale(drawScale, -drawScale, drawScale)
-                    .rotateX((float) Math.toRadians(pitch)).rotateY((float) Math.toRadians(yaw))
-                    .translate(-centerX, -centerY, -centerZ);
+                    .scale(drawScale, -drawScale, drawScale).rotateX((float) Math.toRadians(pitch))
+                    .rotateY((float) Math.toRadians(yaw)).translate(-centerX, -centerY, -centerZ);
             visible = (fixedVisibility == null ? visibility() : fixedVisibility).clone();
             exportPalette = fixedPalette == null ? ElementPalette.snapshot() : fixedPalette;
         }
 
-        /** Prepares frame data asynchronously. CPU-only preparation belongs to the bounded worker pool, never a render callback. */
+        /**
+         * Prepares frame data asynchronously. CPU-only preparation belongs to the bounded worker pool, never a render
+         * callback.
+         */
         private boolean prepareFrame() {
             GeometryPreparation.checkCancelled();
             var structure = definition.structure();
@@ -483,13 +542,15 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
                     cloud.update(animationNanos, loopSeconds);
                     for (int electron = 0; electron < cloud.positions.length; electron += 3) {
                         particle(atom.x() + cloud.positions[electron] * r, atom.y() + cloud.positions[electron + 1] * r,
-                                atom.z() + cloud.positions[electron + 2] * r, r * .032f, 0xFFE480, 1);
+                                atom.z() + cloud.positions[electron + 2] * r, r * .032f,
+                                (UiThemes.color("atom.electron", 0xFFE480) & 0xFFFFFF), 1);
                     }
                 }
                 particles.flip();
                 electronTime = animationNanos;
             }
-            boolean reorder = envelopesDirty || envelopeYaw != yaw || envelopePitch != pitch || envelopeFocus != focused;
+            boolean reorder = envelopesDirty || envelopeYaw != yaw || envelopePitch != pitch
+                    || envelopeFocus != focused;
             if (reorder) {
                 for (int i = 0; i < depth.length; i++) {
                     GeometryPreparation.checkCancelled();
@@ -507,7 +568,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
                     }
                     var atom = structure.atoms().get(i);
                     if (visible[0]) {
-                        particle(atom.x(), atom.y(), atom.z(), nucleusRadii[i] * 1.07f, 0x8F9EBC, .12f);
+                        particle(atom.x(), atom.y(), atom.z(), nucleusRadii[i] * 1.07f,
+                                (UiThemes.color("atom.nucleus.glow", 0x8F9EBC) & 0xFFFFFF), .12f);
                     }
                     if (visible[3] && (model.configuration(i) == null || model.configuration(i).electrons() > 0)) {
                         particle(atom.x(), atom.y(), atom.z(), atom.element().radius() * .96f, colors[i], .09f);
@@ -526,7 +588,10 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
             return true;
         }
 
-        /** Advances rendering phases step-by-step. No waits: a pending worker or exhausted budget leaves the original FBO intact. */
+        /**
+         * Advances rendering phases step-by-step. No waits: a pending worker or exhausted budget leaves the original
+         * FBO intact.
+         */
         public boolean advance() {
             if (closed) {
                 throw new IllegalStateException("Atom export cursor is closed");
@@ -561,87 +626,89 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
                 return false;
             }
             long started = System.nanoTime();
-            GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
-            int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
-            int previousBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
-            int previousVao = GL.getCapabilities().OpenGL30 ? GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING) : 0;
-            int previousMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
-            GL11.glMatrixMode(GL11.GL_MODELVIEW);
-            GL11.glPushMatrix();
-            try {
-                if (!GuiClip.intersect(0, 0, width, height)) {
-                    return false;
-                }
-                GL11.glDisable(GL11.GL_TEXTURE_2D);
-                GL11.glDisable(GL11.GL_LIGHTING);
-                GL11.glDisable(GL11.GL_CULL_FACE);
-                GL11.glShadeModel(GL11.GL_SMOOTH);
-                GL11.glDisable(GL11.GL_ALPHA_TEST);
-                GL11.glEnable(GL11.GL_DEPTH_TEST);
-                GL11.glDepthFunc(GL11.GL_LEQUAL);
-                GL11.glDepthMask(true);
-                GL11.glEnable(GL11.GL_BLEND);
-                GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-                if (!depthStarted) {
-                    GL11.glClearDepth(1);
-                    GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
-                    depthStarted = true;
-                }
-                if (phase == 0) {
-                    ensureGpu();
-                    phase = 1;
-                    return false;
-                }
-                if (phase == 1) {
-                    if (links != null && !links.advance(transform)) {
+            try (var scope = DemonicaRenderScope.open()) {
+                GL11.glPushAttrib(GL11.GL_ALL_ATTRIB_BITS);
+                int previousProgram = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
+                int previousBuffer = GL11.glGetInteger(GL15.GL_ARRAY_BUFFER_BINDING);
+                int previousVao = GL.getCapabilities().OpenGL30 ? GL11.glGetInteger(GL30.GL_VERTEX_ARRAY_BINDING) : 0;
+                int previousMode = GL11.glGetInteger(GL11.GL_MATRIX_MODE);
+                GL11.glMatrixMode(GL11.GL_MODELVIEW);
+                GL11.glPushMatrix();
+                try {
+                    if (!GuiClip.intersect(0, 0, width, height)) {
                         return false;
                     }
-                    if (links != null) {
-                        links.close();
-                        links = null;
-                    }
-                    GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
-                    phase = 2;
-                    first = 0;
-                    return false;
-                }
-                matrix.clear();
-                transform.get(matrix);
-                GL11.glMultMatrixf(matrix);
-                boolean complete;
-                if (phase == 2) {
-                    complete = !visible[0] || particleRange(nucleusParticles, nucleusInstances, false);
-                } else if (phase == 3) {
-                    complete = !visible[1] || orbitRange();
-                } else if (phase == 4) {
-                    complete = !visible[2] || particleRange(particles, instances, false);
-                } else {
-                    GL11.glDepthMask(false);
-                    GL11.glEnable(GL11.GL_CULL_FACE);
-                    GL11.glCullFace(GL11.GL_BACK);
-                    complete = particleRange(envelopes, envelopeInstances, true);
-                }
-                if (complete) {
-                    phase++;
-                    first = 0;
-                }
-                if (phase == 6) {
+                    GL11.glDisable(GL11.GL_TEXTURE_2D);
+                    GL11.glDisable(GL11.GL_LIGHTING);
+                    GL11.glDisable(GL11.GL_CULL_FACE);
+                    GL11.glShadeModel(GL11.GL_SMOOTH);
+                    GL11.glDisable(GL11.GL_ALPHA_TEST);
+                    GL11.glEnable(GL11.GL_DEPTH_TEST);
+                    GL11.glDepthFunc(GL11.GL_LEQUAL);
                     GL11.glDepthMask(true);
-                    GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
-                    rendered = true;
-                }
-                return phase == 6;
-            } finally {
-                GL11.glPopMatrix();
-                GL11.glMatrixMode(previousMode);
-                if (GL.getCapabilities().OpenGL30) {
-                    GL30.glBindVertexArray(previousVao);
-                }
-                GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
-                GL20.glUseProgram(previousProgram);
-                GL11.glPopAttrib();
-                if (!delegated) {
-                    FrameWorkBudget.recordExport(System.nanoTime() - started);
+                    GL11.glEnable(GL11.GL_BLEND);
+                    GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
+                    if (!depthStarted) {
+                        GL11.glClearDepth(1);
+                        GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+                        depthStarted = true;
+                    }
+                    if (phase == 0) {
+                        ensureGpu();
+                        phase = 1;
+                        return false;
+                    }
+                    if (phase == 1) {
+                        if (links != null && !links.advance(transform)) {
+                            return false;
+                        }
+                        if (links != null) {
+                            links.close();
+                            links = null;
+                        }
+                        GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+                        phase = 2;
+                        first = 0;
+                        return false;
+                    }
+                    matrix.clear();
+                    transform.get(matrix);
+                    GL11.glMultMatrixf(matrix);
+                    boolean complete;
+                    if (phase == 2) {
+                        complete = !visible[0] || particleRange(nucleusParticles, nucleusInstances, false);
+                    } else if (phase == 3) {
+                        complete = !visible[1] || orbitRange();
+                    } else if (phase == 4) {
+                        complete = !visible[2] || particleRange(particles, instances, false);
+                    } else {
+                        GL11.glDepthMask(false);
+                        GL11.glEnable(GL11.GL_CULL_FACE);
+                        GL11.glCullFace(GL11.GL_BACK);
+                        complete = particleRange(envelopes, envelopeInstances, true);
+                    }
+                    if (complete) {
+                        phase++;
+                        first = 0;
+                    }
+                    if (phase == 6) {
+                        GL11.glDepthMask(true);
+                        GL11.glClear(GL11.GL_DEPTH_BUFFER_BIT);
+                        rendered = true;
+                    }
+                    return phase == 6;
+                } finally {
+                    GL11.glPopMatrix();
+                    GL11.glMatrixMode(previousMode);
+                    if (GL.getCapabilities().OpenGL30) {
+                        GL30.glBindVertexArray(previousVao);
+                    }
+                    GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, previousBuffer);
+                    GL20.glUseProgram(previousProgram);
+                    GL11.glPopAttrib();
+                    if (!delegated) {
+                        FrameWorkBudget.recordExport(System.nanoTime() - started);
+                    }
                 }
             }
         }
@@ -670,7 +737,9 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
             int count = Math.min(total - first, 65534);
             GL20.glUseProgram(0);
             GL11.glDepthMask(false);
-            GL11.glColor4f(.65f, .75f, .9f, .22f);
+            int orbitColor = UiThemes.color("atom.orbit", 0xFFA6BFE6);
+            GL11.glColor4f((orbitColor >> 16 & 255) / 255f, (orbitColor >> 8 & 255) / 255f, (orbitColor & 255) / 255f,
+                    .22f);
             // Original line-pair order and fixed-function color survive every slice.
             if (program != 0) {
                 FloatBuffer range = orbitLines.duplicate();
@@ -761,8 +830,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
             expanded.put(particles);
             particles = expanded;
         }
-        particles.put(x).put(y).put(z).put(radius).put(((color >> 16) & 255) / 255f)
-                .put(((color >> 8) & 255) / 255f).put((color & 255) / 255f).put(alpha);
+        particles.put(x).put(y).put(z).put(radius).put(((color >> 16) & 255) / 255f).put(((color >> 8) & 255) / 255f)
+                .put((color & 255) / 255f).put(alpha);
     }
 
     /** Ensures GPU shader programs and buffers are allocated and initialized. */
@@ -780,8 +849,10 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
         }
         int vertex = 0, fragment = 0;
         try {
-            vertex = shader(GL20.GL_VERTEX_SHADER, "#version 120\nattribute vec3 shape; attribute float light; attribute vec4 sphere; attribute vec4 tint; varying vec4 color; void main(){ color=vec4(tint.rgb*light,tint.a); gl_Position=gl_ModelViewProjectionMatrix*vec4(sphere.xyz+shape*sphere.w,1.0); }");
-            fragment = shader(GL20.GL_FRAGMENT_SHADER, "#version 120\nvarying vec4 color; void main(){ gl_FragColor=color; }");
+            vertex = shader(GL20.GL_VERTEX_SHADER,
+                    "#version 120\nattribute vec3 shape; attribute float light; attribute vec4 sphere; attribute vec4 tint; varying vec4 color; void main(){ color=vec4(tint.rgb*light,tint.a); gl_Position=gl_ModelViewProjectionMatrix*vec4(sphere.xyz+shape*sphere.w,1.0); }");
+            fragment = shader(GL20.GL_FRAGMENT_SHADER,
+                    "#version 120\nvarying vec4 color; void main(){ gl_FragColor=color; }");
             program = GL20.glCreateProgram();
             GL20.glAttachShader(program, vertex);
             GL20.glAttachShader(program, fragment);
@@ -861,7 +932,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
                 GL33.glVertexAttribDivisor(1, 0);
                 GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, buffer);
                 if (upload) {
-                    GL15.glBufferData(GL15.GL_ARRAY_BUFFER, data, buffer == nucleusInstances ? GL15.GL_STATIC_DRAW : GL15.GL_STREAM_DRAW);
+                    GL15.glBufferData(GL15.GL_ARRAY_BUFFER, data,
+                            buffer == nucleusInstances ? GL15.GL_STATIC_DRAW : GL15.GL_STREAM_DRAW);
                 }
                 GL20.glEnableVertexAttribArray(2);
                 GL20.glVertexAttribPointer(2, 4, GL11.GL_FLOAT, false, 32, 0L);
@@ -896,15 +968,18 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
                 fallbackVertices.clear();
                 for (int i = 0; i < count; i++) {
                     int offset = i * STRIDE;
-                    float x = data.get(offset), y = data.get(offset + 1), z = data.get(offset + 2), r = data.get(offset + 3);
-                    float red = data.get(offset + 4), green = data.get(offset + 5), blue = data.get(offset + 6), alpha = data.get(offset + 7);
+                    float x = data.get(offset), y = data.get(offset + 1), z = data.get(offset + 2),
+                            r = data.get(offset + 3);
+                    float red = data.get(offset + 4), green = data.get(offset + 5), blue = data.get(offset + 6),
+                            alpha = data.get(offset + 7);
                     for (int v = 0; v < selectedMesh.length; v += 6) {
                         if (fallbackVertices.remaining() < 7) {
                             flushFallback();
                         }
                         float light = selectedMesh[v + 3];
-                        fallbackVertices.put(x + selectedMesh[v] * r).put(y + selectedMesh[v + 1] * r).put(z + selectedMesh[v + 2] * r)
-                                .put(red * light).put(green * light).put(blue * light).put(alpha);
+                        fallbackVertices.put(x + selectedMesh[v] * r).put(y + selectedMesh[v + 1] * r)
+                                .put(z + selectedMesh[v + 2] * r).put(red * light).put(green * light).put(blue * light)
+                                .put(alpha);
                     }
                 }
                 flushFallback();
@@ -929,13 +1004,19 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
     }
 
     /** Updates atomic detail levels and rebuilds buffers when necessary. */
+    private long detailThemeRevision = Long.MIN_VALUE;
+
     private void updateDetail() {
-        boolean changed = false;
+        long themeRevision = UiThemes.paintRevision();
+        boolean changed = detailThemeRevision != themeRevision;
+        detailThemeRevision = themeRevision;
         var atoms = definition.structure().atoms();
         for (int i = 0; i < detail.length; i++) {
             GeometryPreparation.checkCancelled();
             float pixels = atoms.get(i).element().radius() * drawScale;
-            byte next = (byte) (focused >= 0 && focused != i ? -1 : focused == i || pixels >= 32 ? 2 : pixels >= 12 ? 1 : 0);
+            byte next = (byte) (focused >= 0 && focused != i
+                    ? -1
+                    : focused == i || pixels >= 32 ? 2 : pixels >= 12 ? 1 : 0);
             if (moleculeReveal) {
                 next = (byte) (reveal[i] > 0 ? 2 : -1);
             }
@@ -976,7 +1057,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
                 continue;
             }
             if (detail[i] < 2) {
-                particle(atom.x(), atom.y(), atom.z(), r * .2f, 0xB49CCC, 1);
+                particle(atom.x(), atom.y(), atom.z(), r * .2f, (UiThemes.color("atom.cluster", 0xB49CCC) & 0xFFFFFF),
+                        1);
             } else {
                 var packing = sharedNuclei.computeIfAbsent(configuration, NuclearGeometry::packing);
                 float radius = r * packing.nucleonRadius();
@@ -985,8 +1067,11 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
                     nuclei.set(i, packing.nucleons());
                 }
                 for (var point : nuclei.get(i)) {
-                    particle(atom.x() + point.x() * r, atom.y() + point.y() * r, atom.z() + point.z() * r,
-                            radius, point.proton() ? 0xF36B72 : 0x6D9FEC, 1);
+                    particle(atom.x() + point.x() * r, atom.y() + point.y() * r, atom.z() + point.z() * r, radius,
+                            point.proton()
+                                    ? (UiThemes.color("atom.proton", 0xF36B72) & 0xFFFFFF)
+                                    : (UiThemes.color("atom.neutron", 0x6D9FEC) & 0xFFFFFF),
+                            1);
                 }
             }
             if (detail[i] < 1) {
@@ -1002,7 +1087,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
                     for (int end = 0; end < 2; end++) {
                         double angle = (vertex + end) * Math.PI / 16;
                         float y = (float) Math.sin(angle) * radius;
-                        orbitLines.put(atom.x() + (float) Math.cos(angle) * radius).put(atom.y() + y * (float) Math.cos(tilt)).put(atom.z() + y * (float) Math.sin(tilt));
+                        orbitLines.put(atom.x() + (float) Math.cos(angle) * radius)
+                                .put(atom.y() + y * (float) Math.cos(tilt)).put(atom.z() + y * (float) Math.sin(tilt));
                     }
                 }
             }
@@ -1022,7 +1108,9 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
         }
         GL20.glUseProgram(0);
         GL11.glDepthMask(false);
-        GL11.glColor4f(.65f, .75f, .9f, .22f);
+        int orbitColor = UiThemes.color("atom.orbit", 0xFFA6BFE6);
+        GL11.glColor4f((orbitColor >> 16 & 255) / 255f, (orbitColor >> 8 & 255) / 255f, (orbitColor & 255) / 255f,
+                .22f);
         if (program != 0) {
             try {
                 // Fixed-function orbit lines need their own arrays, without instanced particle divisors.
@@ -1070,7 +1158,7 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
         private long time = Long.MIN_VALUE;
         private double period = Double.NaN;
 
-        /** Constructs a new {@link ElectronCloud}. */
+        /** Creates a {@link ElectronCloud}. */
         private ElectronCloud(AtomicConfiguration configuration) {
             this.configuration = configuration;
             positions = new float[configuration.electrons() * 3];
@@ -1093,7 +1181,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
                 double tilt = (shell % 3 - 1) * .75;
                 float tiltCos = (float) Math.cos(tilt), tiltSin = (float) Math.sin(tilt);
                 for (int electron = 0; electron < count; electron++) {
-                    double angle = electronAngle(seconds, shell, loopSeconds) + electron * Math.PI * 2 / Math.max(1, count);
+                    double angle = electronAngle(seconds, shell, loopSeconds)
+                            + electron * Math.PI * 2 / Math.max(1, count);
                     float y = (float) Math.sin(angle) * orbit;
                     positions[index++] = (float) Math.cos(angle) * orbit;
                     positions[index++] = y * tiltCos;
@@ -1107,7 +1196,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
 
     /**
      * Generates a smoothly shaded octahedron subdivision mesh.
-     * <p>32 triangles for subpixel particles, full mesh for envelopes.
+     * <p>
+     * 32 triangles for subpixel particles, full mesh for envelopes.
      */
     static float[] particleMesh() {
         float[][] points = {{1, 0, 0}, {-1, 0, 0}, {0, 1, 0}, {0, -1, 0}, {0, 0, 1}, {0, 0, -1}};
@@ -1117,7 +1207,8 @@ public final class AtomicInspectionRenderer implements AutoCloseable {
             Vector3f a = new Vector3f(points[face[0]][0], points[face[0]][1], points[face[0]][2]);
             Vector3f b = new Vector3f(points[face[1]][0], points[face[1]][1], points[face[1]][2]);
             Vector3f c = new Vector3f(points[face[2]][0], points[face[2]][1], points[face[2]][2]);
-            Vector3f ab = new Vector3f(a).add(b).normalize(), bc = new Vector3f(b).add(c).normalize(), ca = new Vector3f(c).add(a).normalize();
+            Vector3f ab = new Vector3f(a).add(b).normalize(), bc = new Vector3f(b).add(c).normalize(),
+                    ca = new Vector3f(c).add(a).normalize();
             for (Vector3f point : new Vector3f[]{a, ab, ca, ab, b, bc, ca, bc, c, ab, bc, ca}) {
                 float brightness = .35f + .65f * Math.max(0, (-point.x + point.y - point.z) * .577f);
                 result.put(point.x).put(point.y).put(point.z).put(brightness).put(0).put(0);

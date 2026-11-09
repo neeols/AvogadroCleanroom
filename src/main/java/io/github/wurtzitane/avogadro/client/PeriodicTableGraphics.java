@@ -2,6 +2,7 @@ package io.github.wurtzitane.avogadro.client;
 
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.client.renderer.OpenGlHelper;
+
 import org.lwjgl.opengl.*;
 
 /** Offscreen artwork must leave Minecraft's graphics state and texture cache in agreement. */
@@ -17,13 +18,16 @@ final class PeriodicTableGraphics implements AutoCloseable {
     private final int program = GL11.glGetInteger(GL20.GL_CURRENT_PROGRAM);
 
     /** Flag indicating whether separate draw and read framebuffers are supported by the context. */
-    private final boolean separateFramebuffers = GL.getCapabilities().OpenGL30 || GL.getCapabilities().GL_ARB_framebuffer_object;
+    private final boolean separateFramebuffers = GL.getCapabilities().OpenGL30
+            || GL.getCapabilities().GL_ARB_framebuffer_object;
 
     /** Stored draw framebuffer binding ID. */
     private final int drawFramebuffer = GL11.glGetInteger(GL30.GL_DRAW_FRAMEBUFFER_BINDING);
 
     /** Stored read framebuffer binding ID. */
-    private final int readFramebuffer = separateFramebuffers ? GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING) : drawFramebuffer;
+    private final int readFramebuffer = separateFramebuffers
+            ? GL11.glGetInteger(GL30.GL_READ_FRAMEBUFFER_BINDING)
+            : drawFramebuffer;
 
     /** Stored renderbuffer binding ID. */
     private final int renderbuffer = GL11.glGetInteger(GL30.GL_RENDERBUFFER_BINDING);
@@ -77,8 +81,8 @@ final class PeriodicTableGraphics implements AutoCloseable {
     private final boolean textureEnabled;
 
     /**
-     * Constructs a new periodic table graphics state context wrapper, pushing attribute and client attribute stacks
-     * and recording current OpenGL parameters.
+     * Creates a periodic table graphics state context wrapper, pushing attribute and client attribute stacks and
+     * recording current OpenGL parameters.
      */
     PeriodicTableGraphics() {
         GL11.glGetFloatv(GL11.GL_CURRENT_COLOR, color);
@@ -120,32 +124,51 @@ final class PeriodicTableGraphics implements AutoCloseable {
     /** Configures standard text rendering states for artwork generation. */
     static void textState() {
         bind(0);
-        GlStateManager.enableTexture2D(); GL11.glEnable(GL11.GL_TEXTURE_2D);
-        GlStateManager.enableAlpha(); GL11.glEnable(GL11.GL_ALPHA_TEST);
-        GlStateManager.alphaFunc(GL11.GL_GREATER, .1f); GL11.glAlphaFunc(GL11.GL_GREATER, .1f);
-        GlStateManager.enableBlend(); GL11.glEnable(GL11.GL_BLEND);
-        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA,
-                GL11.GL_ONE, GL11.GL_ONE_MINUS_SRC_ALPHA);
+        GlStateManager.enableTexture2D();
+        GL11.glEnable(GL11.GL_TEXTURE_2D);
+        GlStateManager.enableAlpha();
+        GL11.glEnable(GL11.GL_ALPHA_TEST);
+        GlStateManager.alphaFunc(GL11.GL_GREATER, .1f);
+        GL11.glAlphaFunc(GL11.GL_GREATER, .1f);
+        GlStateManager.enableBlend();
+        GL11.glEnable(GL11.GL_BLEND);
+        GlStateManager.tryBlendFuncSeparate(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA, GL11.GL_ONE,
+                GL11.GL_ONE_MINUS_SRC_ALPHA);
     }
 
     /** Restores previously captured OpenGL states, attributes, matrices, and framebuffers upon closing. */
-    @Override public void close() {
+    @Override
+    public void close() {
         activeTexture(GL13.GL_TEXTURE0);
         bind(texture);
-        if (textureEnabled) GlStateManager.enableTexture2D(); else GlStateManager.disableTexture2D();
-        if (alpha) GlStateManager.enableAlpha(); else GlStateManager.disableAlpha();
-        if (blend) GlStateManager.enableBlend(); else GlStateManager.disableBlend();
+        if (textureEnabled)
+            GlStateManager.enableTexture2D();
+        else
+            GlStateManager.disableTexture2D();
+        if (alpha)
+            GlStateManager.enableAlpha();
+        else
+            GlStateManager.disableAlpha();
+        if (blend)
+            GlStateManager.enableBlend();
+        else
+            GlStateManager.disableBlend();
         GlStateManager.alphaFunc(alphaFunction, alphaReference);
-        GlStateManager.tryBlendFuncSeparate(blendSourceRgb, blendDestinationRgb, blendSourceAlpha, blendDestinationAlpha);
+        GlStateManager.tryBlendFuncSeparate(blendSourceRgb, blendDestinationRgb, blendSourceAlpha,
+                blendDestinationAlpha);
         GlStateManager.color(color[0], color[1], color[2], color[3]);
-        GL11.glMatrixMode(GL11.GL_MODELVIEW); GL11.glLoadMatrixf(modelViewMatrix);
-        GL11.glMatrixMode(GL11.GL_TEXTURE); GL11.glLoadMatrixf(textureMatrix);
-        GL11.glMatrixMode(GL11.GL_PROJECTION); GL11.glLoadMatrixf(projectionMatrix);
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        GL11.glLoadMatrixf(modelViewMatrix);
+        GL11.glMatrixMode(GL11.GL_TEXTURE);
+        GL11.glLoadMatrixf(textureMatrix);
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        GL11.glLoadMatrixf(projectionMatrix);
         GL11.glMatrixMode(matrixMode);
         if (separateFramebuffers) {
             OpenGlHelper.glBindFramebuffer(GL30.GL_DRAW_FRAMEBUFFER, drawFramebuffer);
             OpenGlHelper.glBindFramebuffer(GL30.GL_READ_FRAMEBUFFER, readFramebuffer);
-        } else OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, drawFramebuffer);
+        } else
+            OpenGlHelper.glBindFramebuffer(OpenGlHelper.GL_FRAMEBUFFER, drawFramebuffer);
         OpenGlHelper.glBindRenderbuffer(OpenGlHelper.GL_RENDERBUFFER, renderbuffer);
         GL11.glPopClientAttrib();
         GL11.glPopAttrib();

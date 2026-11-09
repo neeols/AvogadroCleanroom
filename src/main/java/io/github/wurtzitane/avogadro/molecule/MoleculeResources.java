@@ -1,15 +1,5 @@
 package io.github.wurtzitane.avogadro.molecule;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParseException;
-import com.google.gson.JsonParser;
-import io.github.wurtzitane.avogadro.Avogadro;
-import net.minecraft.util.ResourceLocation;
-import net.minecraftforge.fml.common.Loader;
-import net.minecraftforge.fml.common.ModContainer;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.net.URL;
@@ -29,6 +19,18 @@ import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipFile;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParseException;
+import com.google.gson.JsonParser;
+
+import io.github.wurtzitane.avogadro.Avogadro;
+
+import net.minecraft.util.ResourceLocation;
+import net.minecraftforge.fml.common.Loader;
+import net.minecraftforge.fml.common.ModContainer;
+
 /** File-backed molecule definitions and the item/fluid tags used by their bindings. */
 public final class MoleculeResources {
 
@@ -38,13 +40,12 @@ public final class MoleculeResources {
     /** Regular expression pattern validating resource paths for molecule definitions and tags. */
     private static final Pattern RESOURCE_PATH = Pattern.compile("[^/]+/(molecules|tags/items|tags/fluids)/.+\\.json");
 
-    /** Private constructor to prevent instantiation of utility class. */
     private MoleculeResources() {}
 
     /**
      * Generated references are defaults; installed mod resources may replace them.
      *
-     * @return constructed common defaults {@link Data} instance
+     * @return constructed common defaults {@link Data}
      */
     public static Data readCommonDefaults() {
         return commonDefaults(readMods("data"));
@@ -54,7 +55,7 @@ public final class MoleculeResources {
      * Combines common element/isotope references with installed mod resource layers.
      *
      * @param mods mod resource data instance
-     * @return merged {@link Data} instance
+     * @return merged {@link Data}
      */
     static Data commonDefaults(Data mods) {
         return mergeAll(ElementReferences.data(io.github.wurtzitane.avogadro.Config.AUTO_LOAD_ELEMENTS.get(),
@@ -62,20 +63,18 @@ public final class MoleculeResources {
     }
 
     /** Container record holding molecule definitions, item tags, fluid tags, and fallback hierarchies. */
-    public record Data(Map<ResourceLocation, String> molecules,
-                       Map<ResourceLocation, String> itemTags,
-                       Map<ResourceLocation, String> fluidTags,
-                       Map<ResourceLocation, List<String>> moleculeFallbacks) {
+    public record Data(Map<ResourceLocation, String> molecules, Map<ResourceLocation, String> itemTags,
+            Map<ResourceLocation, String> fluidTags, Map<ResourceLocation, List<String>> moleculeFallbacks) {
 
         /**
          * Constructs data without fallback lists.
          *
          * @param molecules map of molecule resource locations to JSON strings
-         * @param itemTags  map of item tag resource locations to JSON strings
+         * @param itemTags map of item tag resource locations to JSON strings
          * @param fluidTags map of fluid tag resource locations to JSON strings
          */
         public Data(Map<ResourceLocation, String> molecules, Map<ResourceLocation, String> itemTags,
-                    Map<ResourceLocation, String> fluidTags) {
+                Map<ResourceLocation, String> fluidTags) {
             this(molecules, itemTags, fluidTags, Map.of());
         }
 
@@ -92,7 +91,7 @@ public final class MoleculeResources {
         /**
          * Creates an empty data instance.
          *
-         * @return empty {@link Data} instance
+         * @return empty {@link Data}
          */
         public static Data empty() {
             return new Data(Map.of(), Map.of(), Map.of());
@@ -102,11 +101,12 @@ public final class MoleculeResources {
          * Merges this data layer with a later data layer.
          *
          * @param later later resource data layer
-         * @return merged {@link Data} instance
+         * @return merged {@link Data}
          */
         public Data merge(Data later) {
             if (later.molecules.isEmpty() && later.itemTags.isEmpty() && later.fluidTags.isEmpty()
-                    && later.moleculeFallbacks.isEmpty()) return this;
+                    && later.moleculeFallbacks.isEmpty())
+                return this;
             return mergeAll(this, later);
         }
 
@@ -114,8 +114,8 @@ public final class MoleculeResources {
          * Creates an unmodifiable ordered copy of a map.
          *
          * @param source source map
-         * @param <K>    key type
-         * @param <V>    value type
+         * @param <K> key type
+         * @param <V> value type
          * @return unmodifiable ordered map copy
          */
         private static <K, V> Map<K, V> immutableOrderedCopy(Map<K, V> source) {
@@ -127,19 +127,21 @@ public final class MoleculeResources {
      * Reads and collects resource data from all active mod containers and classpath roots.
      *
      * @param root root resource directory path string
-     * @return aggregated mod resource {@link Data} instance
+     * @return aggregated mod resource {@link Data}
      */
     public static Data readMods(String root) {
         Set<Path> sources = new LinkedHashSet<>();
         for (ModContainer mod : Loader.instance().getModList()) {
-            if (mod.getSource() != null) sources.add(mod.getSource().toPath());
+            if (mod.getSource() != null)
+                sources.add(mod.getSource().toPath());
         }
         // In development, resources may be in a separate classpath directory.
         try {
             Enumeration<URL> urls = MoleculeResources.class.getClassLoader().getResources(root);
             while (urls.hasMoreElements()) {
                 URL url = urls.nextElement();
-                if (url.getProtocol().equals("file")) sources.add(Path.of(url.toURI()).getParent());
+                if (url.getProtocol().equals("file"))
+                    sources.add(Path.of(url.toURI()).getParent());
             }
         } catch (Exception e) {
             Avogadro.LOGGER.warn("Cannot enumerate {} resources", root, e);
@@ -170,17 +172,16 @@ public final class MoleculeResources {
     /**
      * Reads relevant JSON resource files recursively from a directory base.
      *
-     * @param base      base directory path
+     * @param base base directory path
      * @param resources collected resources accumulator instance
      * @throws IOException if directory traversal fails
      */
     private static void readDirectory(Path base, CollectedResources resources) throws IOException {
-        if (!Files.isDirectory(base)) return;
+        if (!Files.isDirectory(base))
+            return;
         try (var paths = Files.walk(base)) {
-            List<Path> files = paths.filter(Files::isRegularFile)
-                    .filter(path -> relevant(relativePath(base, path)))
-                    .sorted()
-                    .toList();
+            List<Path> files = paths.filter(Files::isRegularFile).filter(path -> relevant(relativePath(base, path)))
+                    .sorted().toList();
             for (Path path : files) {
                 try (InputStream in = Files.newInputStream(path)) {
                     resources.add(relativePath(base, path), read(in));
@@ -194,8 +195,8 @@ public final class MoleculeResources {
     /**
      * Reads relevant resource entries from a zip archive file.
      *
-     * @param source    archive file path
-     * @param root      root prefix string
+     * @param source archive file path
+     * @param root root prefix string
      * @param resources collected resources accumulator instance
      * @throws IOException if archive processing fails
      */
@@ -203,11 +204,9 @@ public final class MoleculeResources {
         String prefix = root + "/";
         try (ZipFile archive = new ZipFile(source.toFile())) {
             // Most mod entries are unrelated. Filter before sorting or retaining them.
-            var entries = archive.stream()
-                    .filter(entry -> !entry.isDirectory() && entry.getName().startsWith(prefix))
+            var entries = archive.stream().filter(entry -> !entry.isDirectory() && entry.getName().startsWith(prefix))
                     .filter(entry -> relevant(entry.getName().substring(prefix.length())))
-                    .sorted(Comparator.comparing(ZipEntry::getName))
-                    .toList();
+                    .sorted(Comparator.comparing(ZipEntry::getName)).toList();
             for (ZipEntry entry : entries) {
                 try (InputStream in = archive.getInputStream(entry)) {
                     resources.add(entry.getName().substring(prefix.length()), read(in));
@@ -222,16 +221,15 @@ public final class MoleculeResources {
      * Reads local molecule definition files from a specified directory path.
      *
      * @param moleculesDirectory local molecules directory path
-     * @return loaded local resource {@link Data} instance
+     * @return loaded local resource {@link Data}
      */
     public static Data readLocal(Path moleculesDirectory) {
         Map<ResourceLocation, String> molecules = new LinkedHashMap<>();
-        if (!Files.isDirectory(moleculesDirectory)) return Data.empty();
+        if (!Files.isDirectory(moleculesDirectory))
+            return Data.empty();
 
         try (var paths = Files.walk(moleculesDirectory)) {
-            var files = paths.filter(Files::isRegularFile)
-                    .filter(path -> path.toString().endsWith(".json"))
-                    .sorted()
+            var files = paths.filter(Files::isRegularFile).filter(path -> path.toString().endsWith(".json")).sorted()
                     .toList();
             for (Path path : files) {
                 try (InputStream in = Files.newInputStream(path)) {
@@ -286,17 +284,24 @@ public final class MoleculeResources {
 
     /** Merges ordered source layers with one mutable accumulator and a single final freeze. */
     public static Data mergeAll(Data... layers) {
-        if (layers.length == 0) return Data.empty();
-        if (layers.length == 1) return layers[0];
+        if (layers.length == 0)
+            return Data.empty();
+        if (layers.length == 1)
+            return layers[0];
         boolean changed = false;
         for (int i = 1; i < layers.length; i++) {
             Data next = layers[i];
             if (!next.molecules.isEmpty() || !next.itemTags.isEmpty() || !next.fluidTags.isEmpty()
-                    || !next.moleculeFallbacks.isEmpty()) { changed = true; break; }
+                    || !next.moleculeFallbacks.isEmpty()) {
+                changed = true;
+                break;
+            }
         }
-        if (!changed) return layers[0];
+        if (!changed)
+            return layers[0];
         Accumulator accumulator = new Accumulator(layers[0]);
-        for (int i = 1; i < layers.length; i++) accumulator.add(layers[i]);
+        for (int i = 1; i < layers.length; i++)
+            accumulator.add(layers[i]);
         return accumulator.toData();
     }
 
@@ -335,11 +340,14 @@ public final class MoleculeResources {
         public void add(Data later) {
             later.molecules.forEach((id, newest) -> {
                 Set<String> earlier = new LinkedHashSet<>(later.moleculeFallbacks.getOrDefault(id, List.of()));
-                if (molecules.containsKey(id)) earlier.add(molecules.get(id));
+                if (molecules.containsKey(id))
+                    earlier.add(molecules.get(id));
                 earlier.addAll(fallbacks.getOrDefault(id, List.of()));
                 earlier.remove(newest);
-                if (earlier.isEmpty()) fallbacks.remove(id);
-                else fallbacks.put(id, List.copyOf(earlier));
+                if (earlier.isEmpty())
+                    fallbacks.remove(id);
+                else
+                    fallbacks.put(id, List.copyOf(earlier));
                 molecules.put(id, newest);
             });
             mergeTags(itemTags, later.itemTags);
@@ -349,7 +357,7 @@ public final class MoleculeResources {
         /**
          * Finalizes accumulated state into an immutable data instance.
          *
-         * @return constructed {@link Data} instance
+         * @return constructed {@link Data}
          */
         public Data toData() {
             return new Data(molecules, tagJson(itemTags), tagJson(fluidTags), fallbacks);
@@ -370,31 +378,39 @@ public final class MoleculeResources {
          *
          * @param raw raw JSON string
          */
-        TagValue(String raw) { this.raw = raw; }
+        TagValue(String raw) {
+            this.raw = raw;
+        }
 
         /**
          * Constructs a tag value with a pre-parsed JSON object.
          *
          * @param parsed parsed JSON object
          */
-        TagValue(JsonObject parsed) { this.raw = null; this.parsed = parsed; }
+        TagValue(JsonObject parsed) {
+            this.raw = null;
+            this.parsed = parsed;
+        }
 
         /**
-         * Retrieves the parsed JSON object, parsing it lazily if necessary.
+         * Returns the parsed JSON object, parsing it lazily if necessary.
          *
-         * @return parsed {@link JsonObject} instance
+         * @return parsed {@link JsonObject}
          */
         JsonObject object() {
-            if (parsed == null) parsed = tagObject(raw);
+            if (parsed == null)
+                parsed = tagObject(raw);
             return parsed;
         }
 
         /**
-         * Retrieves the string representation of the tag value.
+         * Returns the string representation of the tag value.
          *
          * @return JSON string
          */
-        String json() { return raw == null ? parsed.toString() : raw; }
+        String json() {
+            return raw == null ? parsed.toString() : raw;
+        }
     }
 
     /**
@@ -413,7 +429,7 @@ public final class MoleculeResources {
      * Merges later tag definitions into a target tag map.
      *
      * @param result target tag value map
-     * @param later  later tag JSON map
+     * @param later later tag JSON map
      */
     private static void mergeTags(Map<ResourceLocation, TagValue> result, Map<ResourceLocation, String> later) {
         later.forEach((id, json) -> {
@@ -438,7 +454,7 @@ public final class MoleculeResources {
      * Parses and validates a tag JSON string structure and its contained values.
      *
      * @param json tag JSON string
-     * @return validated {@link JsonObject} instance
+     * @return validated {@link JsonObject}
      * @throws JsonParseException if tag syntax, fields, or values are invalid
      */
     private static JsonObject tagObject(String json) {
@@ -489,7 +505,7 @@ public final class MoleculeResources {
      * Logs a warning message when resource loading fails.
      *
      * @param source source identifier string
-     * @param e      exception instance
+     * @param e exception instance
      */
     private static void warn(String source, Exception e) {
         Avogadro.LOGGER.warn("Cannot load {}: {}", source, e.getMessage());
@@ -510,8 +526,7 @@ public final class MoleculeResources {
         /**
          * Adds a resource entry based on its relative path name and content JSON.
          *
-         * @param name relative path name string
-        3 * @param json JSON content string
+         * @param name relative path name string 3 * @param json JSON content string
          */
         void add(String name, String json) {
             int slash = name.indexOf('/');
@@ -536,7 +551,7 @@ public final class MoleculeResources {
         /**
          * Converts collected resources into a data container instance.
          *
-         * @return constructed {@link Data} instance
+         * @return constructed {@link Data}
          */
         Data toData() {
             return new Data(molecules, itemTags, fluidTags);

@@ -14,12 +14,11 @@ import java.util.function.Supplier;
 public final class SmilesGeometryCache {
     /** Semantic version revision string used to invalidate cache entries when parsing or element logic changes. */
     // Bump when parser interpretation, solver arithmetic, or AtomElement defaults change.
-    static final String SEMANTICS = "smiles-layout-1-elements-1";
+    static final String SEMANTICS = "smiles-layout-1-stereo-ocl2026.10.3-centres1.5-annotations-1";
 
     /** Volatile SMILES geometry engine instance managing memory and disk caching. */
     private static volatile Engine cache = new Engine(null, 32L << 20, 256L << 20, 4096);
 
-    /** Private constructor to prevent instantiation of utility class. */
     private SmilesGeometryCache() {}
 
     /**
@@ -34,13 +33,13 @@ public final class SmilesGeometryCache {
     }
 
     /**
-     * Retrieves or computes a cached molecule structure for the given SMILES string and locale.
+     * Returns or computes a cached molecule structure for the given SMILES string and locale.
      *
-     * @param id          structure resource identifier string
-     * @param smiles      SMILES chemical structure string
-     * @param locale      locale instance
+     * @param id structure resource identifier string
+     * @param smiles SMILES chemical structure string
+     * @param locale locale instance
      * @param computation supplier function to compute the structure if not cached
-     * @return constructed {@link MoleculeStructure} instance
+     * @return constructed {@link MoleculeStructure}
      */
     static MoleculeStructure get(String id, String smiles, Locale locale, Supplier<MoleculeStructure> computation) {
         return cache.get(new Key(SEMANTICS, locale.toLanguageTag(), smiles), computation).withId(id);
@@ -50,18 +49,20 @@ public final class SmilesGeometryCache {
      * Cache key record capturing semantic revision, locale tag, and SMILES string.
      *
      * @param revision semantic version string
-     * @param locale   locale tag string
-     * @param smiles   SMILES string
+     * @param locale locale tag string
+     * @param smiles SMILES string
      */
-    record Key(String revision, String locale, String smiles) {}
+    record Key(String revision, String locale, String smiles) {
+    }
 
     /**
      * Cache value record holding a molecule structure and its calculated memory weight in bytes.
      *
      * @param molecule molecule structure instance
-     * @param bytes    memory consumption in bytes
+     * @param bytes memory consumption in bytes
      */
-    private record Value(MoleculeStructure molecule, long bytes) {}
+    private record Value(MoleculeStructure molecule, long bytes) {
+    }
 
     /** Caching engine handling memory LRU maps, disk serialization, concurrency, and file locking. */
     static final class Engine implements AutoCloseable {
@@ -70,7 +71,7 @@ public final class SmilesGeometryCache {
         private static final int MAGIC = 0x4156534D;
 
         /** File format version integer. */
-        private static final int FORMAT = 1;
+        private static final int FORMAT = 3;
 
         /** Header byte size for cache files. */
         private static final int HEADER = 48;
@@ -102,27 +103,31 @@ public final class SmilesGeometryCache {
         /**
          * Constructs a caching engine with specified storage directories, limits, and entry counts.
          *
-         * @param directory   caching directory path
+         * @param directory caching directory path
          * @param memoryLimit maximum memory byte limit
-         * @param diskLimit   maximum disk byte limit
-         * @param entryLimit  maximum entry count limit
+         * @param diskLimit maximum disk byte limit
+         * @param entryLimit maximum entry count limit
          */
         Engine(Path directory, long memoryLimit, long diskLimit, int entryLimit) {
             this.directory = directory == null ? null : directory.toAbsolutePath().normalize();
-            this.memoryLimit = memoryLimit; this.diskLimit = diskLimit; this.entryLimit = entryLimit;
+            this.memoryLimit = memoryLimit;
+            this.diskLimit = diskLimit;
+            this.entryLimit = entryLimit;
             writer = new ThreadPoolExecutor(1, 1, 10, TimeUnit.SECONDS, new ArrayBlockingQueue<>(4), action -> {
                 Thread thread = new Thread(action, "Avogadro SMILES cache");
-                thread.setDaemon(true); thread.setPriority(Thread.NORM_PRIORITY - 1); return thread;
+                thread.setDaemon(true);
+                thread.setPriority(Thread.NORM_PRIORITY - 1);
+                return thread;
             });
             writer.allowCoreThreadTimeOut(true);
         }
 
         /**
-         * Retrieves a cached structure or computes, caches, and persists it.
+         * Returns a cached structure or computes, caches, and persists it.
          *
-         * @param key         cache key instance
+         * @param key cache key instance
          * @param computation computation supplier function
-         * @return resolved {@link MoleculeStructure} instance
+         * @return resolved {@link MoleculeStructure}
          */
         MoleculeStructure get(Key key, Supplier<MoleculeStructure> computation) {
             while (true) {
@@ -131,37 +136,55 @@ public final class SmilesGeometryCache {
                 boolean owner;
                 synchronized (this) {
                     Value hit = memory.get(key);
-                    if (hit != null) { MoleculeTasks.checkCancelled(); return hit.molecule; }
+                    if (hit != null) {
+                        MoleculeTasks.checkCancelled();
+                        return hit.molecule;
+                    }
                     flight = pending.get(key);
                     owner = flight == null;
-                    if (owner) { flight = new CompletableFuture<>(); pending.put(key, flight); }
+                    if (owner) {
+                        flight = new CompletableFuture<>();
+                        pending.put(key, flight);
+                    }
                 }
                 if (!owner) {
-                    try { MoleculeStructure result = flight.get(); MoleculeTasks.checkCancelled(); return result; }
-                    catch (InterruptedException interrupted) {
-                        Thread.currentThread().interrupt(); throw new CancellationException("SMILES cache wait cancelled");
-                    } catch (CancellationException cancelledOwner) { continue; }
-                    catch (ExecutionException failure) {
-                        if (failure.getCause() instanceof CancellationException) continue;
+                    try {
+                        MoleculeStructure result = flight.get();
+                        MoleculeTasks.checkCancelled();
+                        return result;
+                    } catch (InterruptedException interrupted) {
+                        Thread.currentThread().interrupt();
+                        throw new CancellationException("SMILES cache wait cancelled");
+                    } catch (CancellationException cancelledOwner) {
+                        continue;
+                    } catch (ExecutionException failure) {
+                        if (failure.getCause() instanceof CancellationException)
+                            continue;
                         throw propagate(failure.getCause());
                     }
                 }
                 try {
                     MoleculeStructure molecule = read(key);
                     boolean computed = molecule == null;
-                    if (computed) molecule = computation.get();
+                    if (computed)
+                        molecule = computation.get();
                     MoleculeTasks.checkCancelled();
                     put(key, molecule);
                     flight.complete(molecule);
-                    if (computed) persist(key, molecule);
+                    if (computed)
+                        persist(key, molecule);
                     return molecule;
                 } catch (Throwable failure) {
                     // Remove first: waking waiters may immediately retry a cancelled owner.
-                    synchronized (this) { pending.remove(key, flight); }
+                    synchronized (this) {
+                        pending.remove(key, flight);
+                    }
                     flight.completeExceptionally(failure);
                     throw propagate(failure);
                 } finally {
-                    synchronized (this) { pending.remove(key, flight); }
+                    synchronized (this) {
+                        pending.remove(key, flight);
+                    }
                 }
             }
         }
@@ -173,15 +196,17 @@ public final class SmilesGeometryCache {
          * @return propagated runtime exception
          */
         private static RuntimeException propagate(Throwable failure) {
-            if (failure instanceof RuntimeException runtime) return runtime;
-            if (failure instanceof Error error) throw error;
+            if (failure instanceof RuntimeException runtime)
+                return runtime;
+            if (failure instanceof Error error)
+                throw error;
             return new IllegalStateException(failure);
         }
 
         /**
          * Calculates the estimated memory weight in bytes for a cache entry.
          *
-         * @param key      cache key instance
+         * @param key cache key instance
          * @param molecule molecule structure instance
          * @return calculated byte weight
          */
@@ -193,18 +218,22 @@ public final class SmilesGeometryCache {
         /**
          * Stores a molecule structure in the memory cache, evicting older entries if limits are exceeded.
          *
-         * @param key      cache key instance
+         * @param key cache key instance
          * @param molecule molecule structure instance
          */
         synchronized void put(Key key, MoleculeStructure molecule) {
             long cost = weight(key, molecule);
-            if (cost > memoryLimit || entryLimit == 0) return;
+            if (cost > memoryLimit || entryLimit == 0)
+                return;
             Value old = memory.remove(key);
-            if (old != null) bytes -= old.bytes;
-            memory.put(key, new Value(molecule, cost)); bytes += cost;
+            if (old != null)
+                bytes -= old.bytes;
+            memory.put(key, new Value(molecule, cost));
+            bytes += cost;
             var iterator = memory.entrySet().iterator();
             while ((bytes > memoryLimit || memory.size() > entryLimit) && iterator.hasNext()) {
-                bytes -= iterator.next().getValue().bytes; iterator.remove();
+                bytes -= iterator.next().getValue().bytes;
+                iterator.remove();
             }
         }
 
@@ -212,116 +241,195 @@ public final class SmilesGeometryCache {
          * Reads and validates a cached molecule structure from disk storage.
          *
          * @param key cache key instance
-         * @return loaded {@link MoleculeStructure} instance, or {@code null} if cache miss or invalid
+         * @return loaded {@link MoleculeStructure}, or {@code null} if cache miss or invalid
          */
         private MoleculeStructure read(Key key) {
-            if (directory == null) return null;
+            if (directory == null)
+                return null;
             try {
-                if (!Files.isDirectory(directory)) return null;
-                try (FileChannel channel = FileChannel.open(directory.resolve(".lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-                     FileLock lock = channel.tryLock()) {
-                    if (lock == null) return null;
+                if (!Files.isDirectory(directory))
+                    return null;
+                try (FileChannel channel = FileChannel.open(directory.resolve(".lock"), StandardOpenOption.CREATE,
+                        StandardOpenOption.WRITE); FileLock lock = channel.tryLock()) {
+                    if (lock == null)
+                        return null;
                     Path file = directory.resolve(filename(key));
-                    if (!Files.isRegularFile(file)) return null;
+                    if (!Files.isRegularFile(file))
+                        return null;
                     long size = Files.size(file);
-                    if (size < HEADER || size > diskLimit) return null;
+                    if (size < HEADER || size > diskLimit)
+                        return null;
                     try (var raw = new DataInputStream(new BufferedInputStream(Files.newInputStream(file)))) {
-                        if (raw.readInt() != MAGIC || raw.readInt() != FORMAT) return null;
+                        if (raw.readInt() != MAGIC || raw.readInt() != FORMAT)
+                            return null;
                         long length = raw.readLong();
-                        if (length != size - HEADER) return null;
+                        if (length != size - HEADER)
+                            return null;
                         byte[] expected = raw.readNBytes(32);
                         MessageDigest digest = digest();
                         var input = new DataInputStream(new DigestInputStream(raw, digest));
-                        if (!matchesString(input, key.revision) || !matchesString(input, key.locale) || !matchesString(input, key.smiles)) return null;
+                        if (!matchesString(input, key.revision) || !matchesString(input, key.locale)
+                                || !matchesString(input, key.smiles))
+                            return null;
                         int atoms = input.readInt(), bonds = input.readInt();
                         if (atoms <= 0 || bonds < 0 || 18L * atoms + 12L * bonds > length
-                                || 512L + 96L * atoms + 32L * bonds + 2L * key.smiles().length() > (32L << 20)) return null;
+                                || 512L + 96L * atoms + 32L * bonds + 2L * key.smiles().length() > (32L << 20))
+                            return null;
                         var builder = MoleculeStructure.builder("avogadro:cached-smiles", "", atoms, bonds);
                         for (int i = 0; i < atoms; i++) {
-                            if ((i & 1023) == 0) MoleculeTasks.checkCancelled();
+                            if ((i & 1023) == 0)
+                                MoleculeTasks.checkCancelled();
                             String symbol = readString(input, Math.min(length, 256));
-                            float x = Float.intBitsToFloat(input.readInt()), y = Float.intBitsToFloat(input.readInt()), z = Float.intBitsToFloat(input.readInt());
-                            if (!Float.isFinite(x) || !Float.isFinite(y) || !Float.isFinite(z)) return null;
-                            builder.addAtom(AtomElement.bySymbol(symbol), x, y, z);
+                            float x = Float.intBitsToFloat(input.readInt()), y = Float.intBitsToFloat(input.readInt()),
+                                    z = Float.intBitsToFloat(input.readInt());
+                            if (!Float.isFinite(x) || !Float.isFinite(y) || !Float.isFinite(z))
+                                return null;
+                            String label = readString(input, 32);
+                            int radicals = input.readInt();
+                            builder.addAtom(AtomElement.bySymbol(symbol), x, y, z, new AtomAnnotation(label, radicals));
                         }
                         BondType[] types = BondType.values();
                         for (int i = 0; i < bonds; i++) {
-                            if ((i & 1023) == 0) MoleculeTasks.checkCancelled();
+                            if ((i & 1023) == 0)
+                                MoleculeTasks.checkCancelled();
                             int from = input.readInt(), to = input.readInt(), type = input.readInt();
-                            if (from < 0 || from >= atoms || to < 0 || to >= atoms || from == to || type < 0 || type >= types.length) return null;
+                            if (from < 0 || from >= atoms || to < 0 || to >= atoms || from == to || type < 0
+                                    || type >= types.length)
+                                return null;
                             builder.bond(from, to, types[type]);
                         }
-                        if (input.read() != -1 || !MessageDigest.isEqual(expected, digest.digest())) return null;
-                        MoleculeStructure result = builder.build();
+                        int centers = input.readInt();
+                        if (centers < 0 || centers > atoms) return null;
+                        var stereo = new java.util.HashMap<Integer, StereoConfiguration>();
+                        for (int i = 0; i < centers; i++) {
+                            int atom = input.readInt(), configuration = input.readInt();
+                            if (atom < 0 || atom >= atoms || configuration < 0 || configuration > 1
+                                    || stereo.put(atom, StereoConfiguration.values()[configuration]) != null) return null;
+                        }
+                        if (input.read() != -1 || !MessageDigest.isEqual(expected, digest.digest()))
+                            return null;
+                        MoleculeStructure result = builder.build().withStereochemistry(stereo);
                         Files.setLastModifiedTime(file, FileTime.fromMillis(System.currentTimeMillis()));
                         return result;
                     }
                 }
-            } catch (CancellationException cancelled) { throw cancelled; }
-            catch (java.nio.channels.OverlappingFileLockException busy) { return null; }
-            catch (IOException | RuntimeException failure) { warn(failure); return null; }
+            } catch (CancellationException cancelled) {
+                throw cancelled;
+            } catch (java.nio.channels.OverlappingFileLockException busy) {
+                return null;
+            } catch (IOException | RuntimeException failure) {
+                warn(failure);
+                return null;
+            }
         }
 
         /**
          * Queues asynchronous persistence of a molecule structure to disk.
          *
-         * @param key      cache key instance
+         * @param key cache key instance
          * @param molecule molecule structure instance
          */
         private void persist(Key key, MoleculeStructure molecule) {
-            if (directory == null || molecule.atoms().isEmpty()) return;
+            if (directory == null || molecule.atoms().isEmpty())
+                return;
             long cost = weight(key, molecule);
             synchronized (this) {
-                if (cost > memoryLimit || cost > diskLimit || queuedBytes + cost > memoryLimit) return;
+                if (cost > memoryLimit || cost > diskLimit || queuedBytes + cost > memoryLimit)
+                    return;
                 queuedBytes += cost;
             }
             try {
                 writer.execute(() -> {
-                    try { write(key, molecule); }
-                    finally { synchronized (this) { queuedBytes -= cost; } }
+                    try {
+                        write(key, molecule);
+                    } finally {
+                        synchronized (this) {
+                            queuedBytes -= cost;
+                        }
+                    }
                 });
-            } catch (RejectedExecutionException full) { synchronized (this) { queuedBytes -= cost; } }
+            } catch (RejectedExecutionException full) {
+                synchronized (this) {
+                    queuedBytes -= cost;
+                }
+            }
         }
 
         /**
          * Serializes and writes a molecule structure to a temporary disk file, then atomically moves it into place.
          *
-         * @param key      cache key instance
+         * @param key cache key instance
          * @param molecule molecule structure instance
          */
         private void write(Key key, MoleculeStructure molecule) {
             Path temporary = null;
             try {
                 Files.createDirectories(directory);
-                try (FileChannel channel = FileChannel.open(directory.resolve(".lock"), StandardOpenOption.CREATE, StandardOpenOption.WRITE);
-                     FileLock lock = channel.tryLock()) {
-                    if (lock == null) return;
+                try (FileChannel channel = FileChannel.open(directory.resolve(".lock"), StandardOpenOption.CREATE,
+                        StandardOpenOption.WRITE); FileLock lock = channel.tryLock()) {
+                    if (lock == null)
+                        return;
                     long expected = encodedSize(key, molecule) + HEADER;
-                    if (expected > diskLimit || entryLimit == 0) return;
+                    if (expected > diskLimit || entryLimit == 0)
+                        return;
                     prune(expected);
                     temporary = Files.createTempFile(directory, ".pending-", ".tmp");
                     MessageDigest digest = digest();
                     try (var file = new DataOutputStream(new BufferedOutputStream(Files.newOutputStream(temporary)))) {
-                        file.writeInt(MAGIC); file.writeInt(FORMAT); file.writeLong(expected - HEADER); file.write(new byte[32]);
+                        file.writeInt(MAGIC);
+                        file.writeInt(FORMAT);
+                        file.writeLong(expected - HEADER);
+                        file.write(new byte[32]);
                         var output = new DataOutputStream(new DigestOutputStream(file, digest));
-                        writeString(output, key.revision()); writeString(output, key.locale()); writeString(output, key.smiles());
-                        output.writeInt(molecule.atoms().size()); output.writeInt(molecule.bonds().size());
+                        writeString(output, key.revision());
+                        writeString(output, key.locale());
+                        writeString(output, key.smiles());
+                        output.writeInt(molecule.atoms().size());
+                        output.writeInt(molecule.bonds().size());
                         for (var atom : molecule.atoms()) {
                             writeString(output, atom.element().symbol());
-                            output.writeInt(Float.floatToRawIntBits(atom.x())); output.writeInt(Float.floatToRawIntBits(atom.y())); output.writeInt(Float.floatToRawIntBits(atom.z()));
+                            output.writeInt(Float.floatToRawIntBits(atom.x()));
+                            output.writeInt(Float.floatToRawIntBits(atom.y()));
+                            output.writeInt(Float.floatToRawIntBits(atom.z()));
+                            writeString(output, atom.annotation().label());
+                            output.writeInt(atom.annotation().radicalElectrons());
                         }
-                        for (var bond : molecule.bonds()) { output.writeInt(bond.from()); output.writeInt(bond.to()); output.writeInt(bond.type().ordinal()); }
+                        for (var bond : molecule.bonds()) {
+                            output.writeInt(bond.from());
+                            output.writeInt(bond.to());
+                            output.writeInt(bond.type().ordinal());
+                        }
+                        output.writeInt(molecule.stereochemistry().size());
+                        for (var entry : new java.util.TreeMap<>(molecule.stereochemistry()).entrySet()) {
+                            output.writeInt(entry.getKey());
+                            output.writeInt(entry.getValue().ordinal());
+                        }
                         output.flush();
                     }
-                    try (var file = new RandomAccessFile(temporary.toFile(), "rw")) { file.seek(16); file.write(digest.digest()); }
+                    try (var file = new RandomAccessFile(temporary.toFile(), "rw")) {
+                        file.seek(16);
+                        file.write(digest.digest());
+                    }
                     Path target = directory.resolve(filename(key));
-                    try { Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING); }
-                    catch (AtomicMoveNotSupportedException unsupported) { Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING); }
+                    try {
+                        Files.move(temporary, target, StandardCopyOption.ATOMIC_MOVE,
+                                StandardCopyOption.REPLACE_EXISTING);
+                    } catch (AtomicMoveNotSupportedException unsupported) {
+                        Files.move(temporary, target, StandardCopyOption.REPLACE_EXISTING);
+                    }
                     temporary = null;
                 }
-            } catch (java.nio.channels.OverlappingFileLockException busy) { /* Another process or cache reader owns this disposable write. */ }
-            catch (IOException | RuntimeException failure) { warn(failure); }
-            finally { if (temporary != null) try { Files.deleteIfExists(temporary); } catch (IOException ignored) {} }
+            } catch (java.nio.channels.OverlappingFileLockException busy) {
+                /* Another process or cache reader owns this disposable write. */ } catch (IOException
+                        | RuntimeException failure) {
+                warn(failure);
+            } finally {
+                if (temporary != null)
+                    try {
+                        Files.deleteIfExists(temporary);
+                    } catch (IOException ignored) {
+                    }
+            }
         }
 
         /**
@@ -333,37 +441,58 @@ public final class SmilesGeometryCache {
         private void prune(long incoming) throws IOException {
             List<Path> files;
             try (var stream = Files.list(directory)) {
-                files = new ArrayList<>(stream.filter(file -> file.getFileName().toString().matches("[0-9a-f]{64}\\.bin|\\.pending-.*\\.tmp")).toList());
+                files = new ArrayList<>(stream
+                        .filter(file -> file.getFileName().toString().matches("[0-9a-f]{64}\\.bin|\\.pending-.*\\.tmp"))
+                        .toList());
             }
-            files.sort(Comparator.comparingLong(file -> { try { return Files.getLastModifiedTime(file).toMillis(); } catch (IOException ignored) { return Long.MIN_VALUE; } }));
+            files.sort(Comparator.comparingLong(file -> {
+                try {
+                    return Files.getLastModifiedTime(file).toMillis();
+                } catch (IOException ignored) {
+                    return Long.MIN_VALUE;
+                }
+            }));
             long total = 0;
-            for (Path file : files) total += Files.size(file);
+            for (Path file : files)
+                total += Files.size(file);
             int count = files.size();
             for (Path file : files) {
-                if (total + incoming <= diskLimit && count < entryLimit) break;
-                long size = Files.size(file); Files.deleteIfExists(file); total -= size; count--;
+                if (total + incoming <= diskLimit && count < entryLimit)
+                    break;
+                long size = Files.size(file);
+                Files.deleteIfExists(file);
+                total -= size;
+                count--;
             }
         }
 
         /**
          * Computes the encoded byte size for a cache key and molecule structure.
          *
-         * @param key      cache key instance
+         * @param key cache key instance
          * @param molecule molecule structure instance
          * @return estimated encoded size in bytes
          */
         private static long encodedSize(Key key, MoleculeStructure molecule) {
-            long result = 20L + 2L * (key.revision().length() + key.locale().length() + key.smiles().length()) + 12L * molecule.bonds().size();
-            for (var atom : molecule.atoms()) result += 16L + 2L * atom.element().symbol().length();
+            long result = 24L + 8L * molecule.stereochemistry().size() + 2L * (key.revision().length() + key.locale().length() + key.smiles().length())
+                    + 12L * molecule.bonds().size();
+            for (var atom : molecule.atoms())
+                result += 24L + 2L * (atom.element().symbol().length() + atom.annotation().label().length());
             return result;
         }
 
         /**
          * Creates a SHA-256 message digest instance.
          *
-         * @return {@link MessageDigest} instance
+         * @return {@link MessageDigest}
          */
-        private static MessageDigest digest() { try { return MessageDigest.getInstance("SHA-256"); } catch (NoSuchAlgorithmException impossible) { throw new AssertionError(impossible); } }
+        private static MessageDigest digest() {
+            try {
+                return MessageDigest.getInstance("SHA-256");
+            } catch (NoSuchAlgorithmException impossible) {
+                throw new AssertionError(impossible);
+            }
+        }
 
         /**
          * Generates a hexadecimal filename hash string for a cache key.
@@ -375,46 +504,61 @@ public final class SmilesGeometryCache {
             try {
                 MessageDigest digest = digest();
                 var output = new DataOutputStream(new DigestOutputStream(OutputStream.nullOutputStream(), digest));
-                writeString(output, key.revision()); writeString(output, key.locale()); writeString(output, key.smiles()); output.flush();
+                writeString(output, key.revision());
+                writeString(output, key.locale());
+                writeString(output, key.smiles());
+                output.flush();
                 return HexFormat.of().formatHex(digest.digest()) + ".bin";
-            } catch (IOException impossible) { throw new AssertionError(impossible); }
+            } catch (IOException impossible) {
+                throw new AssertionError(impossible);
+            }
         }
 
         /**
          * Writes a length-prefixed string to a data output stream.
          *
          * @param output data output stream
-         * @param text   string value
+         * @param text string value
          * @throws IOException if writing fails
          */
-        private static void writeString(DataOutputStream output, String text) throws IOException { output.writeInt(text.length()); output.writeChars(text); }
+        private static void writeString(DataOutputStream output, String text) throws IOException {
+            output.writeInt(text.length());
+            output.writeChars(text);
+        }
 
         /**
          * Verifies whether an input stream string matches an expected string.
          *
-         * @param input    data input stream
+         * @param input data input stream
          * @param expected expected string value
          * @return {@code true} if strings match, {@code false} otherwise
          * @throws IOException if reading fails
          */
         private static boolean matchesString(DataInputStream input, String expected) throws IOException {
-            if (input.readInt() != expected.length()) return false;
-            for (int i = 0; i < expected.length(); i++) if (input.readChar() != expected.charAt(i)) return false;
+            if (input.readInt() != expected.length())
+                return false;
+            for (int i = 0; i < expected.length(); i++)
+                if (input.readChar() != expected.charAt(i))
+                    return false;
             return true;
         }
 
         /**
          * Reads a length-prefixed string from a data input stream with boundary checks.
          *
-         * @param input     data input stream
+         * @param input data input stream
          * @param remaining remaining buffer byte count
          * @return decoded string value
          * @throws IOException if length is invalid or exceeds bounds
          */
         private static String readString(DataInputStream input, long remaining) throws IOException {
             int length = input.readInt();
-            if (length < 0 || 2L * length + 4 > remaining || 2L * length > input.available()) throw new IOException("Invalid SMILES cache string length");
-            char[] chars = new char[length]; for (int i = 0; i < length; i++) chars[i] = input.readChar(); return new String(chars);
+            if (length < 0 || 2L * length + 4 > remaining || 2L * length > input.available())
+                throw new IOException("Invalid SMILES cache string length");
+            char[] chars = new char[length];
+            for (int i = 0; i < length; i++)
+                chars[i] = input.readChar();
+            return new String(chars);
         }
 
         /**
@@ -424,23 +568,28 @@ public final class SmilesGeometryCache {
          */
         private synchronized void warn(Exception failure) {
             long now = System.nanoTime();
-            if (lastWarning != 0 && now - lastWarning < TimeUnit.MINUTES.toNanos(1)) return;
+            if (lastWarning != 0 && now - lastWarning < TimeUnit.MINUTES.toNanos(1))
+                return;
             lastWarning = now;
-            org.apache.logging.log4j.LogManager.getLogger("avogadro").warn("SMILES cache unavailable; recomputing geometry: {}", failure.toString());
+            org.apache.logging.log4j.LogManager.getLogger("avogadro")
+                    .warn("SMILES cache unavailable; recomputing geometry: {}", failure.toString());
         }
 
         /**
          * Flushes pending background disk write operations.
          *
          * @throws InterruptedException if thread is interrupted
-         * @throws ExecutionException   if execution fails
-         * @throws TimeoutException     if timeout occurs
+         * @throws ExecutionException if execution fails
+         * @throws TimeoutException if timeout occurs
          */
         void flush() throws InterruptedException, ExecutionException, TimeoutException {
             writer.submit(() -> {}).get(30, TimeUnit.SECONDS);
         }
 
         /** {@inheritDoc} */
-        @Override public void close() { writer.shutdown(); }
+        @Override
+        public void close() {
+            writer.shutdown();
+        }
     }
 }

@@ -2,7 +2,8 @@ package io.github.wurtzitane.avogadro.api;
 
 /**
  * Native-font chemical typography formatting.
- * <p>This changes presentation only, never parsed chemistry or saved data.
+ * <p>
+ * This changes presentation only, never parsed chemistry or saved data.
  */
 public final class ChemicalFormula {
 
@@ -12,14 +13,10 @@ public final class ChemicalFormula {
     /** Superscript character lookup table for numbers 0–9. */
     private static final String SUPER = "⁰¹²³⁴⁵⁶⁷⁸⁹";
 
-    /**
-     * Private constructor to prevent instantiation of this utility class.
-     */
     private ChemicalFormula() {}
 
     /**
-     * Converts a raw formula string into beautifully formatted chemical typography
-     * using Unicode subscripts and superscripts.
+     * Formats a display formula using Unicode subscripts and superscripts.
      *
      * @param formula the raw chemical formula string to format
      * @return the formatted formula string with typography applied, or the original if null/empty
@@ -75,7 +72,8 @@ public final class ChemicalFormula {
                 }
 
                 char previous = i == 0 ? 0 : formula.charAt(i - 1);
-                boolean isotope = previous == '[' && end < formula.length() && Character.isUpperCase(formula.charAt(end));
+                boolean isotope = previous == '[' && end < formula.length()
+                        && Character.isUpperCase(formula.charAt(end));
                 boolean charge = end + 1 == formula.length()
                         && (formula.charAt(end) == '+' || formula.charAt(end) == '-')
                         && (previous == ']' || previous == '}' || formula.substring(0, i).matches("[A-Z][a-z]?"));

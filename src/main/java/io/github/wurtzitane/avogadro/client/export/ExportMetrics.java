@@ -1,14 +1,15 @@
 package io.github.wurtzitane.avogadro.client.export;
 
-import org.lwjgl.opengl.*;
-
 import java.util.ArrayDeque;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
+import org.lwjgl.opengl.*;
+
 /**
  * Optional, bounded diagnostics.
- * <p>No output files or blocking GPU queries in normal exports.
+ * <p>
+ * No output files or blocking GPU queries in normal exports.
  */
 public final class ExportMetrics {
 
@@ -16,8 +17,7 @@ public final class ExportMetrics {
      * Enumeration of profiled export processing stages.
      */
     public enum Stage {
-        PREPARATION, DRAW_SUBMISSION, GPU_ELAPSED, FENCE_LATENCY, MAP_COPY,
-        PIXEL_CONVERSION, GIF_QUANTIZE, GIF_PALETTE, GIF_DITHER, GIF_WRITE, MP4_PIPE, FINALIZATION, BUDGET_OVERSHOOT
+        PREPARATION, DRAW_SUBMISSION, GPU_ELAPSED, FENCE_LATENCY, MAP_COPY, PIXEL_CONVERSION, GIF_QUANTIZE, GIF_PALETTE, GIF_DITHER, GIF_WRITE, MP4_PIPE, FINALIZATION, BUDGET_OVERSHOOT
     }
 
     /** Flag indicating whether profiling metrics are enabled via system properties. */
@@ -44,9 +44,6 @@ public final class ExportMetrics {
         }
     }
 
-    /**
-     * Private constructor to prevent instantiation.
-     */
     private ExportMetrics() {}
 
     /**
@@ -106,7 +103,8 @@ public final class ExportMetrics {
 
     /**
      * Begins an asynchronous GPU elapsed time query.
-     * <p>All GPU methods are render-thread-only; query results are never waited for.
+     * <p>
+     * All GPU methods are render-thread-only; query results are never waited for.
      *
      * @return the generated OpenGL query object ID, or {@code 0} if disabled or unavailable
      */
@@ -158,7 +156,8 @@ public final class ExportMetrics {
             if (GL15.glGetQueryObjecti(query, GL15.GL_QUERY_RESULT_AVAILABLE) == 0) {
                 return;
             }
-            long nanos = gpuContext.OpenGL33 ? GL33.glGetQueryObjectui64(query, GL15.GL_QUERY_RESULT)
+            long nanos = gpuContext.OpenGL33
+                    ? GL33.glGetQueryObjectui64(query, GL15.GL_QUERY_RESULT)
                     : ARBTimerQuery.glGetQueryObjectui64(query, GL15.GL_QUERY_RESULT);
             record(Stage.GPU_ELAPSED, nanos);
             GPU_PENDING.removeFirst();

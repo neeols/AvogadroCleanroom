@@ -4,7 +4,8 @@ import net.minecraftforge.fml.common.eventhandler.Event;
 
 /**
  * Published after a complete snapshot is installed.
- * <p>Views remain valid after the callback.
+ * <p>
+ * Views remain valid after the callback.
  */
 public final class MoleculesChangedEvent extends Event {
 
@@ -37,10 +38,10 @@ public final class MoleculesChangedEvent extends Event {
     }
 
     /**
-     * Constructs a new {@link MoleculesChangedEvent} with the specified scope, view snapshot, and owner.
+     * Creates a {@link MoleculesChangedEvent} with the specified scope, view snapshot, and owner.
      *
      * @param scope the {@link Scope} of the change
-     * @param view  the updated {@link MoleculeView} snapshot
+     * @param view the updated {@link MoleculeView} snapshot
      * @param owner the owner string associated with the change
      */
     public MoleculesChangedEvent(Scope scope, MoleculeView view, String owner) {
@@ -50,25 +51,25 @@ public final class MoleculesChangedEvent extends Event {
     }
 
     /**
-     * Retrieves the scope of this event.
+     * Returns the scope of this event.
      *
-     * @return the {@link Scope} instance
+     * @return the {@link Scope}
      */
     public Scope scope() {
         return scope;
     }
 
     /**
-     * Retrieves the updated molecule view snapshot.
+     * Returns the updated molecule view snapshot.
      *
-     * @return the {@link MoleculeView} instance
+     * @return the {@link MoleculeView}
      */
     public MoleculeView view() {
         return view;
     }
 
     /**
-     * Retrieves the owner identifier associated with the change.
+     * Returns the owner identifier associated with the change.
      *
      * @return the owner string
      */

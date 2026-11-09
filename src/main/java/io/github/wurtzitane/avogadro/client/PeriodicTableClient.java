@@ -3,6 +3,7 @@ package io.github.wurtzitane.avogadro.client;
 import io.github.wurtzitane.avogadro.entity.PeriodicTableEntity;
 import io.github.wurtzitane.avogadro.item.PeriodicTableItem;
 import io.github.wurtzitane.avogadro.network.PeriodicTableNetwork;
+
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.block.model.ModelResourceLocation;
 import net.minecraft.client.resources.I18n;
@@ -31,14 +32,14 @@ public final class PeriodicTableClient {
     /** Flag indicating whether client handlers and listeners have already been initialized. */
     private static boolean initialized;
 
-    /** Private constructor to prevent instantiation of utility class. */
     private PeriodicTableClient() {}
 
     /**
      * Initializes client-side entity rendering handlers, event bus listeners, and resource reload listeners.
      */
     public static void init() {
-        if (initialized) return;
+        if (initialized)
+            return;
         initialized = true;
         RenderingRegistry.registerEntityRenderingHandler(PeriodicTableEntity.class, PeriodicTableEntityRenderer::new);
         MinecraftForge.EVENT_BUS.register(EVENTS);
@@ -67,12 +68,16 @@ public final class PeriodicTableClient {
     public static void scroll(MouseEvent event) {
         var client = Minecraft.getMinecraft();
         if (event.getDwheel() == 0 || client.currentScreen != null || client.player == null
-                || !client.player.isSneaking()) return;
-        EnumHand hand = isTable(client.player.getHeldItemMainhand()) ? EnumHand.MAIN_HAND
+                || !client.player.isSneaking())
+            return;
+        EnumHand hand = isTable(client.player.getHeldItemMainhand())
+                ? EnumHand.MAIN_HAND
                 : isTable(client.player.getHeldItemOffhand()) ? EnumHand.OFF_HAND : null;
-        if (hand == null) return;
+        if (hand == null)
+            return;
         event.setCanceled(true);
-        PeriodicTableNetwork.requestResize(hand, client.player.inventory.currentItem, Integer.signum(event.getDwheel()));
+        PeriodicTableNetwork.requestResize(hand, client.player.inventory.currentItem,
+                Integer.signum(event.getDwheel()));
     }
 
     /**
@@ -82,7 +87,8 @@ public final class PeriodicTableClient {
      */
     @SubscribeEvent
     public static void hand(RenderSpecificHandEvent event) {
-        if (isTable(event.getItemStack()) && PeriodicTableScreen.isAvogadroMenuOpen()) event.setCanceled(true);
+        if (isTable(event.getItemStack()) && PeriodicTableScreen.isAvogadroMenuOpen())
+            event.setCanceled(true);
     }
 
     /**
@@ -104,11 +110,12 @@ public final class PeriodicTableClient {
     @SubscribeEvent
     public static void tooltip(ItemTooltipEvent event) {
         ItemStack stack = event.getItemStack();
-        if (!isTable(stack)) return;
+        if (!isTable(stack))
+            return;
         var lines = event.getToolTip();
-        lines.add(TextFormatting.DARK_AQUA + I18n.format("avogadro.periodic_table.size",
-                PeriodicTableItem.width(stack), PeriodicTableItem.height(stack)));
-        for (String key : new String[] { "open", "place", "resize", "painting" })
+        lines.add(TextFormatting.DARK_AQUA + I18n.format("avogadro.periodic_table.size", PeriodicTableItem.width(stack),
+                PeriodicTableItem.height(stack)));
+        for (String key : new String[]{"open", "place", "resize", "painting"})
             lines.add(TextFormatting.GRAY + I18n.format("avogadro.periodic_table." + key));
     }
 

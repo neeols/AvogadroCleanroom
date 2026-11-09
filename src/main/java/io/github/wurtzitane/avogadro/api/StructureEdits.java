@@ -1,16 +1,21 @@
 package io.github.wurtzitane.avogadro.api;
 
-import com.google.gson.JsonArray;
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import io.github.wurtzitane.avogadro.molecule.BondType;
-import io.github.wurtzitane.avogadro.molecule.StructureRecipe;
-
 import java.util.Objects;
 import java.util.Set;
 
+import com.google.gson.JsonArray;
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+
+import io.github.wurtzitane.avogadro.molecule.BondType;
+import io.github.wurtzitane.avogadro.molecule.StructureRecipe;
+
 /**
- * Serializable sequential geometry edits, shared by Java, Groovy and JSON authoring.
+ * A saved list of editing steps that can be applied to a fragment or written as JSON.
+ *
+ * <p>
+ * Steps run in order. Use {@link StructureEditor} when you want to edit directly; use this class when you want to save
+ * or reuse the same edits.
  */
 public final class StructureEdits {
 
@@ -21,11 +26,11 @@ public final class StructureEdits {
     private final JsonArray operations;
 
     /**
-     * Constructs a new {@link StructureEdits} instance from a JSON array of operations,
-     * validating their structure and boundaries.
+     * Creates a {@link StructureEdits} from a JSON array of operations, validating their structure and boundaries.
      *
      * @param operations the {@link JsonArray} of edit operation objects
-     * @throws IllegalArgumentException if operation counts exceed limits, nesting depth is exceeded, or validation fails
+     * @throws IllegalArgumentException if operation counts exceed limits, nesting depth is exceeded, or validation
+     *     fails
      */
     private StructureEdits(JsonArray operations) {
         if (operations.size() > MAX_OPERATIONS) {
@@ -45,7 +50,7 @@ public final class StructureEdits {
     /**
      * Creates a new edit sequence builder.
      *
-     * @return a new {@link Builder} instance
+     * @return a new {@link Builder}
      */
     public static Builder builder() {
         return new Builder();
@@ -55,7 +60,7 @@ public final class StructureEdits {
      * Creates structure edits from a JSON array of operations.
      *
      * @param operations the {@link JsonArray} of operations
-     * @return a new {@link StructureEdits} instance
+     * @return a new {@link StructureEdits}
      * @throws NullPointerException if operations is null
      */
     public static StructureEdits fromJson(JsonArray operations) {
@@ -87,8 +92,8 @@ public final class StructureEdits {
      */
     public boolean changesGeometry() {
         for (var value : operations) {
-            if (Set.of("replaceAtom", "moveAtom", "atom", "setBond", "removeBond",
-                    "removeAtoms", "append", "connect").contains(value.getAsJsonObject().get("op").getAsString())) {
+            if (Set.of("replaceAtom", "moveAtom", "atom", "setBond", "removeBond", "removeAtoms", "append", "connect")
+                    .contains(value.getAsJsonObject().get("op").getAsString())) {
                 return true;
             }
         }
@@ -135,13 +140,13 @@ public final class StructureEdits {
     /**
      * Applies these edits to a molecule definition, producing a new definition.
      *
-     * @param newId       the resource identifier string for the new definition
-     * @param source      the source {@link io.github.wurtzitane.avogadro.molecule.MoleculeDef}
+     * @param newId the resource identifier string for the new definition
+     * @param source the source {@link io.github.wurtzitane.avogadro.molecule.MoleculeDef}
      * @param materialize whether to materialize the molecule
      * @return the resulting edited {@link io.github.wurtzitane.avogadro.molecule.MoleculeDef}
      */
     public io.github.wurtzitane.avogadro.molecule.MoleculeDef apply(String newId,
-                                                                    io.github.wurtzitane.avogadro.molecule.MoleculeDef source, boolean materialize) {
+            io.github.wurtzitane.avogadro.molecule.MoleculeDef source, boolean materialize) {
         return MoleculeEdits.apply(newId, source, this, materialize);
     }
 
@@ -149,7 +154,7 @@ public final class StructureEdits {
      * Internal dispatcher executing an individual edit operation upon a structure editor session.
      *
      * @param editor the {@link StructureEditor}
-     * @param op     the operation {@link JsonObject}
+     * @param op the operation {@link JsonObject}
      */
     private static void apply(StructureEditor editor, JsonObject op) {
         switch (text(op, "op")) {
@@ -159,13 +164,15 @@ public final class StructureEdits {
             case "setBond" -> editor.setBond(index(op, "from"), index(op, "to"), type(op));
             case "removeBond" -> editor.removeBond(index(op, "from"), index(op, "to"));
             case "removeAtoms" -> editor.removeAtoms(indices(op));
-            case "append" -> editor.append(text(op, "instance"), StructureRecipe.parse(object(required(op, "structure"))));
+            case "append" ->
+                editor.append(text(op, "instance"), StructureRecipe.parse(object(required(op, "structure"))));
             case "connect" -> editor.connect(text(op, "from"), text(op, "to"), type(op));
             case "attachment" -> editor.attachment(text(op, "name"), index(op, "index"));
             case "removeAttachment" -> editor.removeAttachment(text(op, "name"));
             case "atomConfiguration" -> editor.atomConfiguration(index(op, "index"), configuration(op));
             case "clearAtomConfiguration" -> editor.clearAtomConfiguration(index(op, "index"));
-            case "randomLinkCapacity" -> editor.randomLinkCapacity(index(op, "index"), integer(required(op, "capacity"), StructureFragment.MAX_BONDS));
+            case "randomLinkCapacity" -> editor.randomLinkCapacity(index(op, "index"),
+                    integer(required(op, "capacity"), StructureFragment.MAX_BONDS));
             default -> throw invalid("Unknown edit operation.");
         }
     }
@@ -189,7 +196,8 @@ public final class StructureEdits {
                 if (!added) {
                     index(op, "index");
                 }
-                new StructureFragment.Atom(added ? text(op, "e") : "C", number(op, "x"), number(op, "y"), number(op, "z"));
+                new StructureFragment.Atom(added ? text(op, "e") : "C", number(op, "x"), number(op, "y"),
+                        number(op, "z"));
             }
             case "setBond", "removeBond" -> {
                 boolean set = text(op, "op").equals("setBond");
@@ -243,7 +251,7 @@ public final class StructureEdits {
     }
 
     /**
-     * Builder class for programmatically constructing sequential structure edit lists.
+     * Adds editing steps to a reusable edit list.
      */
     public static final class Builder {
         private final JsonArray operations = new JsonArray();
@@ -257,7 +265,7 @@ public final class StructureEdits {
          * Internal helper to add and validate an operation JSON object.
          *
          * @param op the operation {@link JsonObject}
-         * @return this builder instance for chaining
+         * @return this builder
          */
         private Builder add(JsonObject op) {
             if (operations.size() >= MAX_OPERATIONS) {
@@ -271,9 +279,9 @@ public final class StructureEdits {
         /**
          * Adds a replace atom operation.
          *
-         * @param index   the atom index
+         * @param index the atom index
          * @param element the new element symbol
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder replaceAtom(int index, String element) {
             var op = at("replaceAtom", index);
@@ -285,10 +293,10 @@ public final class StructureEdits {
          * Adds a move atom operation.
          *
          * @param index the atom index
-         * @param x     x coordinate
-         * @param y     y coordinate
-         * @param z     z coordinate
-         * @return this builder instance for chaining
+         * @param x x coordinate
+         * @param y y coordinate
+         * @param z z coordinate
+         * @return this builder
          */
         public Builder moveAtom(int index, double x, double y, double z) {
             return add(position(at("moveAtom", index), x, y, z));
@@ -298,10 +306,10 @@ public final class StructureEdits {
          * Adds an add-atom operation.
          *
          * @param element element symbol
-         * @param x       x coordinate
-         * @param y       y coordinate
-         * @param z       z coordinate
-         * @return this builder instance for chaining
+         * @param x x coordinate
+         * @param y y coordinate
+         * @param z z coordinate
+         * @return this builder
          */
         public Builder atom(String element, double x, double y, double z) {
             var op = named("atom");
@@ -313,9 +321,9 @@ public final class StructureEdits {
          * Adds a set bond operation with specified bond type.
          *
          * @param from source atom index
-         * @param to   target atom index
+         * @param to target atom index
          * @param type the {@link BondType}
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder setBond(int from, int to, BondType type) {
             var op = ends("setBond", from, to);
@@ -327,8 +335,8 @@ public final class StructureEdits {
          * Adds a set single bond operation.
          *
          * @param from source atom index
-         * @param to   target atom index
-         * @return this builder instance for chaining
+         * @param to target atom index
+         * @return this builder
          */
         public Builder setBond(int from, int to) {
             return setBond(from, to, BondType.SINGLE);
@@ -338,8 +346,8 @@ public final class StructureEdits {
          * Adds a remove bond operation.
          *
          * @param from source atom index
-         * @param to   target atom index
-         * @return this builder instance for chaining
+         * @param to target atom index
+         * @return this builder
          */
         public Builder removeBond(int from, int to) {
             return add(ends("removeBond", from, to));
@@ -349,7 +357,7 @@ public final class StructureEdits {
          * Adds a remove atoms operation.
          *
          * @param indices array of atom indices to remove
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder removeAtoms(int... indices) {
             var op = named("removeAtoms");
@@ -364,9 +372,9 @@ public final class StructureEdits {
         /**
          * Adds an append fragment operation.
          *
-         * @param instance  instance qualifier prefix string
-         * @param fragment  the {@link StructureFragment} to append
-         * @return this builder instance for chaining
+         * @param instance instance qualifier prefix string
+         * @param fragment the {@link StructureFragment} to append
+         * @return this builder
          */
         public Builder append(String instance, StructureFragment fragment) {
             var op = named("append");
@@ -379,9 +387,9 @@ public final class StructureEdits {
          * Adds a connect attachment operation with specified bond type.
          *
          * @param from source attachment name
-         * @param to   target attachment name
+         * @param to target attachment name
          * @param type the {@link BondType}
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder connect(String from, String to, BondType type) {
             var op = named("connect");
@@ -395,8 +403,8 @@ public final class StructureEdits {
          * Adds a connect attachment operation with single bond type.
          *
          * @param from source attachment name
-         * @param to   target attachment name
-         * @return this builder instance for chaining
+         * @param to target attachment name
+         * @return this builder
          */
         public Builder connect(String from, String to) {
             return connect(from, to, BondType.SINGLE);
@@ -405,9 +413,9 @@ public final class StructureEdits {
         /**
          * Adds an attachment naming operation.
          *
-         * @param name  attachment name string
+         * @param name attachment name string
          * @param index atom index
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder attachment(String name, int index) {
             var op = at("attachment", index);
@@ -419,7 +427,7 @@ public final class StructureEdits {
          * Adds a remove attachment operation.
          *
          * @param name attachment name string to remove
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder removeAttachment(String name) {
             var op = named("removeAttachment");
@@ -432,7 +440,7 @@ public final class StructureEdits {
          *
          * @param index atom index
          * @param value the {@link AtomicConfiguration} value
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder atomConfiguration(int index, AtomicConfiguration value) {
             var op = at("atomConfiguration", index);
@@ -444,7 +452,7 @@ public final class StructureEdits {
          * Adds a clear atom configuration operation.
          *
          * @param index atom index
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder clearAtomConfiguration(int index) {
             return add(at("clearAtomConfiguration", index));
@@ -453,9 +461,9 @@ public final class StructureEdits {
         /**
          * Adds a random link capacity setting operation.
          *
-         * @param index    atom index
+         * @param index atom index
          * @param capacity maximum random link capacity
-         * @return this builder instance for chaining
+         * @return this builder
          */
         public Builder randomLinkCapacity(int index, int capacity) {
             var op = at("randomLinkCapacity", index);
@@ -464,9 +472,9 @@ public final class StructureEdits {
         }
 
         /**
-         * Builds and returns the immutable {@link StructureEdits} instance.
+         * Builds and returns the immutable {@link StructureEdits}.
          *
-         * @return a new {@link StructureEdits} instance
+         * @return a new {@link StructureEdits}
          */
         public StructureEdits build() {
             return new StructureEdits(operations);
@@ -513,7 +521,7 @@ public final class StructureEdits {
         }
     }
 
-    /** Retrieves a required non-null field from an operation object. */
+    /** Returns a required non-null field from an operation object. */
     private static JsonElement required(JsonObject op, String name) {
         var value = op.get(name);
         if (value == null || value.isJsonNull()) {
@@ -542,7 +550,8 @@ public final class StructureEdits {
     /** Extracts a required finite number property from an operation object. */
     private static double number(JsonObject op, String name) {
         var value = required(op, name);
-        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber() || !Double.isFinite(value.getAsDouble())) {
+        if (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isNumber()
+                || !Double.isFinite(value.getAsDouble())) {
             throw invalid(name + " must be a finite number.");
         }
         return value.getAsDouble();

@@ -1,8 +1,11 @@
 package io.github.wurtzitane.avogadro.entity;
 
+import javax.annotation.Nullable;
+
 import io.github.wurtzitane.avogadro.Avogadro;
 import io.github.wurtzitane.avogadro.item.PeriodicTableItem;
 import io.netty.buffer.ByteBuf;
+
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.EntityHanging;
 import net.minecraft.entity.player.EntityPlayer;
@@ -18,8 +21,6 @@ import net.minecraftforge.fml.common.Loader;
 import net.minecraftforge.fml.common.registry.EntityRegistry;
 import net.minecraftforge.fml.common.registry.IEntityAdditionalSpawnData;
 
-import javax.annotation.Nullable;
-
 /** Uses the native painting support, collision, damage and break rules. */
 public final class PeriodicTableEntity extends EntityHanging implements IEntityAdditionalSpawnData {
 
@@ -27,7 +28,7 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
     private int posterWidth = PeriodicTableItem.DEFAULT_WIDTH;
 
     /**
-     * Constructs a new periodic table entity for client/server world instantiation.
+     * Creates a periodic table entity for client/server world instantiation.
      *
      * @param world world instance
      */
@@ -36,12 +37,12 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
     }
 
     /**
-     * Constructs a new periodic table entity with specified anchor position, facing direction, and width.
+     * Creates a periodic table entity with specified anchor position, facing direction, and width.
      *
-     * @param world  world instance
+     * @param world world instance
      * @param anchor block anchor position
      * @param facing horizontal facing direction
-     * @param width  poster width in blocks
+     * @param width poster width in blocks
      */
     public PeriodicTableEntity(World world, BlockPos anchor, EnumFacing facing, int width) {
         super(world, anchor);
@@ -51,12 +52,12 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
 
     /** Registers the periodic table entity with the Forge entity registry. */
     public static void registerEntity() {
-        EntityRegistry.registerModEntity(Avogadro.rl("periodic_table"), PeriodicTableEntity.class,
-                "periodic_table", 0, Loader.instance().activeModContainer().getMod(), 160, Integer.MAX_VALUE, false);
+        EntityRegistry.registerModEntity(Avogadro.rl("periodic_table"), PeriodicTableEntity.class, "periodic_table", 0,
+                Loader.instance().activeModContainer().getMod(), 160, Integer.MAX_VALUE, false);
     }
 
     /**
-     * Retrieves the poster width in blocks.
+     * Returns the poster width in blocks.
      *
      * @return width integer
      */
@@ -65,7 +66,7 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
     }
 
     /**
-     * Retrieves the poster height in blocks.
+     * Returns the poster height in blocks.
      *
      * @return height integer
      */
@@ -74,7 +75,7 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
     }
 
     /**
-     * Retrieves the total width in pixels.
+     * Returns the total width in pixels.
      *
      * @return width in pixels
      */
@@ -84,7 +85,7 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
     }
 
     /**
-     * Retrieves the total height in pixels.
+     * Returns the total height in pixels.
      *
      * @return height in pixels
      */
@@ -113,7 +114,8 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
     @Override
     public void readEntityFromNBT(NBTTagCompound tag) {
         posterWidth = tag.hasKey("PosterWidth", 99)
-                ? PeriodicTableItem.boundedWidth(tag.getInteger("PosterWidth")) : PeriodicTableItem.DEFAULT_WIDTH;
+                ? PeriodicTableItem.boundedWidth(tag.getInteger("PosterWidth"))
+                : PeriodicTableItem.DEFAULT_WIDTH;
         // Height always follows width, including when loading edited or older save data.
         super.readEntityFromNBT(tag);
     }
@@ -138,12 +140,14 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
      */
     @Override
     public void readSpawnData(ByteBuf buffer) {
-        if (buffer.readableBytes() != Long.BYTES + 3) throw new IllegalArgumentException("Invalid periodic-table spawn data");
+        if (buffer.readableBytes() != Long.BYTES + 3)
+            throw new IllegalArgumentException("Invalid periodic-table spawn data");
         hangingPosition = BlockPos.fromLong(buffer.readLong());
         EnumFacing facing = EnumFacing.byHorizontalIndex(buffer.readUnsignedByte());
         posterWidth = PeriodicTableItem.boundedWidth(buffer.readUnsignedByte());
         int height = buffer.readUnsignedByte();
-        if (height != heightBlocks()) throw new IllegalArgumentException("Invalid periodic-table dimensions");
+        if (height != heightBlocks())
+            throw new IllegalArgumentException("Invalid periodic-table dimensions");
         updateFacingWithBoundingBox(facing);
     }
 
@@ -151,12 +155,13 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
      * Handles initial player interaction for opening the periodic table viewer.
      *
      * @param player interacting player
-     * @param hand   interaction hand
+     * @param hand interaction hand
      * @return {@code true}
      */
     @Override
     public boolean processInitialInteract(EntityPlayer player, EnumHand hand) {
-        if (world.isRemote) Avogadro.proxy.interactPeriodicTable(this, player);
+        if (world.isRemote)
+            Avogadro.proxy.interactPeriodicTable(this, player);
         return true;
     }
 
@@ -167,9 +172,11 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
      */
     @Override
     public void onBroken(@Nullable Entity breaker) {
-        if (!world.getGameRules().getBoolean("doEntityDrops")) return;
+        if (!world.getGameRules().getBoolean("doEntityDrops"))
+            return;
         playSound(SoundEvents.ENTITY_PAINTING_BREAK, 1f, 1f);
-        if (breaker instanceof EntityPlayer player && player.capabilities.isCreativeMode) return;
+        if (breaker instanceof EntityPlayer player && player.capabilities.isCreativeMode)
+            return;
         entityDropItem(PeriodicTableItem.stack(widthBlocks()), 0);
     }
 
@@ -180,7 +187,7 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
     }
 
     /**
-     * Retrieves the picked item stack result for middle-click targeting.
+     * Returns the picked item stack result for middle-click targeting.
      *
      * @param target ray trace result
      * @return item stack instance
@@ -193,10 +200,10 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
     /**
      * Sets position and angles.
      *
-     * @param x     x coordinate
-     * @param y     y coordinate
-     * @param z     z coordinate
-     * @param yaw   yaw angle
+     * @param x x coordinate
+     * @param y y coordinate
+     * @param z z coordinate
+     * @param yaw yaw angle
      * @param pitch pitch angle
      */
     @Override
@@ -207,20 +214,21 @@ public final class PeriodicTableEntity extends EntityHanging implements IEntityA
     /**
      * Sets position and rotation directly from server updates.
      *
-     * @param x          x coordinate
-     * @param y          y coordinate
-     * @param z          z coordinate
-     * @param yaw        yaw angle
-     * @param pitch      pitch angle
+     * @param x x coordinate
+     * @param y y coordinate
+     * @param z z coordinate
+     * @param yaw yaw angle
+     * @param pitch pitch angle
      * @param increments interpolation increments
-     * @param teleport   whether to teleport
+     * @param teleport whether to teleport
      */
     @Override
-    public void setPositionAndRotationDirect(double x, double y, double z, float yaw, float pitch,
-                                             int increments, boolean teleport) {
+    public void setPositionAndRotationDirect(double x, double y, double z, float yaw, float pitch, int increments,
+            boolean teleport) {
         if (hangingPosition != null) {
             BlockPos anchor = hangingPosition.add(x - posX, y - posY, z - posZ);
             setPosition(anchor.getX(), anchor.getY(), anchor.getZ());
-        } else setPosition(x, y, z);
+        } else
+            setPosition(x, y, z);
     }
 }

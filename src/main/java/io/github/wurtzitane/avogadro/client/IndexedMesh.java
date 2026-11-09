@@ -1,21 +1,23 @@
 package io.github.wurtzitane.avogadro.client;
 
-import org.lwjgl.BufferUtils;
 import java.nio.ByteBuffer;
 import java.nio.IntBuffer;
 
+import org.lwjgl.BufferUtils;
+
 /**
  * Handles bit-exact vertex deduplication and indexing for meshes.
- * <p>Bit-exact vertex deduplication: all attributes participate, including shading boundaries.
+ * <p>
+ * Bit-exact vertex deduplication: all attributes participate, including shading boundaries.
  */
 final class IndexedMesh {
     final ByteBuffer vertices;
     final IntBuffer indices;
 
     /**
-     * Constructs a new indexed mesh from raw vertex input and stride.
+     * Creates a indexed mesh from raw vertex input and stride.
      *
-     * @param input  raw source vertex byte buffer
+     * @param input raw source vertex byte buffer
      * @param stride vertex stride in bytes
      */
     IndexedMesh(ByteBuffer input, int stride) {

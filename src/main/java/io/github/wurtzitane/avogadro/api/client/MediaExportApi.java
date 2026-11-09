@@ -1,19 +1,21 @@
 package io.github.wurtzitane.avogadro.api.client;
 
-import io.github.wurtzitane.avogadro.client.export.MoleculeMediaExport;
 import java.io.IOException;
 
+import io.github.wurtzitane.avogadro.client.export.MoleculeMediaExport;
+
 /**
- * Client-thread submission API to the same bounded export engine used by commands.
+ * Starts GIF or MP4 exports using the same export engine as the in-game commands.
+ *
+ * <p>
+ * Submit requests on the Minecraft client thread. Only one export can run at a time; a second submission is rejected
+ * rather than queued. The returned job reports progress and supports cancellation.
  */
 public final class MediaExportApi {
 
     /** The singleton instance of {@link MediaExportApi}. */
     static final MediaExportApi INSTANCE = new MediaExportApi();
 
-    /**
-     * Private constructor to enforce the singleton pattern.
-     */
     private MediaExportApi() {}
 
     /**
