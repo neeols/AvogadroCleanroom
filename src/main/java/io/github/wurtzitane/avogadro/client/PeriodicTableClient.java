@@ -26,9 +26,6 @@ import net.minecraftforge.fml.common.eventhandler.SubscribeEvent;
  */
 public final class PeriodicTableClient {
 
-    /** Singleton instance of the periodic table client event handler. */
-    private static final PeriodicTableClient EVENTS = new PeriodicTableClient();
-
     /** Flag indicating whether client handlers and listeners have already been initialized. */
     private static boolean initialized;
 
@@ -42,7 +39,7 @@ public final class PeriodicTableClient {
             return;
         initialized = true;
         RenderingRegistry.registerEntityRenderingHandler(PeriodicTableEntity.class, PeriodicTableEntityRenderer::new);
-        MinecraftForge.EVENT_BUS.register(EVENTS);
+        MinecraftForge.EVENT_BUS.register(PeriodicTableClient.class);
         ((IReloadableResourceManager) Minecraft.getMinecraft().getResourceManager())
                 .registerReloadListener(manager -> PeriodicTableArtwork.clear());
     }
@@ -57,6 +54,14 @@ public final class PeriodicTableClient {
         ModelLoader.setCustomModelResourceLocation(PeriodicTableItem.INSTANCE, 0,
                 new ModelResourceLocation("avogadro:periodic_table", "inventory"));
         PeriodicTableItem.INSTANCE.setTileEntityItemStackRenderer(new PeriodicTableItemRenderer());
+    }
+
+    @SubscribeEvent
+    public static void baked(net.minecraftforge.client.event.ModelBakeEvent event) {
+        var key = new ModelResourceLocation("avogadro:periodic_table", "inventory");
+        var model = event.getModelRegistry().getObject(key);
+        if (model != null && !(model instanceof PeriodicTableItemModel))
+            event.getModelRegistry().putObject(key, new PeriodicTableItemModel(model));
     }
 
     /**

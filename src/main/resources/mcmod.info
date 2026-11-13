@@ -2,7 +2,7 @@
   {
     "modid": "avogadro",
     "name": "Avogadro",
-    "version": "1.0.0",
+    "version": "1.0.1",
     "mcversion": "1.12.2",
     "description": "Avogadro by Trifectum Software & wurtzitane. Original Avogadro by trifectumsoftware; Minecraft 1.12.2 Cleanroom port and continued development by wurtzitane. Displays molecule structures in tooltips, the Molecules category, and supported world HUDs.",
     "authorList": [
