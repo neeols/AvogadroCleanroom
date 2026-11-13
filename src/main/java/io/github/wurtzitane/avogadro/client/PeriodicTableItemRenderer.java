@@ -1,10 +1,11 @@
 package io.github.wurtzitane.avogadro.client;
 
+import io.github.wurtzitane.avogadro.client.compat.DemonicaRenderScope;
+
 import net.minecraft.client.renderer.tileentity.TileEntityItemStackRenderer;
 import net.minecraft.item.ItemStack;
 
 import org.lwjgl.opengl.GL11;
-import org.lwjgl.opengl.GL20;
 
 /**
  * Handles tile entity item stack rendering for periodic table items displayed in inventories or held in hand.
@@ -19,8 +20,7 @@ public final class PeriodicTableItemRenderer extends TileEntityItemStackRenderer
      */
     @Override
     public void renderByItem(ItemStack stack, float partialTicks) {
-        try (var ignored = new PeriodicTableGraphics()) {
-            GL20.glUseProgram(0);
+        try (var scope = DemonicaRenderScope.open(); var ignored = new PeriodicTableGraphics()) {
             GL11.glEnable(GL11.GL_DEPTH_TEST);
             GL11.glDepthMask(true);
             GL11.glTranslatef(.5f, .5f, .5f);
